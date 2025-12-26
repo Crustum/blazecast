@@ -206,7 +206,7 @@ abstract class PusherController implements PusherControllerInterface
                 $e->getMessage(),
                 $e->getFile(),
                 $e->getLine(),
-                $e->getTraceAsString()
+                $e->getTraceAsString(),
             );
             BlazeCastLogger::error($errorMsg, [
                 'scope' => ['socket.controller', 'socket.controller.pusher'],

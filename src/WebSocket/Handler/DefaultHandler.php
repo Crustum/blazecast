@@ -58,6 +58,7 @@ class DefaultHandler implements HandlerInterface
 
         if ($this->isProtocolEvent($eventType)) {
             $connection->send($message->toJson());
+
             return;
         }
 
