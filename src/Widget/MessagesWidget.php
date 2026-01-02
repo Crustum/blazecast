@@ -88,7 +88,7 @@ class MessagesWidget extends BaseWidget
      */
     public function getTemplate(): string
     {
-        return 'BlazeCast.widgets/messages';
+        return 'Crustum/BlazeCast.widgets/messages';
     }
 
     /**

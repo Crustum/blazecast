@@ -128,7 +128,7 @@ class ConnectionsWidget extends BaseWidget
      */
     public function getTemplate(): string
     {
-        return 'BlazeCast.widgets/connections';
+        return 'Crustum/BlazeCast.widgets/connections';
     }
 
     /**
