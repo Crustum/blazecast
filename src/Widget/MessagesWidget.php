@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace Crustum\BlazeCast\Widget;
 
-use Rhythm\Widget\BaseWidget;
-use Rhythm\Widget\Trait\WidgetChartFormattingTrait;
-use Rhythm\Widget\Trait\WidgetSamplingTrait;
+use Crustum\Rhythm\Widget\BaseWidget;
+use Crustum\Rhythm\Widget\Trait\WidgetChartFormattingTrait;
+use Crustum\Rhythm\Widget\Trait\WidgetSamplingTrait;
 
 class MessagesWidget extends BaseWidget
 {

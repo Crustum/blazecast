@@ -7,7 +7,7 @@ use Cake\Event\EventManager;
 use Cake\I18n\DateTime;
 use Crustum\BlazeCast\WebSocket\Event\MessageReceivedEvent;
 use Crustum\BlazeCast\WebSocket\Event\MessageSentEvent;
-use Rhythm\Event\SharedBeat;
+use Crustum\Rhythm\Event\SharedBeat;
 
 /**
  * Event Dispatcher Service

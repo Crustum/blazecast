@@ -34,6 +34,8 @@ use Crustum\BlazeCast\WebSocket\Pusher\Publish\RedisPubSubProvider;
 use Crustum\BlazeCast\WebSocket\RateLimiter\AsyncRateLimiterInterface;
 use Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface;
 use Crustum\BlazeCast\WebSocket\WebSocketServerInterface;
+use Crustum\Rhythm\Event\SharedBeat;
+use Crustum\Rhythm\Rhythm;
 use Exception;
 use GuzzleHttp\Psr7\HttpFactory;
 use GuzzleHttp\Psr7\Message;
@@ -47,8 +49,6 @@ use React\EventLoop\LoopInterface;
 use React\Socket\ConnectionInterface;
 use React\Socket\ServerInterface;
 use React\Socket\SocketServer;
-use Rhythm\Event\SharedBeat;
-use Rhythm\Rhythm;
 use RuntimeException;
 use SignalHandler\Command\Trait\SignalHandlerTrait;
 use Throwable;
@@ -203,7 +203,7 @@ class Server implements WebSocketServerInterface
     /**
      * Rhythm
      *
-     * @var Rhythm|null
+     * @var \Crustum\Rhythm\Rhythm|null
      */
     protected ?Rhythm $rhythm = null;
 

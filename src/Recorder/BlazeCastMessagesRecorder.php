@@ -11,11 +11,11 @@ use Crustum\BlazeCast\WebSocket\Event\MessageSentEvent;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
-use Rhythm\Event\SharedBeat;
-use Rhythm\Recorder\BaseRecorder;
-use Rhythm\Recorder\Trait\IgnoresTrait;
-use Rhythm\Recorder\Trait\SamplingTrait;
-use Rhythm\Rhythm;
+use Crustum\Rhythm\Event\SharedBeat;
+use Crustum\Rhythm\Recorder\BaseRecorder;
+use Crustum\Rhythm\Recorder\Trait\IgnoresTrait;
+use Crustum\Rhythm\Recorder\Trait\SamplingTrait;
+use Crustum\Rhythm\Rhythm;
 
 /**
  * BlazeCast Messages Recorder
@@ -52,7 +52,7 @@ class BlazeCastMessagesRecorder extends BaseRecorder implements EventListenerInt
     /**
      * Constructor.
      *
-     * @param \Rhythm\Rhythm $rhythm Rhythm instance
+     * @param \Crustum\Rhythm\Rhythm $rhythm Rhythm instance
      * @param \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager $applicationManager Application manager
      * @param \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager $connectionManager Connection manager
      * @param BlazeCastMessagesRecorderConfig|array{} $config Configuration array
@@ -197,7 +197,7 @@ class BlazeCastMessagesRecorder extends BaseRecorder implements EventListenerInt
     /**
      * Record HTTP requests for all apps.
      *
-     * @param \Rhythm\Event\SharedBeat $event SharedBeat event
+     * @param \Crustum\Rhythm\Event\SharedBeat $event SharedBeat event
      * @return void
      */
     protected function recordHttpRequests(SharedBeat $event): void

@@ -19,13 +19,12 @@
         "symfony/routing": "^7.3",
         "symfony/http-foundation": "^6.0",
         "symfony/config": "^7.0",
-        "skie/rhythm": "^1.0"
+        "crustum/rhythm": "^1.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.5",
         "ratchet/pawl": "^0.4",
         "react/http": "^1.7",
-        "skie/rhythm": "^1.0",
         "cakephp/cakephp-codesniffer": "^5.0",
         "cakephp/bake": "^3.0"
     },

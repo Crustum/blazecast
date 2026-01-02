@@ -7,17 +7,17 @@ use Cake\Event\EventListenerInterface;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
-use Rhythm\Event\SharedBeat;
-use Rhythm\Recorder\BaseRecorder;
-use Rhythm\Recorder\Trait\IgnoresTrait;
-use Rhythm\Recorder\Trait\SamplingTrait;
-use Rhythm\Rhythm;
+use Crustum\Rhythm\Event\SharedBeat;
+use Crustum\Rhythm\Recorder\BaseRecorder;
+use Crustum\Rhythm\Recorder\Trait\IgnoresTrait;
+use Crustum\Rhythm\Recorder\Trait\SamplingTrait;
+use Crustum\Rhythm\Rhythm;
 
 /**
  * BlazeCast Connections Recorder
  *
  * Records active connection counts for Rhythm metrics.
- * Listens to Rhythm\Event\SharedBeat for periodic recording every 15 seconds.
+ * Listens to Crustum\Rhythm\Event\SharedBeat for periodic recording every 15 seconds.
  * Works directly with WebSocket server objects instead of HTTP requests.
  *
  * @phpstan-import-type ApplicationConfig from \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager
@@ -50,7 +50,7 @@ class BlazeCastConnectionsRecorder extends BaseRecorder implements EventListener
     /**
      * Constructor.
      *
-     * @param \Rhythm\Rhythm $rhythm Rhythm instance
+     * @param \Crustum\Rhythm\Rhythm $rhythm Rhythm instance
      * @param \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager $applicationManager Application manager
      * @param \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager $connectionManager Connection manager
      * @param BlazeCastConnectionsRecorderConfig|array{} $config Configuration array
@@ -94,7 +94,7 @@ class BlazeCastConnectionsRecorder extends BaseRecorder implements EventListener
     /**
      * Record connection count with throttling.
      *
-     * @param \Rhythm\Event\SharedBeat $event SharedBeat event
+     * @param \Crustum\Rhythm\Event\SharedBeat $event SharedBeat event
      * @return void
      */
     protected function recordConnectionCount(SharedBeat $event): void
