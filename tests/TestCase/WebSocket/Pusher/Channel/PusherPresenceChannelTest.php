@@ -8,6 +8,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPresenceChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Exception\ConnectionUnauthorizedException;
 use JsonException;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -50,7 +51,7 @@ class PusherPresenceChannelTest extends TestCase
 
         $this->connectionAttributes = [];
 
-        $this->connection = $this->createMock(Connection::class);
+        $this->connection = $this->createStub(Connection::class);
         $this->connection->method('getId')->willReturn('connection-123');
 
         $this->connection->method('setAttribute')
@@ -72,7 +73,7 @@ class PusherPresenceChannelTest extends TestCase
             ->willReturnCallback(function (string $data) {
             });
 
-        $this->applicationManager = $this->createMock(ApplicationManager::class);
+        $this->applicationManager = $this->createStub(ApplicationManager::class);
         $this->applicationManager->method('getApplicationByKey')
             ->with('app-key')
             ->willReturn([
@@ -84,25 +85,19 @@ class PusherPresenceChannelTest extends TestCase
         $this->channel->setApplicationManager($this->applicationManager);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function presenceChannelReturnsCorrectType(): void
     {
         $this->assertEquals('presence', $this->channel->getType());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function presenceChannelAllowsClientEvents(): void
     {
         $this->assertTrue($this->channel->allowsClientEvents());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function presenceChannelRequiresAuthentication(): void
     {
         $this->expectException(ConnectionUnauthorizedException::class);
@@ -111,9 +106,7 @@ class PusherPresenceChannelTest extends TestCase
         $this->channel->subscribe($this->connection);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function presenceChannelAcceptsSubscriptionWithoutMemberData(): void
     {
         $connectionId = 'connection-123';
@@ -127,9 +120,7 @@ class PusherPresenceChannelTest extends TestCase
         $this->assertTrue($this->channel->hasConnection($this->connection));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function presenceChannelRejectsInvalidMemberDataJson(): void
     {
         $connectionId = 'connection-123';
@@ -145,9 +136,7 @@ class PusherPresenceChannelTest extends TestCase
         $this->channel->subscribe($this->connection, "app-key:{$validSignature}", $invalidData);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function presenceChannelAcceptsDataWithoutUserId(): void
     {
         $connectionId = 'connection-123';
@@ -162,9 +151,7 @@ class PusherPresenceChannelTest extends TestCase
         $this->assertTrue($this->channel->hasConnection($this->connection));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function presenceChannelAcceptsValidSubscription(): void
     {
         $connectionId = 'connection-123';
@@ -183,9 +170,7 @@ class PusherPresenceChannelTest extends TestCase
         $this->assertEquals(1, $this->channel->getMemberCount());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function presenceChannelHandlesMultipleMembers(): void
     {
         $this->subscribeTestMember($this->connection, 'user-123', ['name' => 'User 1']);
@@ -220,9 +205,7 @@ class PusherPresenceChannelTest extends TestCase
         $this->assertContains('user-456', $memberIds);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function presenceChannelCanUnsubscribeMembers(): void
     {
         $this->subscribeTestMember($this->connection, 'user-123', ['name' => 'User 1']);
@@ -238,9 +221,7 @@ class PusherPresenceChannelTest extends TestCase
         $this->assertFalse($this->channel->hasConnection($this->connection));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function presenceChannelProvidesPresenceStats(): void
     {
         $this->subscribeTestMember($this->connection, 'user-123', ['name' => 'User 1']);
@@ -268,9 +249,7 @@ class PusherPresenceChannelTest extends TestCase
         $this->assertEquals(2, $stats['member_count']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function memberAddedEventHasJsonEncodedDataString(): void
     {
         $channel = new PusherPresenceChannel('presence-test-channel');
@@ -302,9 +281,7 @@ class PusherPresenceChannelTest extends TestCase
         $this->assertEquals(json_encode((object)$userData), $message['data']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function memberRemovedEventHasJsonEncodedDataString(): void
     {
         $channel = new PusherPresenceChannel('presence-test-channel');

@@ -73,24 +73,25 @@ class ChannelInformationTraitTest extends TestCase
 
     public function testInfoReturnsOccupied(): void
     {
-        $channelManager = $this->getMockBuilder('stdClass')
-            ->addMethods(['getChannel'])
-            ->getMock();
-        $connectionManager = $this->getMockBuilder('stdClass')
-            ->addMethods(['getConnectionsForChannel'])
-            ->getMock();
-        $channelManager->expects($this->once())
-            ->method('getChannel')
-            ->with('presence-test')
-            ->willReturn('presence-test');
-        $connectionManager->expects($this->once())
-            ->method('getConnectionsForChannel')
-            ->with('presence-test')
-            ->willReturn([
-                (object)['user_id' => '1'],
-                (object)['user_id' => '2'],
-                (object)['user_id' => '1'],
-            ]);
+        $channelManager = new class {
+            public function getChannel(string $name): string
+            {
+                return 'presence-test';
+            }
+        };
+        $connectionManager = new class {
+            /**
+             * @return array<mixed>
+             */
+            public function getConnectionsForChannel(string $name): array
+            {
+                return [
+                    (object)['user_id' => '1'],
+                    (object)['user_id' => '2'],
+                    (object)['user_id' => '1'],
+                ];
+            }
+        };
         $this->traitUser->setManagers($channelManager, $connectionManager);
         $result = $this->traitUser->callInfo([], 'presence-test', 'user_count,subscription_count,member_count');
         $this->assertEquals([

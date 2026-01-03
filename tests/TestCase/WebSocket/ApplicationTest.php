@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Crustum\BlazeCast\Test\TestCase\WebSocket;
 
 use Crustum\BlazeCast\WebSocket\Application;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -11,9 +12,7 @@ use PHPUnit\Framework\TestCase;
  */
 class ApplicationTest extends TestCase
 {
-    /**
-     * @test
-     */
+    #[Test]
     public function applicationCanBeCreatedWithBasicConfig(): void
     {
         $app = new Application(
@@ -36,9 +35,7 @@ class ApplicationTest extends TestCase
         $this->assertEquals(10000, $app->getMaxMessageSize());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function applicationCanBeConvertedToArray(): void
     {
         $app = new Application(
@@ -65,9 +62,7 @@ class ApplicationTest extends TestCase
         $this->assertEquals($expected, $app->toArray());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function applicationHandlesOptionsCorrectly(): void
     {
         $options = ['debug' => true, 'custom_setting' => 'value'];
@@ -89,9 +84,7 @@ class ApplicationTest extends TestCase
         $this->assertEquals($options, $array['options']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function applicationValidatesBasicRequirements(): void
     {
         $configs = [

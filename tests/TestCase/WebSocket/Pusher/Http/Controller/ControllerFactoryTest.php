@@ -61,12 +61,12 @@ class ControllerFactoryTest extends TestCase
     {
         parent::setUp();
 
-        $this->applicationManager = $this->createMock(ApplicationManager::class);
-        $this->channelManager = $this->createMock(ChannelManager::class);
-        $this->connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $this->applicationManager = $this->createStub(ApplicationManager::class);
+        $this->channelManager = $this->createStub(ChannelManager::class);
+        $this->connectionManager = $this->createStub(ChannelConnectionManager::class);
         $this->container = $this->createMock(ContainerInterface::class);
 
-        $this->eventManager = $this->createMock(EventManager::class);
+        $this->eventManager = $this->createStub(EventManager::class);
 
         $this->controllerFactory = new ControllerFactory(
             $this->applicationManager,

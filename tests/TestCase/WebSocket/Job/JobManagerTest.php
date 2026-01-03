@@ -12,7 +12,7 @@ class JobManagerTest extends TestCase
     public function testRegisterAndGetJob(): void
     {
         $jobManager = new JobManager();
-        $job = $this->createMock(JobInterface::class);
+        $job = $this->createStub(JobInterface::class);
 
         $jobManager->register('test_job', $job);
 

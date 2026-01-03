@@ -20,7 +20,7 @@ class RedisClientFactoryTest extends TestCase
     {
         parent::setUp();
 
-        $this->mockLoop = $this->createMock(LoopInterface::class);
+        $this->mockLoop = $this->createStub(LoopInterface::class);
         $this->factory = new RedisClientFactory();
     }
 

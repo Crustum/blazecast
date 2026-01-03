@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Crustum\BlazeCast\WebSocket\Pusher\MetricsHandler;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -24,27 +25,21 @@ class ChannelManagerTest extends TestCase
         $this->manager = new ChannelManager();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanBeCreated(): void
     {
         $manager = new ChannelManager();
         $this->assertInstanceOf(ChannelManager::class, $manager);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerStartsWithNoChannels(): void
     {
         $this->assertEquals(0, $this->manager->getChannelCount());
         $this->assertEmpty($this->manager->getChannels());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetOrCreateChannel(): void
     {
         $this->assertFalse($this->manager->hasChannel('test-channel'));
@@ -57,9 +52,7 @@ class ChannelManagerTest extends TestCase
         $this->assertEquals('test-channel', $channel->getName());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanRemoveEmptyChannel(): void
     {
         $this->manager->getChannel('test-channel');
@@ -72,9 +65,7 @@ class ChannelManagerTest extends TestCase
         $this->assertFalse($this->manager->hasChannel('test-channel'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetAllChannels(): void
     {
         $channel1 = $this->manager->getChannel('channel-1');
@@ -89,9 +80,7 @@ class ChannelManagerTest extends TestCase
         $this->assertSame($channel2, $channels['channel-2']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetChannelsByType(): void
     {
         $this->manager->getChannel('public-channel');
@@ -107,9 +96,7 @@ class ChannelManagerTest extends TestCase
         $this->assertCount(1, $presenceChannels);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanClearAllChannels(): void
     {
         $this->manager->getChannel('channel-1');
@@ -123,9 +110,7 @@ class ChannelManagerTest extends TestCase
         $this->assertEmpty($this->manager->getChannels());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetChannelStatistics(): void
     {
         $this->manager->getChannel('public-chat');
@@ -137,9 +122,7 @@ class ChannelManagerTest extends TestCase
         $this->assertEquals(2, $stats['total_channels']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerReturnsExistingChannel(): void
     {
         $channel1 = $this->manager->getChannel('test-channel');
@@ -149,9 +132,7 @@ class ChannelManagerTest extends TestCase
         $this->assertSame($channel1, $channel2);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanCheckChannelExistence(): void
     {
         $this->assertFalse($this->manager->hasChannel('non-existent'));
@@ -162,9 +143,7 @@ class ChannelManagerTest extends TestCase
         $this->assertFalse($this->manager->hasChannel('still-non-existent'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanRemoveNonExistentChannel(): void
     {
         $removed = $this->manager->removeChannelIfEmpty('non-existent');
@@ -172,9 +151,7 @@ class ChannelManagerTest extends TestCase
         $this->assertEquals(0, $this->manager->getChannelCount());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanCreateDifferentChannelTypes(): void
     {
         $publicChannel = $this->manager->getChannel('public-test');
@@ -188,9 +165,7 @@ class ChannelManagerTest extends TestCase
         $this->assertEquals('cache', $cacheChannel->getType());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetChannelInfo(): void
     {
         $this->manager->getChannel('test-channel');
@@ -201,9 +176,7 @@ class ChannelManagerTest extends TestCase
         $this->assertEquals('test-channel', $info['name']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetChannelNamesByPattern(): void
     {
         $this->manager->getChannel('test-alpha');
@@ -218,9 +191,7 @@ class ChannelManagerTest extends TestCase
         $this->assertNotContains('other-gamma', $testChannels);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanHandleChannelWithMetadata(): void
     {
         $metadata = ['priority' => 'high', 'region' => 'us-east-1'];
@@ -229,9 +200,7 @@ class ChannelManagerTest extends TestCase
         $this->assertEquals($metadata, $channel->getMetadata());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function metricsHandlerWorksWithRealChannels(): void
     {
         // Setup managers

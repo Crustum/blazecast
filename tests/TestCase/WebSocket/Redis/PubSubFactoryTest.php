@@ -6,6 +6,7 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Redis;
 use Cake\Core\Configure;
 use Crustum\BlazeCast\WebSocket\Redis\PubSub;
 use Crustum\BlazeCast\WebSocket\Redis\PubSubFactory;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -32,9 +33,7 @@ class PubSubFactoryTest extends TestCase
         Configure::delete('BlazeCast.redis');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getInstanceReturnsSameInstanceOnMultipleCalls(): void
     {
         $instance1 = PubSubFactory::getInstance();
@@ -44,9 +43,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $instance1);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getInstanceCreatesInstanceWithDefaultConfiguration(): void
     {
         $instance = PubSubFactory::getInstance();
@@ -54,9 +51,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $instance);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getInstanceUsesConfiguredRedisSettings(): void
     {
         $redisConfig = [
@@ -73,13 +68,11 @@ class PubSubFactoryTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $instance);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setInstanceStoresProvidedInstance(): void
     {
-        /** @var PubSub&\PHPUnit\Framework\MockObject\MockObject $mockPubSub */
-        $mockPubSub = $this->createMock(PubSub::class);
+        /** @var PubSub&\PHPUnit\Framework\MockObject\Stub $mockPubSub */
+        $mockPubSub = $this->createStub(PubSub::class);
 
         PubSubFactory::setInstance($mockPubSub);
 
@@ -88,15 +81,13 @@ class PubSubFactoryTest extends TestCase
         $this->assertSame($mockPubSub, $retrievedInstance);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setInstanceOverridesPreviousInstance(): void
     {
         $firstInstance = PubSubFactory::getInstance();
 
-        /** @var PubSub&\PHPUnit\Framework\MockObject\MockObject $mockPubSub */
-        $mockPubSub = $this->createMock(PubSub::class);
+        /** @var PubSub&\PHPUnit\Framework\MockObject\Stub $mockPubSub */
+        $mockPubSub = $this->createStub(PubSub::class);
         PubSubFactory::setInstance($mockPubSub);
 
         // Get instance again
@@ -106,9 +97,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertSame($mockPubSub, $secondInstance);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function createInstanceUsesDefaultConfigurationWhenNoneProvided(): void
     {
         Configure::delete('BlazeCast.redis');
@@ -118,9 +107,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $instance);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function createInstanceHandlesEmptyConfiguration(): void
     {
         Configure::write('BlazeCast.redis', []);
@@ -130,9 +117,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $instance);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function createInstanceHandlesNullConfiguration(): void
     {
         Configure::write('BlazeCast.redis', null);
@@ -142,9 +127,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $instance);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function factoryCreatesInstanceWithProperDependencies(): void
     {
         $instance = PubSubFactory::getInstance();
@@ -156,9 +139,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertTrue($reflection->hasProperty('client'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function multipleCallsToGetInstanceReturnSameObject(): void
     {
         $instances = [];
@@ -173,9 +154,7 @@ class PubSubFactoryTest extends TestCase
         }
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function factoryHandlesComplexRedisConfiguration(): void
     {
         $complexConfig = [

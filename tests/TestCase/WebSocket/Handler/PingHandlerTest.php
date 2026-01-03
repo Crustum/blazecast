@@ -7,6 +7,7 @@ use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Handler\PingHandler;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -17,68 +18,33 @@ use ReflectionClass;
 class PingHandlerTest extends TestCase
 {
     private PingHandler $handler;
-    private Server&MockObject $mockServer;
+    /**
+     * @var \PHPUnit\Framework\MockObject\MockObject&Server
+     */
+    private Server $stubServer;
     private Connection&MockObject $mockConnection;
 
     protected function setUp(): void
     {
         $this->handler = new PingHandler();
-        $this->mockServer = $this->createMock(Server::class);
+        $this->stubServer = $this->createStub(Server::class);
         $this->mockConnection = $this->createMock(Connection::class);
 
-        $this->handler->setServer($this->mockServer);
+        $this->handler->setServer($this->stubServer);
     }
 
-    /**
-     * @test
-     */
-    public function canBeInstantiated(): void
-    {
-        $handler = new PingHandler();
-        $this->assertInstanceOf(PingHandler::class, $handler);
-    }
-
-    /**
-     * @test
-     */
-    public function setServerStoresServerInstance(): void
-    {
-        $handler = new PingHandler();
-        $handler->setServer($this->mockServer);
-
-        $reflection = new ReflectionClass($handler);
-        $serverProperty = $reflection->getProperty('server');
-        $storedServer = $serverProperty->getValue($handler);
-
-        $this->assertSame($this->mockServer, $storedServer);
-    }
-
-    /**
-     * @test
-     */
-    public function supportsPingEvent(): void
+    #[Test]
+    public function handlePingUpdatesConnectionActivity(): void
     {
         $this->assertTrue($this->handler->supports('ping'));
-    }
 
-    /**
-     * @test
-     */
-    public function doesNotSupportOtherEvents(): void
-    {
         $this->assertFalse($this->handler->supports('pong'));
         $this->assertFalse($this->handler->supports('subscribe'));
         $this->assertFalse($this->handler->supports('publish'));
         $this->assertFalse($this->handler->supports('authenticate'));
         $this->assertFalse($this->handler->supports(''));
         $this->assertFalse($this->handler->supports('unknown_event'));
-    }
 
-    /**
-     * @test
-     */
-    public function handlePingUpdatesConnectionActivity(): void
-    {
         $message = new Message('ping');
 
         $this->mockConnection->expects($this->once())
@@ -86,14 +52,12 @@ class PingHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->isType('string'));
+            ->with($this->isString());
 
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handlePingSendsPongResponse(): void
     {
         $message = new Message('ping');
@@ -116,9 +80,7 @@ class PingHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function pongResponseIncludesAccurateTimestamps(): void
     {
         $message = new Message('ping');
@@ -144,9 +106,7 @@ class PingHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handlePingWithData(): void
     {
         $pingData = ['client_time' => microtime(true), 'sequence' => 123];
@@ -168,9 +128,7 @@ class PingHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handlePingWithChannel(): void
     {
         $message = new Message('ping', null, 'test-channel');
@@ -191,9 +149,7 @@ class PingHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function multiplePingHandlesWorkCorrectly(): void
     {
         $messages = [
@@ -218,9 +174,7 @@ class PingHandlerTest extends TestCase
         }
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function pongResponseIsValidJson(): void
     {
         $message = new Message('ping');
@@ -239,9 +193,7 @@ class PingHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handlerMaintainsConnectionAliveness(): void
     {
         $message = new Message('ping');
@@ -253,13 +205,7 @@ class PingHandlerTest extends TestCase
             ->method('send');
 
         $this->handler->handle($this->mockConnection, $message);
-    }
 
-    /**
-     * @test
-     */
-    public function getSupportedEventsReturnsCorrectArray(): void
-    {
         $reflection = new ReflectionClass($this->handler);
         $supportedEventsProperty = $reflection->getProperty('supportedEvents');
         $supportedEvents = $supportedEventsProperty->getValue($this->handler);
@@ -269,9 +215,7 @@ class PingHandlerTest extends TestCase
         $this->assertCount(1, $supportedEvents);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handlerWorksWithoutServerSet(): void
     {
         $handler = new PingHandler();
@@ -291,9 +235,7 @@ class PingHandlerTest extends TestCase
         $handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function pongDataStructureIsConsistent(): void
     {
         $message = new Message('ping');

@@ -7,6 +7,8 @@ use Cake\Core\Configure;
 use Crustum\BlazeCast\Test\Support\TestServer;
 use Crustum\BlazeCast\Test\Support\WebSocketTestClient;
 use Exception;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use React\EventLoop\Loop;
 use Redis;
@@ -156,11 +158,8 @@ class RateLimitingIntegrationTest extends TestCase
         }
     }
 
-    /**
-     * @test
-     * @dataProvider rateLimiterDriverProvider
-     * @param string $driver Rate limiter driver
-     */
+    #[Test]
+    #[DataProvider('rateLimiterDriverProvider')]
     public function testFrontendEventRateLimitSuccess(string $driver): void
     {
         $this->setupServerWithDriver($driver);
@@ -226,11 +225,8 @@ class RateLimitingIntegrationTest extends TestCase
         $this->assertTrue($subscriptionConfirmed, 'Subscription should be confirmed');
     }
 
-    /**
-     * @test
-     * @dataProvider rateLimiterDriverProvider
-     * @param string $driver Rate limiter driver
-     */
+    #[Test]
+    #[DataProvider('rateLimiterDriverProvider')]
     public function testFrontendEventRateLimitExceeded(string $driver): void
     {
         $this->setupServerWithDriver($driver);
@@ -304,11 +300,8 @@ class RateLimitingIntegrationTest extends TestCase
         $this->assertTrue($subscriptionConfirmed, 'Subscription should be confirmed');
     }
 
-    /**
-     * @test
-     * @dataProvider rateLimiterDriverProvider
-     * @param string $driver Rate limiter driver
-     */
+    #[Test]
+    #[DataProvider('rateLimiterDriverProvider')]
     public function testFrontendEventBroadcastWithRateLimiting(string $driver): void
     {
         $this->setupServerWithDriver($driver);

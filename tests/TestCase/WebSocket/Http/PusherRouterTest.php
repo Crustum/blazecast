@@ -82,10 +82,11 @@ class PusherRouterTest extends TestCase
     {
         $request = new Request('GET', '/pusher/health');
         $response = new Response(['health' => 'OK']);
+        $connection = $this->createStub(Connection::class);
 
-        $controller = function ($req, $conn, $params) use ($request, $response) {
+        $controller = function ($req, $conn, $params) use ($request, $response, $connection) {
             $this->assertSame($request, $req);
-            $this->assertSame($this->connection, $conn);
+            $this->assertSame($connection, $conn);
             $this->assertEquals([], $params);
 
             return $response;
@@ -99,7 +100,7 @@ class PusherRouterTest extends TestCase
                 '_route' => 'health_check',
             ]);
 
-        $result = $this->router->dispatch($request, $this->connection);
+        $result = $this->router->dispatch($request, $connection);
         $this->assertSame($response, $result);
     }
 
@@ -112,10 +113,11 @@ class PusherRouterTest extends TestCase
     {
         $request = new Request('GET', '/apps/app-id/channels');
         $response = new Response(['channels' => []]);
+        $connection = $this->createStub(Connection::class);
 
-        $controller = function ($req, $conn, $params) use ($request, $response) {
+        $controller = function ($req, $conn, $params) use ($request, $response, $connection) {
             $this->assertSame($request, $req);
-            $this->assertSame($this->connection, $conn);
+            $this->assertSame($connection, $conn);
             $this->assertEquals(['appId' => 'app-id'], $params);
 
             return $response;
@@ -130,7 +132,7 @@ class PusherRouterTest extends TestCase
                 'appId' => 'app-id',
             ]);
 
-        $result = $this->router->dispatch($request, $this->connection);
+        $result = $this->router->dispatch($request, $connection);
         $this->assertSame($response, $result);
     }
 

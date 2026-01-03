@@ -31,7 +31,7 @@ class HttpRequestProcessorTest extends TestCase
     {
         parent::setUp();
 
-        $this->router = $this->createMock(PusherRouter::class);
+        $this->router = $this->createStub(PusherRouter::class);
         $this->processor = new HttpRequestProcessor($this->router, 1000);
     }
 
@@ -126,11 +126,14 @@ class HttpRequestProcessorTest extends TestCase
         $connection = $this->createMock(Connection::class);
         $routerResponse = new Response('test content', 200);
 
-        $this->router
+        $router = $this->createMock(PusherRouter::class);
+        $router
             ->expects($this->once())
             ->method('dispatch')
             ->with($request, $connection)
             ->willReturn($routerResponse);
+
+        $this->processor->setRouter($router);
 
         $connection->expects($this->once())
             ->method('send')
@@ -154,7 +157,7 @@ class HttpRequestProcessorTest extends TestCase
     public function testProcessHttpRequestWithOptionsRequest(): void
     {
         $request = new ServerRequest('OPTIONS', '/test');
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
 
         $response = $this->processor->processHttpRequest($request, $connection);
 
@@ -173,14 +176,17 @@ class HttpRequestProcessorTest extends TestCase
     public function testProcessHttpRequestWithRegularRequest(): void
     {
         $request = new ServerRequest('GET', '/test');
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $routerResponse = new Response('test content', 200);
 
-        $this->router
+        $router = $this->createMock(PusherRouter::class);
+        $router
             ->expects($this->once())
             ->method('dispatch')
             ->with($request, $connection)
             ->willReturn($routerResponse);
+
+        $this->processor->setRouter($router);
 
         $response = $this->processor->processHttpRequest($request, $connection);
 
@@ -257,7 +263,7 @@ class HttpRequestProcessorTest extends TestCase
      */
     public function testRouterGetterAndSetter(): void
     {
-        $newRouter = $this->createMock(PusherRouter::class);
+        $newRouter = $this->createStub(PusherRouter::class);
 
         $this->assertSame($this->router, $this->processor->getRouter());
 

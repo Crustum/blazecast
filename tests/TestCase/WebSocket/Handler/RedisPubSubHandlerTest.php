@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use Crustum\BlazeCast\WebSocket\Redis\PubSub;
 use Exception;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -20,40 +21,37 @@ class RedisPubSubHandlerTest extends TestCase
 {
     private RedisPubSubHandler $handler;
     private PubSub&MockObject $mockPubSub;
-    private Server&MockObject $mockServer;
+    /**
+     * @var \PHPUnit\Framework\MockObject\MockObject&Server
+     */
+    private Server $stubServer;
     private Connection&MockObject $mockConnection;
 
     protected function setUp(): void
     {
         $this->mockPubSub = $this->createMock(PubSub::class);
-        $this->mockServer = $this->createMock(Server::class);
+        $this->stubServer = $this->createStub(Server::class);
         $this->mockConnection = $this->createMock(Connection::class);
 
         $this->handler = new RedisPubSubHandler($this->mockPubSub);
-        $this->handler->setServer($this->mockServer);
+        $this->handler->setServer($this->stubServer);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function canBeInstantiatedWithoutPubSub(): void
     {
         $handler = new RedisPubSubHandler();
         $this->assertInstanceOf(RedisPubSubHandler::class, $handler);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function canBeInstantiatedWithPubSub(): void
     {
         $handler = new RedisPubSubHandler($this->mockPubSub);
         $this->assertInstanceOf(RedisPubSubHandler::class, $handler);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setPubSubStoresPubSubInstance(): void
     {
         $handler = new RedisPubSubHandler();
@@ -66,24 +64,20 @@ class RedisPubSubHandlerTest extends TestCase
         $this->assertSame($this->mockPubSub, $storedPubSub);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setServerStoresServerInstance(): void
     {
         $handler = new RedisPubSubHandler();
-        $handler->setServer($this->mockServer);
+        $handler->setServer($this->stubServer);
 
         $reflection = new ReflectionClass($handler);
         $serverProperty = $reflection->getProperty('server');
         $storedServer = $serverProperty->getValue($handler);
 
-        $this->assertSame($this->mockServer, $storedServer);
+        $this->assertSame($this->stubServer, $storedServer);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function supportsSupportedEventTypes(): void
     {
         $this->assertTrue($this->handler->supports('redis.publish'));
@@ -91,9 +85,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->assertTrue($this->handler->supports('redis.unsubscribe'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function doesNotSupportUnsupportedEventTypes(): void
     {
         $this->assertFalse($this->handler->supports('unsupported.event'));
@@ -101,9 +93,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->assertFalse($this->handler->supports('publish'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handlePublishWithValidData(): void
     {
         $data = [
@@ -123,9 +113,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handlePublishWithArrayMessage(): void
     {
         $data = [
@@ -147,9 +135,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handlePublishWithMissingChannel(): void
     {
         $data = ['message' => 'test message'];
@@ -165,9 +151,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handlePublishWithMissingMessage(): void
     {
         $data = ['channel' => 'test-channel'];
@@ -183,9 +167,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleSubscribeWithValidData(): void
     {
         $data = ['channel' => 'test-channel'];
@@ -206,7 +188,7 @@ class RedisPubSubHandlerTest extends TestCase
 
         $this->mockPubSub->expects($this->once())
             ->method('subscribe')
-            ->with('test-channel', $this->isType('callable'));
+            ->with('test-channel', $this->isCallable());
 
         $this->mockConnection->expects($this->once())
             ->method('send')
@@ -215,9 +197,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleSubscribeWithAlreadySubscribedChannel(): void
     {
         $data = ['channel' => 'test-channel'];
@@ -245,9 +225,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleSubscribeWithMissingChannel(): void
     {
         $data = [];
@@ -263,9 +241,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleUnsubscribeWithValidData(): void
     {
         $data = ['channel' => 'test-channel'];
@@ -295,9 +271,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleUnsubscribeWithMissingChannel(): void
     {
         $data = [];
@@ -313,9 +287,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleWithNoPubSubInstance(): void
     {
         $handler = new RedisPubSubHandler();
@@ -328,9 +300,7 @@ class RedisPubSubHandlerTest extends TestCase
         $handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handlePublishWithException(): void
     {
         $data = [
@@ -350,9 +320,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleSubscribeWithException(): void
     {
         $data = ['channel' => 'test-channel'];
@@ -378,9 +346,7 @@ class RedisPubSubHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleUnsubscribeWithException(): void
     {
         $data = ['channel' => 'test-channel'];

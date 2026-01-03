@@ -17,11 +17,11 @@ class PruneStaleConnectionsJobTest extends TestCase
     public function testRunPrunesStaleConnection(): void
     {
         $connection = $this->createMock(Connection::class);
-        $server = $this->createMock(Server::class);
-        $connectionRegistry = $this->createMock(ConnectionRegistry::class);
-        $applicationContextResolver = $this->createMock(ApplicationContextResolver::class);
-        $appManager = $this->createMock(ApplicationManager::class);
-        $loop = $this->createMock(LoopInterface::class);
+        $server = $this->createStub(Server::class);
+        $connectionRegistry = $this->createStub(ConnectionRegistry::class);
+        $applicationContextResolver = $this->createStub(ApplicationContextResolver::class);
+        $appManager = $this->createStub(ApplicationManager::class);
+        $loop = $this->createStub(LoopInterface::class);
 
         $app = [
             'id' => 'app-id',
@@ -50,11 +50,11 @@ class PruneStaleConnectionsJobTest extends TestCase
     public function testRunDoesNotPruneActiveConnection(): void
     {
         $connection = $this->createMock(Connection::class);
-        $server = $this->createMock(Server::class);
-        $connectionRegistry = $this->createMock(ConnectionRegistry::class);
-        $applicationContextResolver = $this->createMock(ApplicationContextResolver::class);
-        $appManager = $this->createMock(ApplicationManager::class);
-        $loop = $this->createMock(LoopInterface::class);
+        $server = $this->createStub(Server::class);
+        $connectionRegistry = $this->createStub(ConnectionRegistry::class);
+        $applicationContextResolver = $this->createStub(ApplicationContextResolver::class);
+        $appManager = $this->createStub(ApplicationManager::class);
+        $loop = $this->createStub(LoopInterface::class);
 
         $app = [
             'id' => 'app-id',

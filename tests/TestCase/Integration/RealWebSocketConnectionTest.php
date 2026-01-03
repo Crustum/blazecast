@@ -5,6 +5,7 @@ namespace Crustum\BlazeCast\Test\TestCase\Integration;
 
 use Crustum\BlazeCast\WebSocket\Application;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Ratchet\Client\Connector;
 use React\EventLoop\Loop;
@@ -33,9 +34,7 @@ class RealWebSocketConnectionTest extends TestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function canCreateRealWebsocketClientConnector(): void
     {
         $loop = Loop::get();
@@ -48,9 +47,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertStringContainsString('real_test_key', $wsUrl);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function websocketMessageProtocolIsReadyForRealTransport(): void
     {
         $subscribeMessage = Message::subscribe('public-real-test');
@@ -79,9 +76,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertEquals('public-real-test', $decodedBroadcast['channel']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function realWebsocketServerCommandCanBeConstructed(): void
     {
         $serverCommand = $this->buildServerStartCommand();
@@ -97,9 +92,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertStringContainsString($this->application->getKey(), $clientUrl);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function websocketProtocolHandshakeHeadersAreValid(): void
     {
         $expectedHeaders = [
@@ -121,9 +114,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertEquals(24, strlen($wsKey));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function websocketFrameConstraintsAreUnderstood(): void
     {
         $testMessage = 'Hello WebSocket!';
@@ -137,9 +128,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertLessThan(65536, strlen($normalMessage), 'Normal messages should fit in standard frames');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelSubscriptionProtocolMessagesAreValid(): void
     {
         $authMessage = Message::auth('real-test-token');
@@ -162,9 +151,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertJson($broadcastJson);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function authenticationBugFixWorksWithRealProtocolMessages(): void
     {
         $publicSubscribe = Message::subscribe('public-bug-test');

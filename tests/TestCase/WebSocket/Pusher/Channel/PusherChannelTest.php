@@ -5,6 +5,7 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher\Channel;
 
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannelInterface;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -20,9 +21,7 @@ class PusherChannelTest extends TestCase
         $this->channel = new PusherChannel('test-channel');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelCanBeCreatedWithName(): void
     {
         $channel = new PusherChannel('my-channel');
@@ -31,61 +30,47 @@ class PusherChannelTest extends TestCase
         $this->assertEquals('my-channel', $channel->getName());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelImplementsPusherChannelInterface(): void
     {
         $this->assertInstanceOf(PusherChannelInterface::class, $this->channel);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelReturnsCorrectType(): void
     {
         $this->assertEquals('public', $this->channel->getType());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelReturnsEmptyMembersByDefault(): void
     {
         $members = $this->channel->getMembers();
         $this->assertEmpty($members);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelReturnsZeroMemberCountByDefault(): void
     {
         $count = $this->channel->getMemberCount();
         $this->assertEquals(0, $count);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelReturnsEmptyPresenceStatsByDefault(): void
     {
         $stats = $this->channel->getPresenceStats();
         $this->assertEmpty($stats);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelReturnsEmptyCacheStatsByDefault(): void
     {
         $stats = $this->channel->getCacheStats();
         $this->assertEmpty($stats);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelCanConvertToArray(): void
     {
         $array = $this->channel->toArray();
@@ -94,9 +79,7 @@ class PusherChannelTest extends TestCase
         $this->assertEquals('test-channel', $array['name']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelIsJsonSerializable(): void
     {
         $json = json_encode($this->channel);
@@ -106,9 +89,7 @@ class PusherChannelTest extends TestCase
         $this->assertEquals('test-channel', $decoded['name']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelHandlesDifferentChannelNames(): void
     {
         $testNames = [
@@ -130,9 +111,7 @@ class PusherChannelTest extends TestCase
         }
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelCanGetStatistics(): void
     {
         $stats = $this->channel->getStats();
@@ -142,17 +121,13 @@ class PusherChannelTest extends TestCase
         $this->assertEquals(0, $stats['connection_count']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelImplementsRequiredInterface(): void
     {
         $this->assertInstanceOf(PusherChannelInterface::class, $this->channel);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelCanManageMetadata(): void
     {
         $metadata = ['custom' => 'value', 'priority' => 10];
@@ -161,45 +136,35 @@ class PusherChannelTest extends TestCase
         $this->assertEquals($metadata, $this->channel->getMetadata());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelCanCheckIfEmpty(): void
     {
         $this->assertTrue($this->channel->isEmpty());
         $this->assertEquals(0, $this->channel->getConnectionCount());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelCanGetConnectionsArray(): void
     {
         $connections = $this->channel->getConnections();
         $this->assertEmpty($connections);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelCanFindConnectionById(): void
     {
         $connection = $this->channel->findConnection('non-existent');
         $this->assertNull($connection);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelReturnsCorrectDataForApi(): void
     {
         $data = $this->channel->getData();
         $this->assertEmpty($data);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function channelCanBeCreatedFromArray(): void
     {
         $data = [

@@ -32,7 +32,7 @@ class ServerTest extends TestCase
     {
         parent::setUp();
 
-        $this->router = $this->createMock(PusherRouter::class);
+        $this->router = $this->createStub(PusherRouter::class);
         $this->channelManager = new ChannelManager();
         $this->connectionManager = new ChannelConnectionManager();
         $this->applicationManager = new ApplicationManager([
@@ -46,7 +46,7 @@ class ServerTest extends TestCase
             ],
         ]);
 
-        $this->loop = $this->createMock(LoopInterface::class);
+        $this->loop = $this->createStub(LoopInterface::class);
     }
 
     /**
@@ -104,7 +104,7 @@ class ServerTest extends TestCase
             $this->loop,
         );
 
-        $newRouter = $this->createMock(PusherRouter::class);
+        $newRouter = $this->createStub(PusherRouter::class);
         $server->setHttpRouter($newRouter);
 
         $this->assertSame($newRouter, $server->getHttpRouter());

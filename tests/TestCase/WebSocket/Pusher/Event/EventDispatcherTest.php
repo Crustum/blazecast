@@ -45,7 +45,7 @@ class EventDispatcherTest extends TestCase
         $channel = $this->channelManager->getChannel('test-channel');
         $connection = $this->createMock(Connection::class);
         $connection->method('getId')->willReturn('test-connection-1');
-        $connection->method('send')->with($this->isType('string'));
+        $connection->method('send')->with($this->isString());
 
         $channel->subscribe($connection);
 
