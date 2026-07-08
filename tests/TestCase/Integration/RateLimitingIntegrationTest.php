@@ -7,8 +7,6 @@ use Cake\Core\Configure;
 use Crustum\BlazeCast\Test\Support\TestServer;
 use Crustum\BlazeCast\Test\Support\WebSocketTestClient;
 use Exception;
-use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use React\EventLoop\Loop;
 use Redis;
@@ -73,9 +71,9 @@ class RateLimitingIntegrationTest extends TestCase
         if ($driver === 'redis') {
             $rateLimiterConfig['redis'] = [
                 'host' => env('REDIS_HOST', '127.0.0.1'),
-                'port' => (int)env('REDIS_PORT', 6379),
+                'port' => (int)env('REDIS_PORT', '6379'),
                 'password' => env('REDIS_PASSWORD', null),
-                'database' => (int)env('REDIS_DB_TEST', 1),
+                'database' => (int)env('REDIS_DB_TEST', '1'),
             ];
             $this->cleanupRedisKeys($rateLimiterConfig['redis']);
         }
@@ -158,8 +156,10 @@ class RateLimitingIntegrationTest extends TestCase
         }
     }
 
-    #[Test]
-    #[DataProvider('rateLimiterDriverProvider')]
+    /**
+     * @test
+     * @dataProvider rateLimiterDriverProvider
+     */
     public function testFrontendEventRateLimitSuccess(string $driver): void
     {
         $this->setupServerWithDriver($driver);
@@ -225,8 +225,10 @@ class RateLimitingIntegrationTest extends TestCase
         $this->assertTrue($subscriptionConfirmed, 'Subscription should be confirmed');
     }
 
-    #[Test]
-    #[DataProvider('rateLimiterDriverProvider')]
+    /**
+     * @test
+     * @dataProvider rateLimiterDriverProvider
+     */
     public function testFrontendEventRateLimitExceeded(string $driver): void
     {
         $this->setupServerWithDriver($driver);
@@ -300,8 +302,10 @@ class RateLimitingIntegrationTest extends TestCase
         $this->assertTrue($subscriptionConfirmed, 'Subscription should be confirmed');
     }
 
-    #[Test]
-    #[DataProvider('rateLimiterDriverProvider')]
+    /**
+     * @test
+     * @dataProvider rateLimiterDriverProvider
+     */
     public function testFrontendEventBroadcastWithRateLimiting(string $driver): void
     {
         $this->setupServerWithDriver($driver);

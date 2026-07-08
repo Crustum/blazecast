@@ -8,7 +8,5 @@ parameters:
     ignoreErrors:
         -
             identifier: missingType.generics
-        -
-            identifier: unset.possiblyHookedProperty
 
 services:

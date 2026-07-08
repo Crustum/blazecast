@@ -9,7 +9,7 @@ use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
 use Cake\Core\Configure;
-use Cake\I18n\DateTime;
+use Cake\I18n\FrozenTime;
 
 /**
  * Restart Server Command
@@ -46,7 +46,7 @@ class RestartServerCommand extends Command
      */
     public function execute(Arguments $args, ConsoleIo $io): ?int
     {
-        $timestamp = (new DateTime())->getTimestamp();
+        $timestamp = (new FrozenTime())->getTimestamp();
 
         $cacheKey = 'blazecast:server:restart';
         $cache = Configure::read('Cache.default') ?: 'default';

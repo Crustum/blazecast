@@ -41,7 +41,6 @@ require ROOT . '/vendor/autoload.php';
 use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Datasource\ConnectionManager;
-use Cake\Error\ErrorTrap;
 use Cake\TestSuite\Fixture\SchemaLoader;
 
 Configure::write('App', ['namespace' => 'TestApp']);
@@ -66,9 +65,16 @@ $cache = [
         'engine' => 'File',
         'path' => CACHE,
     ],
-    '_cake_translations_' => [
+    '_cake_core_' => [
         'className' => 'File',
         'prefix' => 'blaze_test_cake_core_',
+        'path' => CACHE . 'persistent/',
+        'serialize' => true,
+        'duration' => '+10 seconds',
+    ],
+    '_cake_translations_' => [
+        'className' => 'File',
+        'prefix' => 'blaze_test_cake_translations_',
         'path' => CACHE . 'persistent/',
         'serialize' => true,
         'duration' => '+10 seconds',
@@ -121,11 +127,13 @@ putenv('PUSHER_APP_SECRET=test-secret');
 $loader = new SchemaLoader();
 $loader->loadInternalFile(TESTS . 'schema.php');
 
-$error = [
-    'errorLevel' => E_ALL,
-    'skipLog' => [],
-    'log' => true,
-    'trace' => true,
-    'ignoredDeprecationPaths' => [],
-];
-(new ErrorTrap($error))->register();
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
+$errorHandler = function (int $severity, string $message, string $file, int $line): bool {
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
+    throw new ErrorException($message, 0, $severity, $file, $line);
+};
+set_error_handler($errorHandler);

@@ -12,8 +12,6 @@ use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPresenceChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
-use PHPUnit\Framework\MockObject\MockBuilder;
-use PHPUnit\Framework\MockObject\Rule\AnyInvokedCount;
 use ReflectionClass;
 use stdClass;
 
@@ -84,11 +82,11 @@ class PusherControllerTestHelper
         $appsProperty = $reflection->getProperty('applications');
         $appsProperty->setValue($this->applicationManager, ['test-app' => $this->testApp]);
 
-        $this->channelManager = (new MockBuilder($this->testCase, ChannelManager::class))
+        $this->channelManager = $this->testCase->getMockBuilder(ChannelManager::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->connectionManager = (new MockBuilder($this->testCase, ChannelConnectionManager::class))
+        $this->connectionManager = $this->testCase->getMockBuilder(ChannelConnectionManager::class)
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -161,15 +159,15 @@ class PusherControllerTestHelper
      */
     public function createChannelMock(string $name, int $connectionCount = 5)
     {
-        $channel = (new MockBuilder($this->testCase, PusherChannel::class))
+        $channel = $this->testCase->getMockBuilder(PusherChannel::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $channel->expects($this->any())
+        $channel->expects($this->testCase->any())
             ->method('getName')
             ->willReturn($name);
 
-        $channel->expects($this->any())
+        $channel->expects($this->testCase->any())
             ->method('getConnectionCount')
             ->willReturn($connectionCount);
 
@@ -186,19 +184,19 @@ class PusherControllerTestHelper
      */
     public function createPresenceChannelMock(string $name, array $users = [], int $connectionCount = 5)
     {
-        $channel = (new MockBuilder($this->testCase, PusherPresenceChannel::class))
+        $channel = $this->testCase->getMockBuilder(PusherPresenceChannel::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $channel->expects($this->any())
+        $channel->expects($this->testCase->any())
             ->method('getName')
             ->willReturn($name);
 
-        $channel->expects($this->any())
+        $channel->expects($this->testCase->any())
             ->method('getConnectionCount')
             ->willReturn($connectionCount);
 
-        $channel->expects($this->any())
+        $channel->expects($this->testCase->any())
             ->method('getUsers')
             ->willReturn($users);
 
@@ -213,19 +211,21 @@ class PusherControllerTestHelper
      */
     public function setupChannels(array $channels): void
     {
-        $this->channelManager->expects($this->any())
+        $this->channelManager->expects($this->testCase->any())
             ->method('getChannels')
             ->willReturn($channels);
 
-        $map = [];
-        foreach ($channels as $channel) {
-            $map[] = [$channel->getName(), $channel];
-        }
+        if (!empty($channels)) {
+            $channelMap = [];
+            foreach ($channels as $channel) {
+                $channelMap[$channel->getName()] = $channel;
+            }
 
-        if (!empty($map)) {
-            $this->channelManager->expects($this->any())
+            $this->channelManager->expects($this->testCase->any())
                 ->method('getChannel')
-                ->willReturnMap($map);
+                ->willReturnCallback(function ($name) use ($channelMap) {
+                    return $channelMap[$name] ?? null;
+                });
         }
     }
 
@@ -342,10 +342,5 @@ class PusherControllerTestHelper
             ->disableOriginalConstructor()
             ->onlyMethods([$methodName])
             ->getMock();
-    }
-
-    public function any(): AnyInvokedCount
-    {
-        return new AnyInvokedCount;
     }
 }

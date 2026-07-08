@@ -33,8 +33,8 @@ class ConnectionRegistryTest extends TestCase
     {
         parent::setUp();
 
-        $this->connectionManager = $this->createStub(ChannelConnectionManager::class);
-        $this->eventManager = $this->createStub(EventManager::class);
+        $this->connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $this->eventManager = $this->createMock(EventManager::class);
 
         $this->registry = new ConnectionRegistry($this->connectionManager, $this->eventManager);
     }

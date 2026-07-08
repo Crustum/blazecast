@@ -56,11 +56,13 @@ if (($loggingConfig['enabled'] ?? true) === true) {
     $logPath = $loggingConfig['log_path'] ?? LOGS;
     $allScopes = array_keys(array_filter($loggingConfig['scopes'] ?? [], fn($enabled) => $enabled === true));
 
-    Log::setConfig($logFile, [
-        'className' => 'Cake\Log\Engine\FileLog',
-        'path' => $logPath,
-        'file' => $logFile,
-        'levels' => ['debug', 'info', 'warning', 'error'],
-        'scopes' => $allScopes,
-    ]);
+    if (Log::getConfig($logFile) === null) {
+        Log::setConfig($logFile, [
+            'className' => 'Cake\Log\Engine\FileLog',
+            'path' => $logPath,
+            'file' => $logFile,
+            'levels' => ['debug', 'info', 'warning', 'error'],
+            'scopes' => $allScopes,
+        ]);
+    }
 }

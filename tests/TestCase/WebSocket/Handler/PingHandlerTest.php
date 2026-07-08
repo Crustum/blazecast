@@ -7,7 +7,6 @@ use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Handler\PingHandler;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -27,14 +26,13 @@ class PingHandlerTest extends TestCase
     protected function setUp(): void
     {
         $this->handler = new PingHandler();
-        $this->stubServer = $this->createStub(Server::class);
+        $this->stubServer = $this->createMock(Server::class);
         $this->mockConnection = $this->createMock(Connection::class);
 
         $this->handler->setServer($this->stubServer);
     }
 
-    #[Test]
-    public function handlePingUpdatesConnectionActivity(): void
+    public function testHandlePingUpdatesConnectionActivity(): void
     {
         $this->assertTrue($this->handler->supports('ping'));
 
@@ -52,13 +50,12 @@ class PingHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->isString());
+            ->with($this->isType('string'));
 
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handlePingSendsPongResponse(): void
+    public function testHandlePingSendsPongResponse(): void
     {
         $message = new Message('ping');
 
@@ -80,8 +77,7 @@ class PingHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function pongResponseIncludesAccurateTimestamps(): void
+    public function testPongResponseIncludesAccurateTimestamps(): void
     {
         $message = new Message('ping');
         $beforeTime = microtime(true);
@@ -106,8 +102,7 @@ class PingHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handlePingWithData(): void
+    public function testHandlePingWithData(): void
     {
         $pingData = ['client_time' => microtime(true), 'sequence' => 123];
         $message = new Message('ping', $pingData);
@@ -128,8 +123,7 @@ class PingHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handlePingWithChannel(): void
+    public function testHandlePingWithChannel(): void
     {
         $message = new Message('ping', null, 'test-channel');
 
@@ -149,8 +143,7 @@ class PingHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function multiplePingHandlesWorkCorrectly(): void
+    public function testMultiplePingHandlesWorkCorrectly(): void
     {
         $messages = [
             new Message('ping'),
@@ -174,8 +167,7 @@ class PingHandlerTest extends TestCase
         }
     }
 
-    #[Test]
-    public function pongResponseIsValidJson(): void
+    public function testPongResponseIsValidJson(): void
     {
         $message = new Message('ping');
 
@@ -193,8 +185,7 @@ class PingHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handlerMaintainsConnectionAliveness(): void
+    public function testHandlerMaintainsConnectionAliveness(): void
     {
         $message = new Message('ping');
 
@@ -215,8 +206,7 @@ class PingHandlerTest extends TestCase
         $this->assertCount(1, $supportedEvents);
     }
 
-    #[Test]
-    public function handlerWorksWithoutServerSet(): void
+    public function testHandlerWorksWithoutServerSet(): void
     {
         $handler = new PingHandler();
         $message = new Message('ping');
@@ -235,8 +225,7 @@ class PingHandlerTest extends TestCase
         $handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function pongDataStructureIsConsistent(): void
+    public function testPongDataStructureIsConsistent(): void
     {
         $message = new Message('ping');
 

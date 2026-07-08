@@ -10,7 +10,6 @@ use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannelFactory;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannelInterface;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPresenceChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPrivateChannel;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -38,8 +37,7 @@ class PusherChannelFactoryTest extends TestCase
         parent::tearDown();
     }
 
-    #[Test]
-    public function factoryCanCreatePublicChannel(): void
+    public function testFactoryCanCreatePublicChannel(): void
     {
         $channel = $this->factory->create('public-channel');
 
@@ -49,8 +47,7 @@ class PusherChannelFactoryTest extends TestCase
         $this->assertEquals('public', $channel->getType());
     }
 
-    #[Test]
-    public function factoryCanCreatePrivateChannel(): void
+    public function testFactoryCanCreatePrivateChannel(): void
     {
         $channel = $this->factory->create('private-test');
 
@@ -60,8 +57,7 @@ class PusherChannelFactoryTest extends TestCase
         $this->assertEquals('private', $channel->getType());
     }
 
-    #[Test]
-    public function factoryCanCreatePresenceChannel(): void
+    public function testFactoryCanCreatePresenceChannel(): void
     {
         $channel = $this->factory->create('presence-room-1');
 
@@ -71,8 +67,7 @@ class PusherChannelFactoryTest extends TestCase
         $this->assertEquals('presence', $channel->getType());
     }
 
-    #[Test]
-    public function factoryCanCreateCacheChannel(): void
+    public function testFactoryCanCreateCacheChannel(): void
     {
         $channel = $this->factory->create('cache-messages');
 
@@ -82,8 +77,7 @@ class PusherChannelFactoryTest extends TestCase
         $this->assertEquals('cache', $channel->getType());
     }
 
-    #[Test]
-    public function factoryDetectsChannelTypeByPrefix(): void
+    public function testFactoryDetectsChannelTypeByPrefix(): void
     {
         $testCases = [
             'public-test' => PusherChannel::class,
@@ -104,8 +98,7 @@ class PusherChannelFactoryTest extends TestCase
         }
     }
 
-    #[Test]
-    public function factoryCanCreateChannelWithMetadata(): void
+    public function testFactoryCanCreateChannelWithMetadata(): void
     {
         $metadata = ['priority' => 'high', 'category' => 'notifications'];
         $channel = $this->factory->create('test-channel', $metadata);
@@ -114,15 +107,13 @@ class PusherChannelFactoryTest extends TestCase
         $this->assertEquals($metadata, $channel->getMetadata());
     }
 
-    #[Test]
-    public function factoryValidatesChannelName(): void
+    public function testFactoryValidatesChannelName(): void
     {
         $isValid = $this->factory->isValidChannelName('');
         $this->assertFalse($isValid);
     }
 
-    #[Test]
-    public function factoryValidatesChannelNameLength(): void
+    public function testFactoryValidatesChannelNameLength(): void
     {
         $longName = str_repeat('a', 201);
 
@@ -130,8 +121,7 @@ class PusherChannelFactoryTest extends TestCase
         $this->assertFalse($isValid);
     }
 
-    #[Test]
-    public function factoryValidatesChannelNameCharacters(): void
+    public function testFactoryValidatesChannelNameCharacters(): void
     {
         $invalidNames = [
             'channel with spaces',
@@ -145,8 +135,7 @@ class PusherChannelFactoryTest extends TestCase
         }
     }
 
-    #[Test]
-    public function factoryAcceptsValidChannelNameCharacters(): void
+    public function testFactoryAcceptsValidChannelNameCharacters(): void
     {
         $validNames = [
             'valid-channel',
@@ -165,8 +154,7 @@ class PusherChannelFactoryTest extends TestCase
         }
     }
 
-    #[Test]
-    public function factoryCanDetectChannelTypeFromName(): void
+    public function testFactoryCanDetectChannelTypeFromName(): void
     {
         $testCases = [
             'simple-channel' => 'public',
@@ -181,8 +169,7 @@ class PusherChannelFactoryTest extends TestCase
         }
     }
 
-    #[Test]
-    public function factoryCanGetSupportedChannelTypes(): void
+    public function testFactoryCanGetSupportedChannelTypes(): void
     {
         $types = $this->factory->getSupportedTypes();
 
@@ -192,8 +179,7 @@ class PusherChannelFactoryTest extends TestCase
         $this->assertContains('cache', $types);
     }
 
-    #[Test]
-    public function factoryCanCreateFromArrayData(): void
+    public function testFactoryCanCreateFromArrayData(): void
     {
         $channelData = [
             'name' => 'configured-channel',
@@ -207,8 +193,7 @@ class PusherChannelFactoryTest extends TestCase
         $this->assertEquals(['configured' => true], $channel->getMetadata());
     }
 
-    #[Test]
-    public function factoryCanCreateMultipleChannels(): void
+    public function testFactoryCanCreateMultipleChannels(): void
     {
         $channelNames = ['channel-1', 'private-channel-2', 'presence-room-3'];
 
@@ -220,8 +205,7 @@ class PusherChannelFactoryTest extends TestCase
         $this->assertArrayHasKey('presence-room-3', $channels);
     }
 
-    #[Test]
-    public function factoryCanGetBasicStatistics(): void
+    public function testFactoryCanGetBasicStatistics(): void
     {
         $stats = $this->factory->getStats();
 
@@ -229,8 +213,7 @@ class PusherChannelFactoryTest extends TestCase
         $this->assertArrayHasKey('config', $stats);
     }
 
-    #[Test]
-    public function factoryPreventsCircularDependencies(): void
+    public function testFactoryPreventsCircularDependencies(): void
     {
         $channel1 = $this->factory->create('test-circular');
         $channel2 = $this->factory->create('test-circular');

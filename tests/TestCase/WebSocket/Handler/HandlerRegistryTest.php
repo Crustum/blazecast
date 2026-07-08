@@ -10,7 +10,6 @@ use Crustum\BlazeCast\WebSocket\Handler\HandlerRegistry;
 use Crustum\BlazeCast\WebSocket\Handler\PingHandler;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -30,19 +29,17 @@ class HandlerRegistryTest extends TestCase
     protected function setUp(): void
     {
         $this->registry = new HandlerRegistry();
-        $this->stubServer = $this->createStub(Server::class);
+        $this->stubServer = $this->createMock(Server::class);
         $this->mockConnection = $this->createMock(Connection::class);
     }
 
-    #[Test]
-    public function canBeInstantiated(): void
+    public function testCanBeInstantiated(): void
     {
         $registry = new HandlerRegistry();
         $this->assertInstanceOf(HandlerRegistry::class, $registry);
     }
 
-    #[Test]
-    public function setServerStoresServerInstance(): void
+    public function testSetServerStoresServerInstance(): void
     {
         $this->registry->setServer($this->stubServer);
 
@@ -53,8 +50,7 @@ class HandlerRegistryTest extends TestCase
         $this->assertSame($this->stubServer, $storedServer);
     }
 
-    #[Test]
-    public function setServerUpdatesAllRegisteredHandlers(): void
+    public function testSetServerUpdatesAllRegisteredHandlers(): void
     {
         /** @var HandlerInterface&MockObject $handler1 */
         $handler1 = $this->createMock(HandlerInterface::class);
@@ -76,10 +72,8 @@ class HandlerRegistryTest extends TestCase
         $this->registry->setServer($this->stubServer);
     }
 
-    #[Test]
-    public function registerAddsHandlerToRegistry(): void
+    public function testRegisterAddsHandlerToRegistry(): void
     {
-        /** @var HandlerInterface $handler */
         $handler = $this->createStub(HandlerInterface::class);
 
         $this->registry->register($handler);
@@ -89,8 +83,7 @@ class HandlerRegistryTest extends TestCase
         $this->assertSame($handler, $handlers[0]);
     }
 
-    #[Test]
-    public function registerSetsServerOnHandlerIfServerExists(): void
+    public function testRegisterSetsServerOnHandlerIfServerExists(): void
     {
         $this->registry->setServer($this->stubServer);
 
@@ -103,8 +96,7 @@ class HandlerRegistryTest extends TestCase
         $this->registry->register($handler);
     }
 
-    #[Test]
-    public function registerDoesNotSetServerOnHandlerIfNoServerExists(): void
+    public function testRegisterDoesNotSetServerOnHandlerIfNoServerExists(): void
     {
         /** @var HandlerInterface&MockObject $handler */
         $handler = $this->createMock(HandlerInterface::class);
@@ -114,14 +106,10 @@ class HandlerRegistryTest extends TestCase
         $this->registry->register($handler);
     }
 
-    #[Test]
-    public function getHandlersReturnsAllRegisteredHandlers(): void
+    public function testGetHandlersReturnsAllRegisteredHandlers(): void
     {
-        /** @var HandlerInterface $handler1 */
         $handler1 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface $handler2 */
         $handler2 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface $handler3 */
         $handler3 = $this->createStub(HandlerInterface::class);
 
         $this->registry->register($handler1);
@@ -135,15 +123,13 @@ class HandlerRegistryTest extends TestCase
         $this->assertSame($handler3, $handlers[2]);
     }
 
-    #[Test]
-    public function getHandlersReturnsEmptyArrayWhenNoHandlers(): void
+    public function testGetHandlersReturnsEmptyArrayWhenNoHandlers(): void
     {
         $handlers = $this->registry->getHandlers();
         $this->assertEmpty($handlers);
     }
 
-    #[Test]
-    public function handleReturnsTrueWhenHandlerProcessesMessage(): void
+    public function testHandleReturnsTrueWhenHandlerProcessesMessage(): void
     {
         $message = new Message('test_event', ['data' => 'test']);
 
@@ -164,8 +150,7 @@ class HandlerRegistryTest extends TestCase
         $this->assertTrue($result);
     }
 
-    #[Test]
-    public function handleReturnsFalseWhenNoHandlerSupportsMessage(): void
+    public function testHandleReturnsFalseWhenNoHandlerSupportsMessage(): void
     {
         $message = new Message('unsupported_event', ['data' => 'test']);
 
@@ -185,8 +170,7 @@ class HandlerRegistryTest extends TestCase
         $this->assertFalse($result);
     }
 
-    #[Test]
-    public function handleUsesFirstSupportingHandler(): void
+    public function testHandleUsesFirstSupportingHandler(): void
     {
         $message = new Message('test_event', ['data' => 'test']);
 
@@ -214,8 +198,7 @@ class HandlerRegistryTest extends TestCase
         $this->assertTrue($result);
     }
 
-    #[Test]
-    public function handleChecksHandlersInRegistrationOrder(): void
+    public function testHandleChecksHandlersInRegistrationOrder(): void
     {
         $message = new Message('test_event', ['data' => 'test']);
 
@@ -245,8 +228,7 @@ class HandlerRegistryTest extends TestCase
         $this->assertTrue($result);
     }
 
-    #[Test]
-    public function handleWorksWithRealHandlers(): void
+    public function testHandleWorksWithRealHandlers(): void
     {
         $pingHandler = new PingHandler();
         $defaultHandler = new DefaultHandler();
@@ -269,8 +251,7 @@ class HandlerRegistryTest extends TestCase
         $this->assertTrue($result);
     }
 
-    #[Test]
-    public function handleWorksWithMultipleRealHandlers(): void
+    public function testHandleWorksWithMultipleRealHandlers(): void
     {
         $pingHandler = new PingHandler();
         $defaultHandler = new DefaultHandler();
@@ -291,12 +272,10 @@ class HandlerRegistryTest extends TestCase
         $this->assertTrue($result);
     }
 
-    #[Test]
-    public function multipleHandlersCanBeRegistered(): void
+    public function testMultipleHandlersCanBeRegistered(): void
     {
         $handlers = [];
         for ($i = 0; $i < 5; $i++) {
-            /** @var HandlerInterface $handler */
             $handler = $this->createStub(HandlerInterface::class);
             $handlers[] = $handler;
             $this->registry->register($handler);
@@ -310,8 +289,7 @@ class HandlerRegistryTest extends TestCase
         }
     }
 
-    #[Test]
-    public function handleWorksWithEmptyRegistry(): void
+    public function testHandleWorksWithEmptyRegistry(): void
     {
         $message = new Message('test_event', ['data' => 'test']);
 
@@ -319,14 +297,10 @@ class HandlerRegistryTest extends TestCase
         $this->assertFalse($result);
     }
 
-    #[Test]
-    public function registryMaintainsHandlerOrder(): void
+    public function testRegistryMaintainsHandlerOrder(): void
     {
-        /** @var HandlerInterface $handler1 */
         $handler1 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface $handler2 */
         $handler2 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface $handler3 */
         $handler3 = $this->createStub(HandlerInterface::class);
 
         // Register in specific order
@@ -342,8 +316,7 @@ class HandlerRegistryTest extends TestCase
         $this->assertSame($handler3, $handlers[2]);
     }
 
-    #[Test]
-    public function handlePassesCorrectParametersToHandler(): void
+    public function testHandlePassesCorrectParametersToHandler(): void
     {
         $eventType = 'custom_event';
         $data = ['user_id' => 123, 'content' => 'test message'];
@@ -373,8 +346,7 @@ class HandlerRegistryTest extends TestCase
         $this->registry->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function registryWorksWithMixedHandlerTypes(): void
+    public function testRegistryWorksWithMixedHandlerTypes(): void
     {
         /** @var HandlerInterface&MockObject $mockHandler */
         $mockHandler = $this->createStub(HandlerInterface::class);

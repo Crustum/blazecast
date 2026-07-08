@@ -58,11 +58,11 @@ class ChannelOperationsManagerTest extends TestCase
     {
         parent::setUp();
 
-        $this->applicationManager = $this->createStub(ApplicationManager::class);
-        $this->connectionRegistry = $this->createStub(ConnectionRegistry::class);
-        $this->connectionManager = $this->createStub(ChannelConnectionManager::class);
-        $this->eventManager = $this->createStub(EventManager::class);
-        $this->contextResolver = $this->createStub(ApplicationContextResolver::class);
+        $this->applicationManager = $this->createMock(ApplicationManager::class);
+        $this->connectionRegistry = $this->createMock(ConnectionRegistry::class);
+        $this->connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $this->eventManager = $this->createMock(EventManager::class);
+        $this->contextResolver = $this->createMock(ApplicationContextResolver::class);
 
         $this->channelManager = new ChannelOperationsManager(
             $this->applicationManager,
@@ -144,7 +144,7 @@ class ChannelOperationsManagerTest extends TestCase
      */
     public function testBroadcastToChannelForApp(): void
     {
-        $channelManager = $this->createStub(PusherChannelManager::class);
+        $channelManager = $this->createMock(PusherChannelManager::class);
         $channel = $this->createMock(PusherChannel::class);
 
         $application = [
@@ -181,7 +181,7 @@ class ChannelOperationsManagerTest extends TestCase
         $connection2 = $this->createStub(Connection::class);
         $connection2->method('getId')->willReturn('conn-2');
 
-        $channelManager = $this->createStub(PusherChannelManager::class);
+        $channelManager = $this->createMock(PusherChannelManager::class);
         $channel = $this->createStub(PusherChannel::class);
 
         $application = [
@@ -266,7 +266,7 @@ class ChannelOperationsManagerTest extends TestCase
      */
     public function testBroadcastToChannelsForApp(): void
     {
-        $channelManager = $this->createStub(PusherChannelManager::class);
+        $channelManager = $this->createMock(PusherChannelManager::class);
         $channel1 = $this->createMock(PusherChannel::class);
         $channel2 = $this->createMock(PusherChannel::class);
 
@@ -282,10 +282,13 @@ class ChannelOperationsManagerTest extends TestCase
 
         $channelManager
             ->method('getChannel')
-            ->willReturnMap([
-                ['channel-1', $channel1],
-                ['channel-2', $channel2],
-            ]);
+            ->willReturnCallback(function ($name) use ($channel1, $channel2) {
+                return match ($name) {
+                    'channel-1' => $channel1,
+                    'channel-2' => $channel2,
+                    default => null,
+                };
+            });
 
         $channel1->method('getConnectionCount')->willReturn(3);
         $channel2->method('getConnectionCount')->willReturn(2);

@@ -8,7 +8,6 @@ use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPrivateChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Exception\ConnectionUnauthorizedException;
 use InvalidArgumentException;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -44,24 +43,21 @@ class PusherPrivateChannelTest extends TestCase
         $this->connection = $this->createMock(Connection::class);
         $this->connection->method('getId')->willReturn('connection-123');
 
-        $this->applicationManager = $this->createStub(ApplicationManager::class);
+        $this->applicationManager = $this->createMock(ApplicationManager::class);
         $this->channel->setApplicationManager($this->applicationManager);
     }
 
-    #[Test]
-    public function privateChannelReturnsCorrectType(): void
+    public function testPrivateChannelReturnsCorrectType(): void
     {
         $this->assertEquals('private', $this->channel->getType());
     }
 
-    #[Test]
-    public function privateChannelAllowsClientEvents(): void
+    public function testPrivateChannelAllowsClientEvents(): void
     {
         $this->assertTrue($this->channel->allowsClientEvents());
     }
 
-    #[Test]
-    public function privateChannelRequiresAuthentication(): void
+    public function testPrivateChannelRequiresAuthentication(): void
     {
         $this->expectException(ConnectionUnauthorizedException::class);
         $this->expectExceptionMessage('Invalid authentication format');
@@ -69,8 +65,7 @@ class PusherPrivateChannelTest extends TestCase
         $this->channel->subscribe($this->connection);
     }
 
-    #[Test]
-    public function privateChannelRejectsInvalidAuthFormat(): void
+    public function testPrivateChannelRejectsInvalidAuthFormat(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid authentication format');
@@ -78,8 +73,7 @@ class PusherPrivateChannelTest extends TestCase
         $this->channel->subscribe($this->connection, 'invalid-auth-format');
     }
 
-    #[Test]
-    public function privateChannelRejectsInvalidApplicationKey(): void
+    public function testPrivateChannelRejectsInvalidApplicationKey(): void
     {
         $this->applicationManager->method('getApplicationByKey')
             ->with('app-key')
@@ -91,8 +85,7 @@ class PusherPrivateChannelTest extends TestCase
         $this->channel->subscribe($this->connection, 'app-key:signature');
     }
 
-    #[Test]
-    public function privateChannelRejectsInvalidSignature(): void
+    public function testPrivateChannelRejectsInvalidSignature(): void
     {
         $this->applicationManager->method('getApplicationByKey')
             ->with('app-key')
@@ -108,8 +101,7 @@ class PusherPrivateChannelTest extends TestCase
         $this->channel->subscribe($this->connection, 'app-key:invalid-signature');
     }
 
-    #[Test]
-    public function privateChannelAcceptsValidAuthentication(): void
+    public function testPrivateChannelAcceptsValidAuthentication(): void
     {
         $connectionId = 'connection-123';
         $channelName = 'private-test-channel';
@@ -130,8 +122,7 @@ class PusherPrivateChannelTest extends TestCase
         $this->assertTrue($this->channel->hasConnection($this->connection));
     }
 
-    #[Test]
-    public function privateChannelHandlesChannelData(): void
+    public function testPrivateChannelHandlesChannelData(): void
     {
         $connectionId = 'connection-123';
         $channelName = 'private-test-channel';
@@ -161,8 +152,7 @@ class PusherPrivateChannelTest extends TestCase
         $this->assertTrue($this->channel->hasConnection($this->connection));
     }
 
-    #[Test]
-    public function privateChannelCanGetAndSetApplicationManager(): void
+    public function testPrivateChannelCanGetAndSetApplicationManager(): void
     {
         $newManager = $this->createMock(ApplicationManager::class);
         $this->channel->setApplicationManager($newManager);
@@ -170,8 +160,7 @@ class PusherPrivateChannelTest extends TestCase
         $this->assertSame($newManager, $this->channel->getApplicationManager());
     }
 
-    #[Test]
-    public function privateChannelCanBeCreatedWithDifferentNames(): void
+    public function testPrivateChannelCanBeCreatedWithDifferentNames(): void
     {
         $validNames = [
             'private-test',
@@ -188,8 +177,7 @@ class PusherPrivateChannelTest extends TestCase
         }
     }
 
-    #[Test]
-    public function privateChannelCanUnsubscribeConnection(): void
+    public function testPrivateChannelCanUnsubscribeConnection(): void
     {
         $connectionId = 'connection-123';
         $channelName = 'private-test-channel';

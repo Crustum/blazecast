@@ -56,6 +56,12 @@ class BlazeCastPlugin extends BasePlugin implements ManifestInterface
         $container->addShared(EventManager::class, function () {
             return EventManager::instance();
         });
+
+        $container
+            ->add(ServerStartCommand::class)
+            ->addArgument(ApplicationManager::class)
+            ->addArgument(ChannelConnectionManager::class)
+            ->addArgument(ContainerInterface::class);
     }
 
     /**

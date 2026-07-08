@@ -5,8 +5,9 @@
     "license": "MIT",
     "require": {
         "php": ">=8.2",
-        "cakephp/cakephp": "^5.2",
-        "crustum/plugin-manifest": "^1.0",
+        "cakephp/cakephp": "^4.5",
+        "crustum/plugin-manifest": "^0.0.1",
+        "crustum/rhythm": "^0.0.1",
         "clue/redis-react": "^2.6",
         "firebase/php-jwt": "^6.11",
         "guzzlehttp/psr7": "^2.6",
@@ -15,18 +16,17 @@
         "react/async": "^4.3",
         "react/promise-timer": "^1.10",
         "react/socket": "^1.14",
-        "skie/signal_handler": "^1.0",
-        "symfony/routing": "^7.3",
+        "skie/signal_handler": "^0.0.1",
+        "symfony/routing": "^6.4",
         "symfony/http-foundation": "^6.0",
-        "symfony/config": "^7.0",
-        "crustum/rhythm": "^1.0"
+        "symfony/config": "^6.4"
     },
     "require-dev": {
-        "phpunit/phpunit": "^11.1",
+        "phpunit/phpunit": "^9.6",
         "ratchet/pawl": "^0.4",
         "react/http": "^1.7",
         "cakephp/cakephp-codesniffer": "^5.0",
-        "cakephp/bake": "^3.0"
+        "cakephp/bake": "^2.10"
     },
     "autoload": {
         "psr-4": {
@@ -56,7 +56,9 @@
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true
         },
-        "platform-check": false
-    },
-    "repositories": []
+        "platform-check": false,
+        "platform": {
+            "php": "8.3.0"
+        }
+    }
 }

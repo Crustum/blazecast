@@ -5,7 +5,6 @@ namespace Crustum\BlazeCast\Test\TestCase\Integration;
 
 use Crustum\BlazeCast\WebSocket\Application;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Ratchet\Client\Connector;
 use React\EventLoop\Loop;
@@ -34,8 +33,7 @@ class RealWebSocketConnectionTest extends TestCase
         );
     }
 
-    #[Test]
-    public function canCreateRealWebsocketClientConnector(): void
+    public function testCanCreateRealWebsocketClientConnector(): void
     {
         $loop = Loop::get();
         $connector = new Connector($loop);
@@ -47,8 +45,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertStringContainsString('real_test_key', $wsUrl);
     }
 
-    #[Test]
-    public function websocketMessageProtocolIsReadyForRealTransport(): void
+    public function testWebsocketMessageProtocolIsReadyForRealTransport(): void
     {
         $subscribeMessage = Message::subscribe('public-real-test');
         $authMessage = Message::auth('test-real-token');
@@ -76,8 +73,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertEquals('public-real-test', $decodedBroadcast['channel']);
     }
 
-    #[Test]
-    public function realWebsocketServerCommandCanBeConstructed(): void
+    public function testRealWebsocketServerCommandCanBeConstructed(): void
     {
         $serverCommand = $this->buildServerStartCommand();
         $clientUrl = $this->buildWebSocketClientUrl();
@@ -92,8 +88,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertStringContainsString($this->application->getKey(), $clientUrl);
     }
 
-    #[Test]
-    public function websocketProtocolHandshakeHeadersAreValid(): void
+    public function testWebsocketProtocolHandshakeHeadersAreValid(): void
     {
         $expectedHeaders = [
             'Upgrade: websocket',
@@ -114,8 +109,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertEquals(24, strlen($wsKey));
     }
 
-    #[Test]
-    public function websocketFrameConstraintsAreUnderstood(): void
+    public function testWebsocketFrameConstraintsAreUnderstood(): void
     {
         $testMessage = 'Hello WebSocket!';
 
@@ -128,8 +122,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertLessThan(65536, strlen($normalMessage), 'Normal messages should fit in standard frames');
     }
 
-    #[Test]
-    public function channelSubscriptionProtocolMessagesAreValid(): void
+    public function testChannelSubscriptionProtocolMessagesAreValid(): void
     {
         $authMessage = Message::auth('real-test-token');
         $authJson = $authMessage->toJson();
@@ -151,8 +144,7 @@ class RealWebSocketConnectionTest extends TestCase
         $this->assertJson($broadcastJson);
     }
 
-    #[Test]
-    public function authenticationBugFixWorksWithRealProtocolMessages(): void
+    public function testAuthenticationBugFixWorksWithRealProtocolMessages(): void
     {
         $publicSubscribe = Message::subscribe('public-bug-test');
         $publicJson = $publicSubscribe->toJson();

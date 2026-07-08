@@ -8,7 +8,7 @@ use Cake\Core\Configure;
 use Cake\Core\ContainerInterface;
 use Cake\Event\Event;
 use Cake\Event\EventManager;
-use Cake\I18n\DateTime;
+use Cake\I18n\FrozenTime;
 use Crustum\BlazeCast\WebSocket\ApplicationContextResolver;
 use Crustum\BlazeCast\WebSocket\ChannelOperationsManager;
 use Crustum\BlazeCast\WebSocket\Connection;
@@ -447,7 +447,7 @@ class Server implements WebSocketServerInterface
         $this->initializePubSub();
         $this->jobManager->startAll();
         $this->ensureRhythmEventsAreCollected();
-        $this->setupPrometheusMetricsListeners();
+        // $this->setupPrometheusMetricsListeners();
 
         $this->bindGracefulTermination(function (): void {
             $this->isRunning = false;
@@ -533,7 +533,7 @@ class Server implements WebSocketServerInterface
         $interval = 1;
         $this->loop->addPeriodicTimer($interval, function (): void {
             try {
-                $this->eventManager->dispatch(new SharedBeat(DateTime::now(), gethostname()));
+                $this->eventManager->dispatch(new SharedBeat(FrozenTime::now(), gethostname()));
                 $this->ingestRhythmMetrics();
             } catch (Exception $e) {
                 debug($e);

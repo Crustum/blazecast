@@ -5,7 +5,6 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Filter;
 
 use Crustum\BlazeCast\WebSocket\Filter\DefaultMessageFilter;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -20,8 +19,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->filter = new DefaultMessageFilter();
     }
 
-    #[Test]
-    public function filterSupportsEventCriteria(): void
+    public function testFilterSupportsEventCriteria(): void
     {
         $message = new Message('test_event', ['data' => 'test'], 'test-channel');
 
@@ -31,8 +29,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->assertTrue($this->filter->filter($message, ['event' => '*']));
     }
 
-    #[Test]
-    public function filterSupportsChannelCriteria(): void
+    public function testFilterSupportsChannelCriteria(): void
     {
         $message = new Message('test_event', ['data' => 'test'], 'public-general');
 
@@ -42,8 +39,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->assertTrue($this->filter->filter($message, ['channel' => '*']));
     }
 
-    #[Test]
-    public function filterSupportsDataContainsCriteria(): void
+    public function testFilterSupportsDataContainsCriteria(): void
     {
         $message = new Message('test_event', ['user_id' => 123, 'content' => 'hello'], 'test-channel');
 
@@ -52,8 +48,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->assertFalse($this->filter->filter($message, ['data_contains' => 'world']));
     }
 
-    #[Test]
-    public function filterSupportsUserIdCriteria(): void
+    public function testFilterSupportsUserIdCriteria(): void
     {
         $message = new Message('test_event', ['user_id' => 123], 'test-channel');
 
@@ -61,8 +56,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->assertFalse($this->filter->filter($message, ['user_id' => 456]));
     }
 
-    #[Test]
-    public function transformAddsTimestamp(): void
+    public function testTransformAddsTimestamp(): void
     {
         $message = new Message('test_event', ['content' => 'test'], 'test-channel');
         $transformed = $this->filter->transform($message, ['add_timestamp' => true]);
@@ -74,8 +68,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->assertIsString($data['timestamp_iso']);
     }
 
-    #[Test]
-    public function transformAddsUserInfo(): void
+    public function testTransformAddsUserInfo(): void
     {
         $message = new Message('test_event', ['content' => 'test'], 'test-channel');
         $userInfo = ['id' => 123, 'name' => 'John'];
@@ -86,8 +79,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->assertEquals($userInfo, $data['user_info']);
     }
 
-    #[Test]
-    public function transformChangesEvent(): void
+    public function testTransformChangesEvent(): void
     {
         $message = new Message('test_event', ['content' => 'test'], 'test-channel');
         $transformed = $this->filter->transform($message, ['change_event' => 'new_event']);
@@ -97,8 +89,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->assertEquals($message->getChannel(), $transformed->getChannel());
     }
 
-    #[Test]
-    public function transformAddsMetadata(): void
+    public function testTransformAddsMetadata(): void
     {
         $message = new Message('test_event', ['content' => 'test'], 'test-channel');
         $metadata = ['source' => 'api', 'version' => '1.0'];
@@ -109,8 +100,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->assertEquals($metadata, $data['metadata']);
     }
 
-    #[Test]
-    public function getSupportedCriteriaReturnsExpectedTypes(): void
+    public function testGetSupportedCriteriaReturnsExpectedTypes(): void
     {
         $criteria = $this->filter->getSupportedCriteria();
 
@@ -121,8 +111,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->assertContains('connection_id', $criteria);
     }
 
-    #[Test]
-    public function getSupportedRulesReturnsExpectedTypes(): void
+    public function testGetSupportedRulesReturnsExpectedTypes(): void
     {
         $rules = $this->filter->getSupportedRules();
 
@@ -133,8 +122,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->assertContains('add_metadata', $rules);
     }
 
-    #[Test]
-    public function multipleCriteriaAllMustPass(): void
+    public function testMultipleCriteriaAllMustPass(): void
     {
         $message = new Message('test_event', ['user_id' => 123], 'public-general');
 
@@ -150,8 +138,7 @@ class DefaultMessageFilterTest extends TestCase
         $this->assertFalse($this->filter->filter($message, $criteria));
     }
 
-    #[Test]
-    public function multipleTransformationsAreApplied(): void
+    public function testMultipleTransformationsAreApplied(): void
     {
         $message = new Message('test_event', ['content' => 'test'], 'test-channel');
 

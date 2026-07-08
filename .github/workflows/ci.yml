@@ -26,9 +26,6 @@ jobs:
           - php-version: '8.3'
             db-type: 'mysql'
             dependencies: highest
-          - php-version: '8.4'
-            db-type: 'mysql'
-            dependencies: highest
 
     services:
       mysql:
@@ -105,7 +102,7 @@ jobs:
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.4'
+        php-version: '8.2'
         extensions: mbstring, intl
         coverage: none
         tools: phive

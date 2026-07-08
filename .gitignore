@@ -5,6 +5,8 @@
 
 # IDE files
 .idea/
+.claude/
+.cursor/
 .vscode/
 *.sublime-project
 *.sublime-workspace

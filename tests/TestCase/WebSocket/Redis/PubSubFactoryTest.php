@@ -6,7 +6,6 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Redis;
 use Cake\Core\Configure;
 use Crustum\BlazeCast\WebSocket\Redis\PubSub;
 use Crustum\BlazeCast\WebSocket\Redis\PubSubFactory;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -33,8 +32,7 @@ class PubSubFactoryTest extends TestCase
         Configure::delete('BlazeCast.redis');
     }
 
-    #[Test]
-    public function getInstanceReturnsSameInstanceOnMultipleCalls(): void
+    public function testGetInstanceReturnsSameInstanceOnMultipleCalls(): void
     {
         $instance1 = PubSubFactory::getInstance();
         $instance2 = PubSubFactory::getInstance();
@@ -43,16 +41,14 @@ class PubSubFactoryTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $instance1);
     }
 
-    #[Test]
-    public function getInstanceCreatesInstanceWithDefaultConfiguration(): void
+    public function testGetInstanceCreatesInstanceWithDefaultConfiguration(): void
     {
         $instance = PubSubFactory::getInstance();
 
         $this->assertInstanceOf(PubSub::class, $instance);
     }
 
-    #[Test]
-    public function getInstanceUsesConfiguredRedisSettings(): void
+    public function testGetInstanceUsesConfiguredRedisSettings(): void
     {
         $redisConfig = [
             'host' => '192.168.1.100',
@@ -68,8 +64,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $instance);
     }
 
-    #[Test]
-    public function setInstanceStoresProvidedInstance(): void
+    public function testSetInstanceStoresProvidedInstance(): void
     {
         /** @var PubSub&\PHPUnit\Framework\MockObject\Stub $mockPubSub */
         $mockPubSub = $this->createStub(PubSub::class);
@@ -81,8 +76,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertSame($mockPubSub, $retrievedInstance);
     }
 
-    #[Test]
-    public function setInstanceOverridesPreviousInstance(): void
+    public function testSetInstanceOverridesPreviousInstance(): void
     {
         $firstInstance = PubSubFactory::getInstance();
 
@@ -97,8 +91,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertSame($mockPubSub, $secondInstance);
     }
 
-    #[Test]
-    public function createInstanceUsesDefaultConfigurationWhenNoneProvided(): void
+    public function testCreateInstanceUsesDefaultConfigurationWhenNoneProvided(): void
     {
         Configure::delete('BlazeCast.redis');
 
@@ -107,8 +100,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $instance);
     }
 
-    #[Test]
-    public function createInstanceHandlesEmptyConfiguration(): void
+    public function testCreateInstanceHandlesEmptyConfiguration(): void
     {
         Configure::write('BlazeCast.redis', []);
 
@@ -117,8 +109,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $instance);
     }
 
-    #[Test]
-    public function createInstanceHandlesNullConfiguration(): void
+    public function testCreateInstanceHandlesNullConfiguration(): void
     {
         Configure::write('BlazeCast.redis', null);
 
@@ -127,8 +118,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $instance);
     }
 
-    #[Test]
-    public function factoryCreatesInstanceWithProperDependencies(): void
+    public function testFactoryCreatesInstanceWithProperDependencies(): void
     {
         $instance = PubSubFactory::getInstance();
 
@@ -139,8 +129,7 @@ class PubSubFactoryTest extends TestCase
         $this->assertTrue($reflection->hasProperty('client'));
     }
 
-    #[Test]
-    public function multipleCallsToGetInstanceReturnSameObject(): void
+    public function testMultipleCallsToGetInstanceReturnSameObject(): void
     {
         $instances = [];
 
@@ -154,8 +143,7 @@ class PubSubFactoryTest extends TestCase
         }
     }
 
-    #[Test]
-    public function factoryHandlesComplexRedisConfiguration(): void
+    public function testFactoryHandlesComplexRedisConfiguration(): void
     {
         $complexConfig = [
             'uri' => 'redis://user:password@redis.example.com:6379/0',

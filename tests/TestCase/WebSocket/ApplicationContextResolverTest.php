@@ -15,17 +15,17 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 class ApplicationContextResolverTest extends TestCase
 {
     /**
-     * @var ApplicationContextResolver&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\ApplicationContextResolver
      */
     protected ApplicationContextResolver $resolver;
 
     /**
-     * @var ApplicationManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\Stub
      */
     protected ApplicationManager $applicationManager;
 
     /**
-     * @var ChannelManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\PHPUnit\Framework\MockObject\Stub
      */
     protected ChannelManager $defaultChannelManager;
 
@@ -79,7 +79,7 @@ class ApplicationContextResolverTest extends TestCase
      */
     public function testGetAppIdForConnectionWithAttribute(): void
     {
-        $connection = $this->createStub(Connection::class);
+        $connection = $this->createMock(Connection::class);
         $connection->method('getId')->willReturn('conn-123');
         $connection->method('getAttribute')->with('app_id')->willReturn('app-789');
 
@@ -115,7 +115,6 @@ class ApplicationContextResolverTest extends TestCase
         $application = ['id' => 'app-from-key'];
         $this->applicationManager
             ->method('getApplicationByKey')
-            ->with('test-key')
             ->willReturn($application);
 
         $activeConnections = [];
@@ -178,7 +177,6 @@ class ApplicationContextResolverTest extends TestCase
 
         $this->applicationManager
             ->method('getApplication')
-            ->with('app-123')
             ->willReturn($application);
 
         $result = $this->resolver->getChannelManagerForConnection($connection, $activeConnections);
@@ -219,7 +217,6 @@ class ApplicationContextResolverTest extends TestCase
 
         $this->applicationManager
             ->method('getApplication')
-            ->with('app-123')
             ->willReturn($application);
 
         $result = $this->resolver->getApplication('app-123');
@@ -238,7 +235,6 @@ class ApplicationContextResolverTest extends TestCase
 
         $this->applicationManager
             ->method('getApplicationByKey')
-            ->with('test-key')
             ->willReturn($application);
 
         $result = $this->resolver->getApplicationByKey('test-key');

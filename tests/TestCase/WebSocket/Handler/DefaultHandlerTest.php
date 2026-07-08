@@ -7,7 +7,6 @@ use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Handler\DefaultHandler;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -30,15 +29,13 @@ class DefaultHandlerTest extends TestCase
         $this->handler->setServer($this->stubServer);
     }
 
-    #[Test]
-    public function canBeInstantiated(): void
+    public function testCanBeInstantiated(): void
     {
         $handler = new DefaultHandler();
         $this->assertInstanceOf(DefaultHandler::class, $handler);
     }
 
-    #[Test]
-    public function setServerStoresServerInstance(): void
+    public function testSetServerStoresServerInstance(): void
     {
         $handler = new DefaultHandler();
         $handler->setServer($this->stubServer);
@@ -50,8 +47,7 @@ class DefaultHandlerTest extends TestCase
         $this->assertSame($this->stubServer, $storedServer);
     }
 
-    #[Test]
-    public function supportsAllEventTypes(): void
+    public function testSupportsAllEventTypes(): void
     {
         $this->assertTrue($this->handler->supports('any_event'));
         $this->assertTrue($this->handler->supports('custom_event'));
@@ -60,8 +56,7 @@ class DefaultHandlerTest extends TestCase
         $this->assertTrue($this->handler->supports('test.event'));
     }
 
-    #[Test]
-    public function handleEchoesMessageBackToClient(): void
+    public function testHandleEchoesMessageBackToClient(): void
     {
         $eventType = 'test_event';
         $data = ['key' => 'value', 'number' => 123];
@@ -81,8 +76,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handleIncludesTimestampInResponse(): void
+    public function testHandleIncludesTimestampInResponse(): void
     {
         $message = new Message('test_event', ['test' => 'data']);
         $beforeTime = time();
@@ -99,8 +93,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handleWorksWithEmptyData(): void
+    public function testHandleWorksWithEmptyData(): void
     {
         $message = new Message('empty_event');
 
@@ -118,8 +111,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handleWorksWithComplexData(): void
+    public function testHandleWorksWithComplexData(): void
     {
         $complexData = [
             'user' => ['id' => 123, 'name' => 'John'],
@@ -142,8 +134,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handleWorksWithChannelMessages(): void
+    public function testHandleWorksWithChannelMessages(): void
     {
         $message = new Message('channel_event', ['content' => 'hello'], 'test-channel');
 
@@ -161,8 +152,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handleWorksWithStringData(): void
+    public function testHandleWorksWithStringData(): void
     {
         $message = new Message('string_event', 'simple string data');
 
@@ -180,8 +170,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handleWorksWithNumericData(): void
+    public function testHandleWorksWithNumericData(): void
     {
         $message = new Message('numeric_event', 42);
 
@@ -199,8 +188,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handleWorksWithBooleanData(): void
+    public function testHandleWorksWithBooleanData(): void
     {
         $message = new Message('boolean_event', true);
 
@@ -218,8 +206,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function responseIsValidJson(): void
+    public function testResponseIsValidJson(): void
     {
         $message = new Message('json_test', ['test' => 'data']);
 
@@ -234,8 +221,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    #[Test]
-    public function handlerActsAsFallbackForAllEvents(): void
+    public function testHandlerActsAsFallbackForAllEvents(): void
     {
         $eventTypes = [
             'unknown_event',
@@ -254,8 +240,7 @@ class DefaultHandlerTest extends TestCase
         }
     }
 
-    #[Test]
-    public function multipleHandleCallsWorkCorrectly(): void
+    public function testMultipleHandleCallsWorkCorrectly(): void
     {
         $messages = [
             new Message('event1', ['data' => 1]),

@@ -15,7 +15,6 @@ use Crustum\BlazeCast\WebSocket\RateLimiter\RedisRateLimiter;
 use Exception;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
-use PHPUnit\Framework\Attributes\Test;
 use Redis;
 
 /**
@@ -43,8 +42,8 @@ class HttpRateLimitingRedisTest extends TestCase
 
         $redisConfig = Configure::read('BlazeCast.redis_test') ?? [
             'host' => env('REDIS_HOST', '127.0.0.1'),
-            'port' => (int)env('REDIS_PORT', 6379),
-            'database' => (int)env('REDIS_DB_TEST', 1),
+            'port' => (int)env('REDIS_PORT', '6379'),
+            'database' => (int)env('REDIS_DB_TEST', '1'),
             'password' => env('REDIS_PASSWORD'),
         ];
 
@@ -121,7 +120,6 @@ class HttpRateLimitingRedisTest extends TestCase
         }
     }
 
-    #[Test]
     public function testBackendEventRateLimitSuccess(): void
     {
         $controller = $this->helper->createController(EventsController::class, [null, $this->rateLimiter]);
@@ -145,7 +143,6 @@ class HttpRateLimitingRedisTest extends TestCase
         $this->assertStringNotContainsString('Rate limit exceeded', $response->getContent());
     }
 
-    #[Test]
     public function testBackendEventRateLimitExceeded(): void
     {
         $request = new ServerRequest('POST', new Uri('/apps/' . $this->appId . '/events'));
@@ -190,7 +187,6 @@ class HttpRateLimitingRedisTest extends TestCase
         $this->assertArrayHasKey('X-RateLimit-Remaining', $headers);
     }
 
-    #[Test]
     public function testBackendEventBatchRateLimitExceeded(): void
     {
         $controller = $this->helper->createController(EventsController::class, [null, $this->rateLimiter]);
@@ -216,7 +212,6 @@ class HttpRateLimitingRedisTest extends TestCase
         $this->assertStringContainsString('Rate limit exceeded', $response->getContent());
     }
 
-    #[Test]
     public function testReadRequestRateLimitSuccess(): void
     {
         $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
@@ -257,7 +252,6 @@ class HttpRateLimitingRedisTest extends TestCase
         $this->assertEquals(200, $response->getStatusCode());
     }
 
-    #[Test]
     public function testReadRequestRateLimitExceeded(): void
     {
         $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
@@ -329,7 +323,6 @@ class HttpRateLimitingRedisTest extends TestCase
         $this->assertArrayHasKey('X-RateLimit-Remaining', $headers);
     }
 
-    #[Test]
     public function testConnectionsReadRequestRateLimitExceeded(): void
     {
         $request = new ServerRequest('GET', new Uri('/apps/' . $this->appId . '/connections'));

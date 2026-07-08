@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Crustum\BlazeCast\Service;
 
 use Cake\Event\EventManager;
-use Cake\I18n\DateTime;
+use Cake\I18n\FrozenTime;
 use Crustum\BlazeCast\WebSocket\Event\MessageReceivedEvent;
 use Crustum\BlazeCast\WebSocket\Event\MessageSentEvent;
 use Crustum\Rhythm\Event\SharedBeat;
@@ -42,7 +42,7 @@ class EventDispatcherService
      */
     public function dispatchSharedBeat(): void
     {
-        $event = new SharedBeat(new DateTime(), 'blazecast');
+        $event = new SharedBeat(new FrozenTime(), 'blazecast');
         $this->eventManager->dispatch($event);
     }
 

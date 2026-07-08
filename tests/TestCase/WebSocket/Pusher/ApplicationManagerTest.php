@@ -5,7 +5,6 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher;
 
 use Cake\Core\Configure;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -81,15 +80,13 @@ class ApplicationManagerTest extends TestCase
         parent::tearDown();
     }
 
-    #[Test]
-    public function managerCanBeCreated(): void
+    public function testManagerCanBeCreated(): void
     {
         $manager = new ApplicationManager();
         $this->assertInstanceOf(ApplicationManager::class, $manager);
     }
 
-    #[Test]
-    public function managerCanGetAllApplications(): void
+    public function testManagerCanGetAllApplications(): void
     {
         $apps = $this->manager->getApplications();
 
@@ -99,8 +96,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertArrayHasKey('app3', $apps);
     }
 
-    #[Test]
-    public function managerCanGetApplicationById(): void
+    public function testManagerCanGetApplicationById(): void
     {
         $app1 = $this->manager->getApplication('app1');
         $app2 = $this->manager->getApplication('app2');
@@ -118,8 +114,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertNull($nonExistent);
     }
 
-    #[Test]
-    public function managerCanGetApplicationByKey(): void
+    public function testManagerCanGetApplicationByKey(): void
     {
         $app1 = $this->manager->getApplicationByKey('test_key_1');
         $app2 = $this->manager->getApplicationByKey('test_key_2');
@@ -136,8 +131,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertNull($nonExistent);
     }
 
-    #[Test]
-    public function managerCanCheckIfApplicationExists(): void
+    public function testManagerCanCheckIfApplicationExists(): void
     {
         $this->assertTrue($this->manager->hasApplication('app1'));
         $this->assertTrue($this->manager->hasApplication('app2'));
@@ -145,8 +139,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertFalse($this->manager->hasApplication('non-existent'));
     }
 
-    #[Test]
-    public function managerCanValidateCredentials(): void
+    public function testManagerCanValidateCredentials(): void
     {
         $this->assertTrue($this->manager->validateCredentials('app1', 'test_key_1', 'test_secret_1'));
         $this->assertTrue($this->manager->validateCredentials('app2', 'test_key_2', 'test_secret_2'));
@@ -156,8 +149,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertFalse($this->manager->validateCredentials('non-existent', 'test_key_1', 'test_secret_1'));
     }
 
-    #[Test]
-    public function managerCanValidateSignature(): void
+    public function testManagerCanValidateSignature(): void
     {
         $body = json_encode(['event' => 'test', 'data' => 'test_data']);
         $path = '/apps/app1/events';
@@ -196,8 +188,7 @@ class ApplicationManagerTest extends TestCase
         ));
     }
 
-    #[Test]
-    public function managerCanRegisterAndRemoveApplications(): void
+    public function testManagerCanRegisterAndRemoveApplications(): void
     {
         $newApp = [
             'id' => 'new-app',
@@ -218,8 +209,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertFalse($this->manager->removeApplication('non-existent'));
     }
 
-    #[Test]
-    public function managerHandlesEmptyConfiguration(): void
+    public function testManagerHandlesEmptyConfiguration(): void
     {
         Configure::write('BlazeCast.apps', []);
         $emptyManager = new ApplicationManager();
@@ -229,8 +219,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertNull($emptyManager->getApplication('any_id'));
     }
 
-    #[Test]
-    public function managerHandlesMissingConfiguration(): void
+    public function testManagerHandlesMissingConfiguration(): void
     {
         Configure::delete('BlazeCast.apps');
         $missingManager = new ApplicationManager();
@@ -240,8 +229,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertNull($missingManager->getApplication('any_id'));
     }
 
-    #[Test]
-    public function managerCanGetApplicationCount(): void
+    public function testManagerCanGetApplicationCount(): void
     {
         $this->assertEquals(3, $this->manager->getApplicationCount());
 

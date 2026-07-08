@@ -15,8 +15,8 @@ class PingInactiveConnectionsJobTest extends TestCase
     public function testRunPingsInactiveConnection(): void
     {
         $connection = $this->createMock(Connection::class);
-        $server = $this->createStub(Server::class);
-        $appManager = $this->createStub(ApplicationManager::class);
+        $server = $this->createMock(Server::class);
+        $appManager = $this->createMock(ApplicationManager::class);
         $loop = $this->createStub(LoopInterface::class);
 
         $app = [
@@ -40,8 +40,8 @@ class PingInactiveConnectionsJobTest extends TestCase
     public function testRunDoesNotPingActiveConnection(): void
     {
         $connection = $this->createMock(Connection::class);
-        $server = $this->createStub(Server::class);
-        $appManager = $this->createStub(ApplicationManager::class);
+        $server = $this->createMock(Server::class);
+        $appManager = $this->createMock(ApplicationManager::class);
         $loop = $this->createStub(LoopInterface::class);
 
         $app = [

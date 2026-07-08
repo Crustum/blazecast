@@ -41,23 +41,42 @@ class ServerStartCommand extends Command
     protected ?int $serverPort = null;
 
     /**
-     * Get container instance from factory
+     * Application manager (optional, injected via DI)
      *
-     * @return \Cake\Core\ContainerInterface|null
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager|null
      */
-    protected function getContainer(): ?ContainerInterface
-    {
-        if ($this->factory) {
-            $reflection = new ReflectionClass($this->factory);
-            if ($reflection->hasProperty('container')) {
-                $property = $reflection->getProperty('container');
-                $property->setAccessible(true);
+    protected ?ApplicationManager $applicationManager = null;
 
-                return $property->getValue($this->factory);
-            }
-        }
+    /**
+     * Channel connection manager (optional, injected via DI)
+     *
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager|null
+     */
+    protected ?ChannelConnectionManager $channelConnectionManager = null;
 
-        return null;
+    /**
+     * Container instance (optional, injected via DI)
+     *
+     * @var \Cake\Core\ContainerInterface|null
+     */
+    protected ?ContainerInterface $container = null;
+
+    /**
+     * Constructor - dependencies are optionally injected
+     *
+     * @param \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager|null $applicationManager Application manager
+     * @param \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager|null $channelConnectionManager Connection manager
+     * @param \Cake\Core\ContainerInterface|null $container Container instance
+     */
+    public function __construct(
+        ?ApplicationManager $applicationManager = null,
+        ?ChannelConnectionManager $channelConnectionManager = null,
+        ?ContainerInterface $container = null,
+    ) {
+        parent::__construct();
+        $this->applicationManager = $applicationManager;
+        $this->channelConnectionManager = $channelConnectionManager;
+        $this->container = $container;
     }
 
     /**
@@ -139,23 +158,11 @@ class ServerStartCommand extends Command
         ]);
 
         try {
-            $applicationManager = null;
-            $connectionManager = null;
-
-            $container = $this->getContainer();
-            if ($container) {
-                if ($container->has(ApplicationManager::class)) {
-                    $applicationManager = $container->get(ApplicationManager::class);
-                    $io->out('<info>Using ApplicationManager from container</info>');
-                } else {
-                    $io->out('<error>ApplicationManager not found in container</error>');
-                }
-                if ($container->has(ChannelConnectionManager::class)) {
-                    $connectionManager = $container->get(ChannelConnectionManager::class);
-                    $io->out('<info>Using ChannelConnectionManager from container</info>');
-                } else {
-                    $io->out('<error>ChannelConnectionManager not found in container</error>');
-                }
+            if ($this->applicationManager) {
+                $io->out('<info>Using ApplicationManager from DI container</info>');
+            }
+            if ($this->channelConnectionManager) {
+                $io->out('<info>Using ChannelConnectionManager from DI container</info>');
             }
 
             $server = ServerFactory::create(
@@ -163,9 +170,9 @@ class ServerStartCommand extends Command
                 $this->getServerPort(),
                 $config,
                 null,
-                $applicationManager,
-                $connectionManager,
-                $container,
+                $this->applicationManager,
+                $this->channelConnectionManager,
+                $this->container,
             );
             $io->out('<success>Server created</success>');
 

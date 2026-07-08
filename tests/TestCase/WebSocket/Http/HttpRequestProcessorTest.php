@@ -31,7 +31,7 @@ class HttpRequestProcessorTest extends TestCase
     {
         parent::setUp();
 
-        $this->router = $this->createStub(PusherRouter::class);
+        $this->router = $this->createMock(PusherRouter::class);
         $this->processor = new HttpRequestProcessor($this->router, 1000);
     }
 
