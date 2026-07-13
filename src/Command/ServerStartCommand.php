@@ -289,7 +289,7 @@ class ServerStartCommand extends Command
     protected function setServerPort(Arguments $args): void
     {
         $config = Configure::read('BlazeCast.servers.blazecast', []);
-        $port = $args->getOption('port') ?: null;
+        $port = (int)$args->getOption('port') ?: null;
 
         $this->serverPort = $port ?: ($config['port'] ?? 8080);
     }
