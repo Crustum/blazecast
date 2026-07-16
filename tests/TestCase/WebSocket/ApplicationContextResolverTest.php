@@ -8,6 +8,7 @@ use Crustum\BlazeCast\WebSocket\ApplicationContextResolver;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
+use PHPUnit\Framework\MockObject\MockObject;
 
 /**
  * ApplicationContextResolverTest
@@ -20,12 +21,12 @@ class ApplicationContextResolverTest extends TestCase
     protected ApplicationContextResolver $resolver;
 
     /**
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\MockObject
      */
-    protected ApplicationManager $applicationManager;
+    protected ApplicationManager&MockObject $applicationManager;
 
     /**
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\PHPUnit\Framework\MockObject\Stub
      */
     protected ChannelManager $defaultChannelManager;
 
@@ -38,7 +39,7 @@ class ApplicationContextResolverTest extends TestCase
     {
         parent::setUp();
 
-        $this->applicationManager = $this->createStub(ApplicationManager::class);
+        $this->applicationManager = $this->createMock(ApplicationManager::class);
         $this->defaultChannelManager = $this->createStub(ChannelManager::class);
 
         $this->resolver = new ApplicationContextResolver(
@@ -79,7 +80,7 @@ class ApplicationContextResolverTest extends TestCase
      */
     public function testGetAppIdForConnectionWithAttribute(): void
     {
-        $connection = $this->createStub(Connection::class);
+        $connection = $this->createMock(Connection::class);
         $connection->method('getId')->willReturn('conn-123');
         $connection->method('getAttribute')->with('app_id')->willReturn('app-789');
 

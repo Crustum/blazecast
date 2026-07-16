@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Http\HttpRequestProcessor;
 use Crustum\BlazeCast\WebSocket\Http\PusherRouter;
 use Crustum\BlazeCast\WebSocket\Http\Response;
 use GuzzleHttp\Psr7\ServerRequest;
+use PHPUnit\Framework\MockObject\Stub;
 use ReflectionClass;
 
 /**
@@ -18,9 +19,9 @@ class HttpRequestProcessorTest extends TestCase
 {
     protected HttpRequestProcessor $processor;
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&\Crustum\BlazeCast\WebSocket\Http\PusherRouter
+     * @var \PHPUnit\Framework\MockObject\Stub&\Crustum\BlazeCast\WebSocket\Http\PusherRouter
      */
-    protected $router;
+    protected PusherRouter&Stub $router;
 
     /**
      * Set up test fixtures

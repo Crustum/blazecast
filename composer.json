@@ -46,7 +46,7 @@
         "test:unit": "phpunit --testsuite=Unit",
         "test:integration": "phpunit --testsuite=Integration",
         "test:coverage": "phpunit --coverage-html coverage",
-        "stan": "tools/phpstan analyse src/",
+        "stan": "tools/phpstan analyse src/ tests/",
         "stan-test": "tools/phpstan analyse  tests/",
         "stan-baseline": "tools/phpstan analyse src/ tests/ --generate-baseline"
     },

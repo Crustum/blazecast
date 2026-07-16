@@ -13,6 +13,8 @@ use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager as PusherChannelManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 
 /**
  * ChannelOperationsManagerTest
@@ -27,27 +29,27 @@ class ChannelOperationsManagerTest extends TestCase
     /**
      * @var \PHPUnit\Framework\MockObject\MockObject&ApplicationManager
      */
-    private ApplicationManager $applicationManager;
+    private ApplicationManager&MockObject $applicationManager;
 
     /**
      * @var \PHPUnit\Framework\MockObject\MockObject&ConnectionRegistry
      */
-    private ConnectionRegistry $connectionRegistry;
+    private ConnectionRegistry&MockObject $connectionRegistry;
 
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&ChannelConnectionManager
+     * @var \PHPUnit\Framework\MockObject\Stub&ChannelConnectionManager
      */
-    private ChannelConnectionManager $connectionManager;
+    private ChannelConnectionManager&Stub $connectionManager;
 
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&EventManager
+     * @var \PHPUnit\Framework\MockObject\Stub&EventManager
      */
-    private EventManager $eventManager;
+    private EventManager&Stub $eventManager;
 
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&ApplicationContextResolver
+     * @var \PHPUnit\Framework\MockObject\Stub&ApplicationContextResolver
      */
-    private ApplicationContextResolver $contextResolver;
+    private ApplicationContextResolver&Stub $contextResolver;
 
     /**
      * Set up test fixtures
@@ -58,8 +60,8 @@ class ChannelOperationsManagerTest extends TestCase
     {
         parent::setUp();
 
-        $this->applicationManager = $this->createStub(ApplicationManager::class);
-        $this->connectionRegistry = $this->createStub(ConnectionRegistry::class);
+        $this->applicationManager = $this->createMock(ApplicationManager::class);
+        $this->connectionRegistry = $this->createMock(ConnectionRegistry::class);
         $this->connectionManager = $this->createStub(ChannelConnectionManager::class);
         $this->eventManager = $this->createStub(EventManager::class);
         $this->contextResolver = $this->createStub(ApplicationContextResolver::class);
@@ -144,7 +146,7 @@ class ChannelOperationsManagerTest extends TestCase
      */
     public function testBroadcastToChannelForApp(): void
     {
-        $channelManager = $this->createStub(PusherChannelManager::class);
+        $channelManager = $this->createMock(PusherChannelManager::class);
         $channel = $this->createMock(PusherChannel::class);
 
         $application = [
@@ -181,7 +183,7 @@ class ChannelOperationsManagerTest extends TestCase
         $connection2 = $this->createStub(Connection::class);
         $connection2->method('getId')->willReturn('conn-2');
 
-        $channelManager = $this->createStub(PusherChannelManager::class);
+        $channelManager = $this->createMock(PusherChannelManager::class);
         $channel = $this->createStub(PusherChannel::class);
 
         $application = [

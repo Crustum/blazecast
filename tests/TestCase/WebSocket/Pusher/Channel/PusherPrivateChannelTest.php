@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPrivateChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Exception\ConnectionUnauthorizedException;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -33,7 +34,7 @@ class PusherPrivateChannelTest extends TestCase
      *
      * @var \PHPUnit\Framework\MockObject\MockObject&\Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager
      */
-    private $applicationManager;
+    private ApplicationManager&MockObject $applicationManager;
 
     protected function setUp(): void
     {
@@ -44,7 +45,7 @@ class PusherPrivateChannelTest extends TestCase
         $this->connection = $this->createMock(Connection::class);
         $this->connection->method('getId')->willReturn('connection-123');
 
-        $this->applicationManager = $this->createStub(ApplicationManager::class);
+        $this->applicationManager = $this->createMock(ApplicationManager::class);
         $this->channel->setApplicationManager($this->applicationManager);
     }
 

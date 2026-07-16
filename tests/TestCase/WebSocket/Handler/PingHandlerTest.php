@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -19,9 +20,9 @@ class PingHandlerTest extends TestCase
 {
     private PingHandler $handler;
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&Server
+     * @var \PHPUnit\Framework\MockObject\Stub&Server
      */
-    private Server $stubServer;
+    private Server&Stub $stubServer;
     private Connection&MockObject $mockConnection;
 
     protected function setUp(): void

@@ -11,6 +11,7 @@ use Crustum\BlazeCast\WebSocket\Redis\PubSub;
 use Exception;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -22,9 +23,9 @@ class RedisPubSubHandlerTest extends TestCase
     private RedisPubSubHandler $handler;
     private PubSub&MockObject $mockPubSub;
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&Server
+     * @var \PHPUnit\Framework\MockObject\Stub&Server
      */
-    private Server $stubServer;
+    private Server&Stub $stubServer;
     private Connection&MockObject $mockConnection;
 
     protected function setUp(): void

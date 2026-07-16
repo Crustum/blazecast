@@ -75,7 +75,6 @@ class ConnectionTest extends TestCase
     {
         $connection = new Connection($this->mockReactConnection);
         $this->assertNotEmpty($connection->getId());
-        $this->assertIsString($connection->getId());
     }
 
     /**

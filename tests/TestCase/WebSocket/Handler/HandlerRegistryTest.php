@@ -12,6 +12,7 @@ use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -22,9 +23,9 @@ class HandlerRegistryTest extends TestCase
 {
     private HandlerRegistry $registry;
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&Server
+     * @var \PHPUnit\Framework\MockObject\Stub&Server
      */
-    private Server $stubServer;
+    private Server&Stub $stubServer;
     private Connection&MockObject $mockConnection;
 
     protected function setUp(): void
@@ -79,7 +80,7 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function registerAddsHandlerToRegistry(): void
     {
-        /** @var HandlerInterface $handler */
+        /** @var HandlerInterface&Stub $handler */
         $handler = $this->createStub(HandlerInterface::class);
 
         $this->registry->register($handler);
@@ -117,11 +118,11 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function getHandlersReturnsAllRegisteredHandlers(): void
     {
-        /** @var HandlerInterface $handler1 */
+        /** @var HandlerInterface&Stub $handler1 */
         $handler1 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface $handler2 */
+        /** @var HandlerInterface&Stub $handler2 */
         $handler2 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface $handler3 */
+        /** @var HandlerInterface&Stub $handler3 */
         $handler3 = $this->createStub(HandlerInterface::class);
 
         $this->registry->register($handler1);
@@ -296,7 +297,7 @@ class HandlerRegistryTest extends TestCase
     {
         $handlers = [];
         for ($i = 0; $i < 5; $i++) {
-            /** @var HandlerInterface $handler */
+            /** @var HandlerInterface&Stub $handler */
             $handler = $this->createStub(HandlerInterface::class);
             $handlers[] = $handler;
             $this->registry->register($handler);
@@ -322,11 +323,11 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function registryMaintainsHandlerOrder(): void
     {
-        /** @var HandlerInterface $handler1 */
+        /** @var HandlerInterface&Stub $handler1 */
         $handler1 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface $handler2 */
+        /** @var HandlerInterface&Stub $handler2 */
         $handler2 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface $handler3 */
+        /** @var HandlerInterface&Stub $handler3 */
         $handler3 = $this->createStub(HandlerInterface::class);
 
         // Register in specific order
@@ -376,7 +377,7 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function registryWorksWithMixedHandlerTypes(): void
     {
-        /** @var HandlerInterface&MockObject $mockHandler */
+        /** @var HandlerInterface&Stub $mockHandler */
         $mockHandler = $this->createStub(HandlerInterface::class);
         $mockHandler->method('supports')->willReturn(false);
 

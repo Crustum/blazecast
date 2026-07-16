@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -18,7 +19,10 @@ use ReflectionClass;
 class DefaultHandlerTest extends TestCase
 {
     private DefaultHandler $handler;
-    private Server $stubServer;
+    /**
+     * @var \PHPUnit\Framework\MockObject\Stub&Server
+     */
+    private Server&Stub $stubServer;
     private Connection&MockObject $mockConnection;
 
     protected function setUp(): void
