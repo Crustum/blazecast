@@ -125,11 +125,18 @@ trait ChannelInformationTrait
      */
     protected function extractUniqueUsers(array $connections): array
     {
-        return (new Collection($connections))
-            ->map(fn($connection) => $this->extractUserId($connection))
-            ->filter(fn($userId) => $userId !== null)
-            ->unique()
-            ->toList();
+        $userIds = [];
+        foreach ($connections as $connection) {
+            $userId = $this->extractUserId($connection);
+            if ($userId !== null && $userId !== '') {
+                $userIds[] = $userId;
+            }
+        }
+
+        /** @var list<string> $uniqueUsers */
+        $uniqueUsers = array_values(array_unique($userIds));
+
+        return $uniqueUsers;
     }
 
     /**

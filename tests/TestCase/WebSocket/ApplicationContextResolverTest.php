@@ -15,17 +15,17 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 class ApplicationContextResolverTest extends TestCase
 {
     /**
-     * @var ApplicationContextResolver&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\ApplicationContextResolver
      */
     protected ApplicationContextResolver $resolver;
 
     /**
-     * @var ApplicationManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager
      */
     protected ApplicationManager $applicationManager;
 
     /**
-     * @var ChannelManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager
      */
     protected ChannelManager $defaultChannelManager;
 

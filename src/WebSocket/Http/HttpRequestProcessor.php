@@ -150,17 +150,27 @@ class HttpRequestProcessor
     }
 
     /**
-     * Add CORS headers to response
+     * Add CORS headers to response when not already set by the controller.
      *
      * @param \Crustum\BlazeCast\WebSocket\Http\Response $response Original response
      * @return \Crustum\BlazeCast\WebSocket\Http\Response Response with CORS headers
      */
     protected function addCorsHeaders(Response $response): Response
     {
-        return $response
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-            ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Pusher-Key, X-Requested-With');
+        $headers = $response->getHeaders();
+        if (!isset($headers['Access-Control-Allow-Origin'])) {
+            $response = $response->withHeader('Access-Control-Allow-Origin', '*');
+        }
+
+        if (!isset($headers['Access-Control-Allow-Methods'])) {
+            $response = $response->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        }
+
+        if (!isset($headers['Access-Control-Allow-Headers'])) {
+            $response = $response->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Pusher-Key, X-Requested-With');
+        }
+
+        return $response;
     }
 
     /**

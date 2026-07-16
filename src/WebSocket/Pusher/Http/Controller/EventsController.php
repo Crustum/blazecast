@@ -7,6 +7,7 @@ use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Event\HttpApiEvent;
 use Crustum\BlazeCast\WebSocket\Http\Response;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
+use Crustum\BlazeCast\WebSocket\Pusher\Event\EventDispatcher;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use InvalidArgumentException;
 use JsonException;
@@ -21,14 +22,14 @@ use Psr\Http\Message\RequestInterface;
  * @phpstan-import-type PayloadData from \Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface
  * @phpstan-type SingleEventPayload array{
  *   name?: string,
- *   data?: array<string, mixed>,
+ *   data?: string|array<string, mixed>,
  *   channel?: string,
- *   channels?: array<string>,
+ *   channels?: list<string>,
  *   socket_id?: string,
- *   info?: string|array<string>
+ *   info?: string|list<string>
  * }
  * @phpstan-type BatchEventPayload array{
- *   batch?: array<SingleEventPayload>
+ *   batch?: list<SingleEventPayload>
  * }
  * @phpstan-type EventPayload SingleEventPayload|BatchEventPayload
  * @phpstan-type ChannelInfo array<string, mixed>
@@ -110,6 +111,18 @@ class EventsController extends PusherController
             $exceptConnection = $this->connectionManager->getConnection($socketId);
         }
 
+        $encodedData = is_string($data) ? $data : (string)json_encode($data);
+
+        EventDispatcher::dispatchToMultiple(
+            $this->applicationManager,
+            $appId,
+            $channels,
+            $event,
+            (string)$encodedData,
+            $exceptConnection,
+            $socketId,
+        );
+
         foreach ($channels as $channelName) {
             $channel = $appChannelManager->getChannel($channelName);
             $message = [
@@ -117,8 +130,6 @@ class EventsController extends PusherController
                 'channel' => $channelName,
                 'data' => $data,
             ];
-
-            $channel->broadcast($message, $exceptConnection);
 
             $messageBytes = strlen(json_encode($message));
 
@@ -172,9 +183,22 @@ class EventsController extends PusherController
             $appChannelManager = $this->getChannelManagerForCurrentApp();
 
             $exceptConnection = null;
+            $itemSocketId = $item['socket_id'] ?? null;
             if (isset($item['socket_id'])) {
                 $exceptConnection = $this->connectionManager->getConnection($item['socket_id']);
             }
+
+            $encodedData = is_string($item['data']) ? $item['data'] : (string)json_encode($item['data']);
+
+            EventDispatcher::dispatch(
+                $this->applicationManager,
+                $appId,
+                $item['channel'],
+                $item['name'],
+                (string)$encodedData,
+                $exceptConnection,
+                is_string($itemSocketId) ? $itemSocketId : null,
+            );
 
             $channel = $appChannelManager->getChannel($item['channel']);
             $message = [
@@ -182,7 +206,6 @@ class EventsController extends PusherController
                 'channel' => $item['channel'],
                 'data' => $item['data'],
             ];
-            $channel->broadcast($message, $exceptConnection);
 
             $messageBytes = strlen(json_encode($message));
             $this->connectionManager->recordWsMessageReceived($appId, $messageBytes);

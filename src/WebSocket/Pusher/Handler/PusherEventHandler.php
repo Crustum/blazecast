@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Handler\HandlerInterface;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Event\EventDispatcher;
+use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Crustum\BlazeCast\WebSocket\RateLimiter\AsyncRateLimiterInterface;
 use Crustum\BlazeCast\WebSocket\RateLimiter\RateLimitResult;
 use Crustum\BlazeCast\WebSocket\WebSocketServerInterface;
@@ -383,18 +384,86 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
             return;
         }
 
+        $application = $applicationManager->getApplication($appId);
+        $acceptFrom = $this->resolveAcceptClientEventsFrom($application);
+
+        if (!in_array($acceptFrom, ['all', 'members'], true)) {
+            $this->sendClientEventError($connection, 4301, 'The app does not have client messaging enabled.');
+
+            return;
+        }
+
+        if ($acceptFrom === 'members') {
+            $channelManager = $application['channel_manager'] ?? null;
+            $channel = null;
+            if ($channelManager instanceof ChannelManager && $channelManager->hasChannel($channelName)) {
+                $channel = $channelManager->getChannel($channelName);
+            }
+
+            if ($channel === null || !$channel->hasConnection($connection)) {
+                $this->sendClientEventError($connection, 4009, 'The client is not a member of the specified channel.');
+
+                return;
+            }
+        }
+
+        $payloadData = is_string($data) ? $data : json_encode($data);
+
         EventDispatcher::dispatch(
             $applicationManager,
             $appId,
             $channelName,
             $event,
-            is_string($data) ? $data : json_encode($data),
+            (string)$payloadData,
             $connection,
+            $connection->getSocketId() ?? $connection->getId(),
         );
 
         BlazeCastLogger::info(__('PusherEventHandler: Client event {0} for application {1} dispatched via EventDispatcher to channel {2} for connection {3}', $event, $appId, $channelName, $connection->getId()), [
             'scope' => ['socket.handler', 'socket.handler.pusher'],
         ]);
+    }
+
+    /**
+     * Resolve who may send client events for an application.
+     *
+     * @param array<string, mixed>|null $application Application config
+     * @return string One of `all`, `members`, or `none`
+     */
+    protected function resolveAcceptClientEventsFrom(?array $application): string
+    {
+        if ($application === null) {
+            return 'none';
+        }
+
+        if (isset($application['accept_client_events_from'])) {
+            return (string)$application['accept_client_events_from'];
+        }
+
+        $enabled = $application['enable_client_messages'] ?? true;
+
+        return $enabled ? 'all' : 'none';
+    }
+
+    /**
+     * Send a client-event rejection error to the connection.
+     *
+     * @param \Crustum\BlazeCast\WebSocket\Connection $connection Connection
+     * @param int $code Pusher error code
+     * @param string $message Error message
+     * @return void
+     */
+    protected function sendClientEventError(Connection $connection, int $code, string $message): void
+    {
+        $errorData = [
+            'event' => 'pusher:error',
+            'data' => json_encode([
+                'code' => $code,
+                'message' => $message,
+            ]),
+        ];
+
+        $connection->send((string)json_encode($errorData));
     }
 
     /**

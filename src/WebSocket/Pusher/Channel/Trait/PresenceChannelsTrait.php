@@ -145,15 +145,20 @@ trait PresenceChannelsTrait
      */
     public function data(): array
     {
-        $connections = new Collection($this->getConnections());
-        $uniqueMembers = $connections
-            ->map(fn($connection) => $connection->getAttribute('user_id'))
-            ->filter()
-            ->toList();
+        $userIds = [];
+        foreach ($this->getConnections() as $connection) {
+            $userId = $connection->getAttribute('user_id');
+            if (is_string($userId) && $userId !== '') {
+                $userIds[] = $userId;
+            } elseif (is_int($userId) || is_float($userId)) {
+                $userIds[] = (string)$userId;
+            }
+        }
 
-        $uniqueMembers = array_unique($uniqueMembers);
+        /** @var list<string> $uniqueMembers */
+        $uniqueMembers = array_values(array_unique($userIds));
 
-        if (empty($uniqueMembers)) {
+        if ($uniqueMembers === []) {
             return [
                 'presence' => [
                     'count' => 0,
@@ -166,7 +171,7 @@ trait PresenceChannelsTrait
         return [
             'presence' => [
                 'count' => count($uniqueMembers),
-                'ids' => array_values($uniqueMembers),
+                'ids' => $uniqueMembers,
                 'hash' => $this->members,
             ],
         ];

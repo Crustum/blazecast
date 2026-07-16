@@ -140,13 +140,25 @@ The server configuration defines how the WebSocket server operates:
 
 - `host`: The host address to bind to (default: `0.0.0.0` for all interfaces)
 - `port`: The port number to listen on (default: `8080`)
-- `path`: Optional path prefix for WebSocket connections
-- `hostname`: Optional hostname for the server
+- `path`: Optional URI path prefix for HTTP API routes and WebSocket connections (e.g. `/ws`). When set, the prefix is registered on routes, stripped before HMAC signature verification (clients sign paths without the prefix), and stripped when resolving `/app/{key}` WebSocket upgrades
+- `hostname`: Optional public hostname for the server (informational / TLS context)
 - `protocol_version`: Pusher protocol version (default: `7`)
-- `options.tls`: TLS configuration for secure connections
-- `max_request_size`: Maximum size of HTTP requests in bytes (default: `10000`)
+- `options.tls`: TLS context for React `SocketServer`. When `local_cert` and/or `local_pk` are set, the server binds as `tls://{host}:{port}`
+- `max_request_size`: Maximum size of HTTP upgrade/API request buffers in bytes (default: `10000`)
 - `ping_interval`: Interval in seconds for sending ping messages (default: `30`)
-- `activity_timeout`: Timeout in seconds for inactive connections (default: `120`)
+- `activity_timeout`: Timeout in seconds for inactive connections (default: `120`). Used as the fallback for the `pusher:connection_established` welcome payload when the application does not set its own value
+
+Example TLS options:
+
+```php
+'options' => [
+    'tls' => [
+        'local_cert' => '/path/to/fullchain.pem',
+        'local_pk' => '/path/to/privkey.pem',
+        'verify_peer' => true,
+    ],
+],
+```
 
 <a name="application-configuration"></a>
 ### Application Configuration
@@ -162,6 +174,7 @@ Applications define the authentication credentials and limits for your WebSocket
         'name' => env('BLAZECAST_APP_NAME', 'Default BlazeCast App'),
         'max_connections' => env('BLAZECAST_APP_MAX_CONNECTIONS', 100),
         'enable_client_messages' => env('BLAZECAST_APP_ENABLE_CLIENT_MESSAGES', true),
+        'accept_client_events_from' => env('BLAZECAST_APP_ACCEPT_CLIENT_EVENTS_FROM', 'all'),
         'enable_statistics' => env('BLAZECAST_APP_ENABLE_STATISTICS', true),
         'enable_debug' => env('BLAZECAST_APP_ENABLE_DEBUG', false),
         'allowed_origins' => ['*'],
@@ -179,13 +192,14 @@ Applications define the authentication credentials and limits for your WebSocket
 - `secret`: Private application secret (used for authentication)
 - `name`: Human-readable application name
 - `max_connections`: Maximum number of concurrent connections (default: `100`)
-- `enable_client_messages`: Allow clients to send messages (default: `true`)
+- `enable_client_messages`: Legacy boolean gate for client events (default: `true`). When `accept_client_events_from` is omitted, `true` maps to `all` and `false` maps to `none`
+- `accept_client_events_from`: Who may send `client-*` events — `all` (any connected client), `members` (must be subscribed to the channel), or `none` (disabled). Default: `all`. Env: `BLAZECAST_APP_ACCEPT_CLIENT_EVENTS_FROM`
 - `enable_statistics`: Enable connection and channel statistics (default: `true`)
 - `enable_debug`: Enable debug logging (default: `false`)
-- `allowed_origins`: Array of allowed CORS origins (default: `['*']`)
+- `allowed_origins`: Allowed browser origins for WebSocket handshake **and** HTTP CORS (default: `['*']`). Use host patterns such as `example.com` or `*.example.com`. Connections with a non-matching `Origin` are rejected
 - `ping_interval`: Interval in seconds for ping messages (default: `60`)
-- `activity_timeout`: Timeout in seconds for inactive connections (default: `30`)
-- `max_message_size`: Maximum message size in bytes (default: `10000`)
+- `activity_timeout`: Timeout in seconds for inactive connections (default: `30`). Sent to clients in the `pusher:connection_established` welcome payload (preferred over the server-level value)
+- `max_message_size`: Maximum inbound WebSocket message payload size in bytes (default: `10000`). Oversized frames are rejected and the connection is closed
 
 <a name="redis-configuration"></a>
 ### Redis Configuration
@@ -450,13 +464,14 @@ return [
                 'port' => env('BLAZECAST_SERVER_PORT', 8080),
                 'scheme' => env('BLAZECAST_SCHEME', 'http'),
                 'useTLS' => false,
+                'path' => env('BLAZECAST_SERVER_PATH', ''),
             ],
         ],
     ],
 ];
 ```
 
-Make sure the `key`, `secret`, and `app_id` match the values configured in your `config/blazecast.php` file.
+Make sure the `key`, `secret`, and `app_id` match the values configured in your `config/blazecast.php` file. When `BLAZECAST_SERVER_PATH` is set (for example `/ws`), pass the same value as `options.path` so the Broadcasting HTTP client signs and calls the prefixed API routes.
 
 <a name="laravel-echo"></a>
 ### Laravel Echo Configuration
@@ -475,6 +490,7 @@ window.Echo = new Echo({
     wsHost: process.env.MIX_PUSHER_HOST || '127.0.0.1',
     wsPort: process.env.MIX_PUSHER_PORT || 8080,
     wssPort: process.env.MIX_PUSHER_PORT || 8080,
+    wsPath: process.env.MIX_PUSHER_PATH || '',
     forceTLS: false,
     enabledTransports: ['ws', 'wss'],
     disableStats: true,
@@ -486,6 +502,8 @@ window.Echo = new Echo({
     }
 });
 ```
+
+When `BLAZECAST_SERVER_PATH` is set (for example `/ws`), set `wsPath` (and `MIX_PUSHER_PATH`) to the same prefix so Echo connects to `{wsPath}/app/{key}` instead of `/app/{key}`.
 
 Now you can listen for events broadcast by your CakePHP application:
 
@@ -518,7 +536,9 @@ Echo.join('presence-chat.' + roomId)
 <a name="redis-pubsub"></a>
 ### Redis PubSub
 
-BlazeCast uses Redis PubSub to enable horizontal scaling. When multiple server instances are running, they communicate through Redis to broadcast events across all instances:
+BlazeCast uses Redis PubSub to enable horizontal scaling. When multiple server instances are running, they communicate through Redis to broadcast events across all instances.
+
+When scaling is enabled, outbound channel events are published to Redis. Each node (including the publisher) receives the payload via an incoming message handler and broadcasts locally. Payloads include a raw `socket_id` when present so `toOthers` / HTTP `socket_id` exclusion works across nodes behind a load balancer (even when the excluded connection is not local to the publishing node).
 
 ```php
 'scaling' => [
@@ -542,7 +562,7 @@ To scale horizontally, run multiple BlazeCast server instances behind a load bal
 2. Use the same application configuration
 3. Share the same scaling channel name
 
-Events triggered on one instance will be broadcast to all connected clients across all instances via Redis PubSub.
+Events triggered on one instance will be broadcast to all connected clients across all instances via Redis PubSub. Use HTTP API `socket_id` (or client-event exclusion) to omit the originating socket on every node.
 
 <a name="rate-limiting"></a>
 ## Rate Limiting
@@ -563,6 +583,11 @@ Rate limiting can be configured in `config/blazecast.php`:
         'max_frontend_events_per_second' => env('BLAZECAST_RATE_LIMITER_FRONTEND_EVENTS', 10),
         'max_read_requests_per_second' => env('BLAZECAST_RATE_LIMITER_READ_REQUESTS', 50),
     ],
+    'connection' => [
+        'enabled' => env('BLAZECAST_CONNECTION_RATE_LIMIT_ENABLED', false),
+        'max_messages_per_second' => env('BLAZECAST_CONNECTION_RATE_LIMIT_MAX', 60),
+        'terminate_on_limit' => env('BLAZECAST_CONNECTION_RATE_LIMIT_TERMINATE', false),
+    ],
     'redis' => [
         'host' => env('REDIS_HOST', 'localhost'),
         'port' => (int)env('REDIS_PORT', 6379),
@@ -576,9 +601,15 @@ Rate limiting can be configured in `config/blazecast.php`:
 **Rate Limit Types:**
 
 - `max_backend_events_per_second`: Maximum events per second via HTTP API (default: `100`)
-- `max_frontend_events_per_second`: Maximum events per second from WebSocket clients (default: `10`)
+- `max_frontend_events_per_second`: Maximum `client-*` events per second from WebSocket clients (default: `10`)
 - `max_read_requests_per_second`: Maximum read requests per second (default: `50`)
+- `connection.max_messages_per_second`: Maximum inbound WebSocket **text frames** per connection per second (subscribe, ping, client events, malformed payloads). Default: `60`. Opt-in via `connection.enabled`. Independent of the Soketi buckets above; always local to the process.
+- `connection.terminate_on_limit`: When `true`, close the WebSocket after a connection-level rate-limit error (default: `false`)
 
+Per-application overrides: `max_connection_messages_per_second`, `connection_rate_limit_terminate`.
+
+> [!NOTE]
+> Connection-level limiting protects the server from message floods. Soketi frontend/backend/read buckets protect API and client-event quotas (and can use Redis across nodes). Both layers can apply to `client-*` events.
 <a name="rate-limit-drivers"></a>
 ### Rate Limit Drivers
 

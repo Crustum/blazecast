@@ -133,6 +133,12 @@ class PusherControllerTestHelper
             'channel_manager' => $this->channelManager,
         ]);
 
+        $reflectionManager = new ReflectionClass($this->applicationManager);
+        $appsProperty = $reflectionManager->getProperty('applications');
+        $appsProperty->setValue($this->applicationManager, [
+            $this->testApp['id'] => $testAppWithChannelManager,
+        ]);
+
         $defaults = [
             'application' => $testAppWithChannelManager,
             'query' => [],
@@ -172,6 +178,10 @@ class PusherControllerTestHelper
         $channel->expects($this->any())
             ->method('getConnectionCount')
             ->willReturn($connectionCount);
+
+        $channel->expects($this->any())
+            ->method('getConnections')
+            ->willReturn(array_fill(0, $connectionCount, null));
 
         return $channel;
     }
@@ -346,6 +356,6 @@ class PusherControllerTestHelper
 
     public function any(): AnyInvokedCount
     {
-        return new AnyInvokedCount;
+        return new AnyInvokedCount();
     }
 }

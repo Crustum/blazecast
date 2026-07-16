@@ -51,7 +51,7 @@ class PusherPresenceChannelTest extends TestCase
 
         $this->connectionAttributes = [];
 
-        $this->connection = $this->createStub(Connection::class);
+        $this->connection = $this->createMock(Connection::class);
         $this->connection->method('getId')->willReturn('connection-123');
 
         $this->connection->method('setAttribute')
@@ -73,7 +73,7 @@ class PusherPresenceChannelTest extends TestCase
             ->willReturnCallback(function (string $data) {
             });
 
-        $this->applicationManager = $this->createStub(ApplicationManager::class);
+        $this->applicationManager = $this->createMock(ApplicationManager::class);
         $this->applicationManager->method('getApplicationByKey')
             ->with('app-key')
             ->willReturn([

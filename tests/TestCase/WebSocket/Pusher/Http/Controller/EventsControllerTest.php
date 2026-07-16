@@ -7,6 +7,7 @@ use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\Test\Support\PusherControllerTestHelper;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
+use Crustum\BlazeCast\WebSocket\Pusher\Event\EventDispatcher;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\EventsController;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
@@ -68,9 +69,22 @@ class EventsControllerTest extends TestCase
     {
         parent::setUp();
 
+        EventDispatcher::setPubSubProvider(null);
+
         $this->helper = new PusherControllerTestHelper($this);
         $this->controller = $this->helper->createController(EventsController::class);
         $this->helper->configureController($this->controller);
+    }
+
+    /**
+     * Tear down method
+     *
+     * @return void
+     */
+    protected function tearDown(): void
+    {
+        EventDispatcher::setPubSubProvider(null);
+        parent::tearDown();
     }
 
     /**

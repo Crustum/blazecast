@@ -101,6 +101,13 @@ abstract class PusherController implements PusherControllerInterface
     protected ?array $requestData = null;
 
     /**
+     * Origin header from the current HTTP request
+     *
+     * @var string|null
+     */
+    protected ?string $requestOrigin = null;
+
+    /**
      * Constructor
      *
      * @param \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager $applicationManager Application manager
@@ -154,6 +161,7 @@ abstract class PusherController implements PusherControllerInterface
 
             $this->query = $this->parseQueryParams($request);
             $this->body = $this->parseRequestBody($request);
+            $this->requestOrigin = $request->getHeaderLine('Origin') ?: null;
             $this->requestData = [
                 'query' => $this->query,
                 'body' => $this->body,
@@ -304,12 +312,18 @@ abstract class PusherController implements PusherControllerInterface
      */
     protected function handleOptions(): Response
     {
-        return new Response(null, 204, [
-            'Access-Control-Allow-Origin' => '*',
+        $headers = [
             'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS',
             'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With',
             'Access-Control-Max-Age' => '86400',
-        ]);
+        ];
+
+        $corsOrigin = $this->resolveCorsAllowOrigin();
+        if ($corsOrigin !== null) {
+            $headers['Access-Control-Allow-Origin'] = $corsOrigin;
+        }
+
+        return new Response(null, 204, $headers);
     }
 
     /**
