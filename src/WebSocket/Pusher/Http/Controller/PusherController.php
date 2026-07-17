@@ -208,20 +208,20 @@ abstract class PusherController implements PusherControllerInterface
             ]);
 
             return $response;
-        } catch (Exception $e) {
+        } catch (Exception $exception) {
             $errorMsg = sprintf(
                 'Controller: Error processing request - %s in %s:%d - Trace: %s',
-                $e->getMessage(),
-                $e->getFile(),
-                $e->getLine(),
-                $e->getTraceAsString(),
+                $exception->getMessage(),
+                $exception->getFile(),
+                $exception->getLine(),
+                $exception->getTraceAsString(),
             );
             BlazeCastLogger::error($errorMsg, [
                 'scope' => ['socket.controller', 'socket.controller.pusher'],
                 'controller' => static::class,
             ]);
 
-            return $this->errorResponse($e->getMessage(), 500);
+            return $this->errorResponse($exception->getMessage(), 500);
         }
     }
 
@@ -250,9 +250,7 @@ abstract class PusherController implements PusherControllerInterface
                 throw new InvalidArgumentException('Missing authentication signature');
             }
 
-            $params = array_filter($this->query, function ($key) {
-                return !in_array($key, ['body_md5', 'appId', 'appKey', 'channelName']);
-            }, ARRAY_FILTER_USE_KEY);
+            $params = array_filter($this->query, fn($key): bool => !in_array($key, ['body_md5', 'appId', 'appKey', 'channelName']), ARRAY_FILTER_USE_KEY);
 
             if ($this->body !== null && $this->body !== '') {
                 $params['body_md5'] = md5($this->body);

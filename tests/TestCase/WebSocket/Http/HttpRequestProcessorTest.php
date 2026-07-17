@@ -18,6 +18,7 @@ use ReflectionClass;
 class HttpRequestProcessorTest extends TestCase
 {
     protected HttpRequestProcessor $processor;
+
     /**
      * @var \PHPUnit\Framework\MockObject\Stub&\Crustum\BlazeCast\WebSocket\Http\PusherRouter
      */
@@ -28,7 +29,7 @@ class HttpRequestProcessorTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -105,10 +106,8 @@ class HttpRequestProcessorTest extends TestCase
 
         $connection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($response) {
-                return strpos($response, 'HTTP/1.1 200 OK') !== false &&
-                       strpos($response, 'Access-Control-Allow-Origin: *') !== false;
-            }));
+            ->with($this->callback(fn($response): bool => str_contains((string)$response, 'HTTP/1.1 200 OK') &&
+                   str_contains((string)$response, 'Access-Control-Allow-Origin: *')));
 
         $connection->expects($this->once())
             ->method('close');
@@ -138,11 +137,9 @@ class HttpRequestProcessorTest extends TestCase
 
         $connection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($response) {
-                return strpos($response, 'HTTP/1.1 200 OK') !== false &&
-                       strpos($response, 'Access-Control-Allow-Origin: *') !== false &&
-                       strpos($response, 'test content') !== false;
-            }));
+            ->with($this->callback(fn($response): bool => str_contains((string)$response, 'HTTP/1.1 200 OK') &&
+                   str_contains((string)$response, 'Access-Control-Allow-Origin: *') &&
+                   str_contains((string)$response, 'test content')));
 
         $connection->expects($this->once())
             ->method('close');

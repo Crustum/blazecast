@@ -5,6 +5,7 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher\Http;
 
 use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\WebSocket\Http\PusherRouteBuilder;
+use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
 class PusherRouteLoaderInterfaceTest extends TestCase
@@ -21,10 +22,11 @@ class PusherRouteLoaderInterfaceTest extends TestCase
         $loader = new TestRouteLoader($collection);
 
         $loader->registerRoutes($builder);
+
         $routes = $loader->getRouteCollection();
 
         $this->assertCount(2, $routes);
-        $this->assertTrue($routes->get('test.route') !== null);
-        $this->assertTrue($routes->get('test.route.two') !== null);
+        $this->assertTrue($routes->get('test.route') instanceof Route);
+        $this->assertTrue($routes->get('test.route.two') instanceof Route);
     }
 }

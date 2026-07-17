@@ -159,30 +159,35 @@ class DefaultMessageFilter implements MessageFilterInterface
                     $data['timestamp'] = time();
                     $data['timestamp_iso'] = date('c');
                 }
+
                 break;
 
             case 'add_user_info':
                 if (is_array($data) && is_array($params)) {
                     $data['user_info'] = $params;
                 }
+
                 break;
 
             case 'transform_data':
                 if (is_array($params) && isset($params['callback']) && is_callable($params['callback'])) {
                     $data = $params['callback']($data);
                 }
+
                 break;
 
             case 'change_event':
                 if (is_string($params)) {
                     return new Message($params, $data, $message->getChannel());
                 }
+
                 break;
 
             case 'add_metadata':
                 if (is_array($data) && is_array($params)) {
                     $data['metadata'] = array_merge($data['metadata'] ?? [], $params);
                 }
+
                 break;
         }
 
@@ -202,7 +207,7 @@ class DefaultMessageFilter implements MessageFilterInterface
             return true;
         }
 
-        if (strpos($pattern, '*') === false) {
+        if (!str_contains($pattern, '*')) {
             return $string === $pattern;
         }
 
@@ -224,6 +229,7 @@ class DefaultMessageFilter implements MessageFilterInterface
             if ($item === $value) {
                 return true;
             }
+
             if (is_array($item) && $this->arrayContains($item, $value)) {
                 return true;
             }

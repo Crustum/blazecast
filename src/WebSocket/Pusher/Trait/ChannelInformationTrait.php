@@ -56,7 +56,7 @@ trait ChannelInformationTrait
     protected function infoForChannels(array $application, array $channels, string $info = ''): array
     {
         return (new Collection($channels))
-            ->map(fn($channel) => $channel instanceof PusherChannelInterface ? $channel->getName() : (string)$channel)
+            ->map(fn($channel): string => $channel instanceof PusherChannelInterface ? $channel->getName() : (string)$channel)
             ->combine(
                 fn($channelName) => $channelName,
                 fn($channelName) => $this->info($application, $channelName, $info),
@@ -176,12 +176,12 @@ trait ChannelInformationTrait
      */
     protected function parseInfoFields(string $info): array
     {
-        if (!$info) {
+        if ($info === '' || $info === '0') {
             return [];
         }
 
         $allowedFields = ['user_count', 'subscription_count', 'member_count', 'occupied'];
-        $requestedFields = array_map('trim', explode(',', $info));
+        $requestedFields = array_map(trim(...), explode(',', $info));
 
         return array_intersect($requestedFields, $allowedFields);
     }

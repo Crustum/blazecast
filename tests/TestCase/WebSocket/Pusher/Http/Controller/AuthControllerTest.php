@@ -252,7 +252,7 @@ class AuthControllerTest extends TestCase
         $this->assertArrayHasKey('channel_data', $responseBody);
 
         $channelData = $responseBody['channel_data'];
-        $decodedData = json_decode($channelData, true);
+        $decodedData = json_decode((string)$channelData, true);
 
         $this->assertIsArray($decodedData);
         $this->assertArrayHasKey('user_id', $decodedData);

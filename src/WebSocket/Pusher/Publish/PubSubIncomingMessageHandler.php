@@ -54,8 +54,8 @@ class PubSubIncomingMessageHandler
         try {
             /** @var DecodedPubSubEnvelope $event */
             $event = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            BlazeCastLogger::error(sprintf('PubSubIncomingMessageHandler: Invalid JSON payload: %s', $e->getMessage()), [
+        } catch (JsonException $jsonException) {
+            BlazeCastLogger::error(sprintf('PubSubIncomingMessageHandler: Invalid JSON payload: %s', $jsonException->getMessage()), [
                 'scope' => ['socket.server', 'socket.server.redis'],
             ]);
 
@@ -97,8 +97,8 @@ class PubSubIncomingMessageHandler
                 $encodedData,
                 $exceptConnection,
             );
-        } catch (Throwable $e) {
-            BlazeCastLogger::error(sprintf('PubSubIncomingMessageHandler: Failed to dispatch: %s', $e->getMessage()), [
+        } catch (Throwable $throwable) {
+            BlazeCastLogger::error(sprintf('PubSubIncomingMessageHandler: Failed to dispatch: %s', $throwable->getMessage()), [
                 'scope' => ['socket.server', 'socket.server.redis'],
             ]);
         }

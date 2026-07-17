@@ -200,7 +200,7 @@ class PusherEventHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($data) {
+            ->with($this->callback(function ($data): bool {
                 $decoded = json_decode($data, true);
 
                 return $decoded['event'] === 'pusher:pong' && $decoded['data'] === '{}';
@@ -245,7 +245,7 @@ class PusherEventHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($data) {
+            ->with($this->callback(function ($data): bool {
                 $decoded = json_decode($data, true);
 
                 return $decoded['event'] === 'pusher_internal:subscription_succeeded'

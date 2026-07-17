@@ -16,10 +16,12 @@ use PHPUnit\Framework\MockObject\Stub;
 class ConnectionRegistryTest extends TestCase
 {
     protected ConnectionRegistry $registry;
+
     /**
      * @var \PHPUnit\Framework\MockObject\Stub&ChannelConnectionManager
      */
     protected ChannelConnectionManager&Stub $connectionManager;
+
     /**
      * @var \PHPUnit\Framework\MockObject\Stub&EventManager
      */
@@ -30,7 +32,7 @@ class ConnectionRegistryTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 

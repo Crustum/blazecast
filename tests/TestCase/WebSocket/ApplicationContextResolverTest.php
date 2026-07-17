@@ -35,7 +35,7 @@ class ApplicationContextResolverTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -102,10 +102,11 @@ class ApplicationContextResolverTest extends TestCase
         $connection->method('getId')->willReturn('conn-123');
         $connection->expects($this->exactly(2))
             ->method('getAttribute')
-            ->willReturnCallback(function ($attribute) {
+            ->willReturnCallback(function ($attribute): ?string {
                 if ($attribute === 'app_id') {
                     return null;
                 }
+
                 if ($attribute === 'app_key') {
                     return 'test-key';
                 }

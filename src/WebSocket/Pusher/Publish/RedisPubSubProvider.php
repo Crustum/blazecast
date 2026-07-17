@@ -73,7 +73,7 @@ class RedisPubSubProvider
         $properties = [$loop, $this->channel, $this->server];
 
         $this->publisher = new RedisPublishClient(...$properties);
-        $this->subscriber = new RedisSubscribeClient(...array_merge($properties, [fn() => $this->subscribe()]));
+        $this->subscriber = new RedisSubscribeClient(...array_merge($properties, [$this->subscribe(...)]));
 
         $this->publisher->connect();
         $this->subscriber->connect();

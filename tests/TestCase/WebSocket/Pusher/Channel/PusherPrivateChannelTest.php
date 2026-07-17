@@ -24,10 +24,8 @@ class PusherPrivateChannelTest extends TestCase
 
     /**
      * Mock connection object
-     *
-     * @var \PHPUnit\Framework\MockObject\MockObject|\Crustum\BlazeCast\WebSocket\Connection
      */
-    private $connection;
+    private MockObject|Connection $connection;
 
     /**
      * Mock application manager
@@ -153,7 +151,7 @@ class PusherPrivateChannelTest extends TestCase
         $this->connection->expects($this->once())
             ->method('setAttribute')
             ->with("channel_data_{$channelName}", $this->anything())
-            ->willReturnCallback(function ($key, $value) use (&$attributes) {
+            ->willReturnCallback(function ($key, $value) use (&$attributes): void {
                 $attributes[$key] = $value;
             });
 

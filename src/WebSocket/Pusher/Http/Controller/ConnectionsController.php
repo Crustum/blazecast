@@ -5,6 +5,7 @@ namespace Crustum\BlazeCast\WebSocket\Pusher\Http\Controller;
 
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Http\Response;
+use Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface;
 use Psr\Http\Message\RequestInterface;
 
 /**
@@ -28,7 +29,7 @@ class ConnectionsController extends PusherController
     {
         $appId = $params['appId'] ?? ($this->application['id'] ?? 'unknown');
 
-        if ($this->rateLimiter !== null) {
+        if ($this->rateLimiter instanceof RateLimiterInterface) {
             $rateLimitResult = $this->rateLimiter->consumeReadRequestPoints(1, $appId);
 
             if ($rateLimitResult->isExceeded()) {

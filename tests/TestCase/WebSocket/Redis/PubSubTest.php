@@ -25,9 +25,13 @@ use ReflectionClass;
 class PubSubTest extends TestCase
 {
     private LoopInterface $mockLoop;
+
     private Server&MockObject $mockServer;
+
     private Client&MockObject $mockClient;
+
     private PubSub $pubSub;
+
     /**
      * @var array<string, mixed>
      */
@@ -64,7 +68,7 @@ class PubSubTest extends TestCase
     public function subscribeCallsRedisSubscribeWithCorrectParameters(): void
     {
         $channel = 'test-channel';
-        $callback = function ($message, $channel) {
+        $callback = function ($message, $channel): void {
         };
 
         $mockPromise = $this->createMock(PromiseInterface::class);
@@ -134,7 +138,7 @@ class PubSubTest extends TestCase
     public function subscribePatternCallsRedisPsubscribeWithCorrectParameters(): void
     {
         $pattern = 'user:*';
-        $callback = function ($message, $channel, $pattern) {
+        $callback = function ($message, $channel, $pattern): void {
         };
 
         $mockPromise = $this->createMock(PromiseInterface::class);
@@ -303,7 +307,7 @@ class PubSubTest extends TestCase
 
         $mockPromise = $this->createMock(PromiseInterface::class);
         $mockPromise->method('then')
-            ->willReturnCallback(function ($successCallback) use ($mockPromise) {
+            ->willReturnCallback(function ($successCallback) use ($mockPromise): MockObject {
                 $successCallback();
 
                 return $mockPromise;
@@ -339,7 +343,7 @@ class PubSubTest extends TestCase
     {
         $mockPromise = $this->createMock(PromiseInterface::class);
         $mockPromise->method('then')
-            ->willReturnCallback(function ($successCallback) use ($mockPromise) {
+            ->willReturnCallback(function ($successCallback) use ($mockPromise): MockObject {
                 $successCallback();
 
                 return $mockPromise;

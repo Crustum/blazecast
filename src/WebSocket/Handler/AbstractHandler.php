@@ -134,7 +134,7 @@ abstract class AbstractHandler implements HandlerInterface
     protected function getAppIdForConnection(Connection $connection): ?string
     {
         $contextResolver = $this->getApplicationContextResolver();
-        if ($contextResolver) {
+        if ($contextResolver instanceof ApplicationContextResolver) {
             return $contextResolver->getAppIdForConnection($connection, []);
         }
 
@@ -150,7 +150,7 @@ abstract class AbstractHandler implements HandlerInterface
     protected function getChannelManagerForConnection(Connection $connection): ?ChannelManager
     {
         $contextResolver = $this->getApplicationContextResolver();
-        if ($contextResolver) {
+        if ($contextResolver instanceof ApplicationContextResolver) {
             return $contextResolver->getChannelManagerForConnection($connection, []);
         }
 
@@ -184,7 +184,7 @@ abstract class AbstractHandler implements HandlerInterface
     {
         $message = new Message($event, $data);
         $channelOperationsManager = $this->getChannelOperationsManager();
-        if ($channelOperationsManager) {
+        if ($channelOperationsManager instanceof ChannelOperationsManager) {
             $channelOperationsManager->broadcast($message->toJson(), $exceptConnectionId);
         }
     }
@@ -206,7 +206,7 @@ abstract class AbstractHandler implements HandlerInterface
     ): void {
         $message = new Message($event, $data, $channel);
         $channelOperationsManager = $this->getChannelOperationsManager();
-        if ($channelOperationsManager) {
+        if ($channelOperationsManager instanceof ChannelOperationsManager) {
             $channelOperationsManager->broadcastToChannel($channel, $message->toJson(), $exceptConnectionId);
         }
     }

@@ -53,7 +53,7 @@ class BlazeCastLogger
         $allScopes = $config['scopes'] ?? [];
         $disabledScopesList = $config['disabled_scopes'] ?? [];
 
-        $enabledScopeKeys = array_keys(array_filter($allScopes, fn($enabled) => $enabled === true));
+        $enabledScopeKeys = array_keys(array_filter($allScopes, fn($enabled): bool => $enabled === true));
         /** @var array<string|int, string> $enabledScopesFlipped */
         $enabledScopesFlipped = array_flip($enabledScopeKeys);
         self::$enabledScopes = $enabledScopesFlipped;

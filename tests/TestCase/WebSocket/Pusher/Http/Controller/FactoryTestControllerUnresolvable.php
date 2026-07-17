@@ -13,10 +13,14 @@ use Psr\Http\Message\RequestInterface;
  */
 class FactoryTestControllerUnresolvable implements PusherControllerInterface
 {
-    /** @phpstan-ignore-next-line TODO: Test class - unused parameters are intentional for testing */
+    private string $unresolvableParam;
+
+    /**
+     * @param string $unresolvableParam Intentionally unresolvable for factory tests
+     */
     public function __construct(string $unresolvableParam)
     {
-        // Constructor with unresolvable parameter
+        $this->unresolvableParam = $unresolvableParam;
     }
 
     public function __invoke(RequestInterface $request, Connection $connection, array $params = []): Response
@@ -26,6 +30,6 @@ class FactoryTestControllerUnresolvable implements PusherControllerInterface
 
     public function handle(RequestInterface $request, Connection $connection, array $params): Response
     {
-        return new Response('test');
+        return new Response($this->unresolvableParam === '' ? 'test' : 'test');
     }
 }

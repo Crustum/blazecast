@@ -111,7 +111,7 @@ class EventDispatcher
 
         $resolvedSocketId = $socketId ?? $excludeConnection?->getSocketId() ?? $excludeConnection?->getId();
 
-        if (self::$pubSubProvider !== null) {
+        if (self::$pubSubProvider instanceof RedisPubSubProvider) {
             /** @var ScalingMessagePayload $payload */
             $payload = [
                 'type' => 'message',
@@ -195,7 +195,7 @@ class EventDispatcher
         }
 
         $channelManager = self::getChannelManagerFromApplication($application);
-        if (!$channelManager) {
+        if (!$channelManager instanceof ChannelManager) {
             BlazeCastLogger::error(sprintf('ChannelManager not found for application. app_id=%s, channel=%s, event=%s', $appId, $channelName, $event), [
                 'scope' => ['socket.handler', 'socket.handler.dispatcher'],
             ]);

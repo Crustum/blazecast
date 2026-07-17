@@ -225,13 +225,13 @@ class RedisClient
      */
     protected function redisUrl(): string
     {
-        $config = empty($this->server) ? $this->getDefaultConfig() : $this->server;
+        $config = $this->server === [] ? $this->getDefaultConfig() : $this->server;
 
         $parsed = $this->parseConfiguration($config);
 
         $driver = strtolower($parsed['driver'] ?? '');
 
-        if (in_array($driver, ['tcp', 'tls'])) {
+        if (in_array($driver, ['tcp', 'tls'], true)) {
             $parsed['scheme'] = $driver;
         }
 
@@ -256,7 +256,7 @@ class RedisClient
 
         $query = http_build_query($query);
 
-        return "redis{$protocol}://{$host}:{$port}" . ($query ? "?{$query}" : '');
+        return "redis{$protocol}://{$host}:{$port}" . ($query !== '' && $query !== '0' ? "?{$query}" : '');
     }
 
     /**

@@ -25,8 +25,11 @@ use ReflectionMethod;
 class ServerTlsTest extends TestCase
 {
     protected PusherRouter $router;
+
     protected ChannelManager $channelManager;
+
     protected ChannelConnectionManager $connectionManager;
+
     protected ApplicationManager $applicationManager;
 
     /**
@@ -39,7 +42,7 @@ class ServerTlsTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -63,7 +66,7 @@ class ServerTlsTest extends TestCase
      *
      * @return void
      */
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         foreach ($this->servers as $server) {
             $reflection = new ReflectionClass($server);
@@ -75,6 +78,7 @@ class ServerTlsTest extends TestCase
                 }
             }
         }
+
         $this->servers = [];
 
         parent::tearDown();
@@ -286,9 +290,7 @@ class ServerTlsTest extends TestCase
      */
     protected function accessibleMethod(object $object, string $methodName): ReflectionMethod
     {
-        $method = new ReflectionMethod($object, $methodName);
-
-        return $method;
+        return new ReflectionMethod($object, $methodName);
     }
 
     /**

@@ -22,10 +22,12 @@ use ReflectionClass;
 class HandlerRegistryTest extends TestCase
 {
     private HandlerRegistry $registry;
+
     /**
      * @var \PHPUnit\Framework\MockObject\Stub&Server
      */
     private Server&Stub $stubServer;
+
     private Connection&MockObject $mockConnection;
 
     protected function setUp(): void
@@ -260,7 +262,7 @@ class HandlerRegistryTest extends TestCase
             ->method('updateActivity');
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($json) {
+            ->with($this->callback(function ($json): bool {
                 $decoded = json_decode($json, true);
 
                 return $decoded['event'] === 'pong';
@@ -282,7 +284,7 @@ class HandlerRegistryTest extends TestCase
         $unknownMessage = new Message('unknown_event', ['test' => 'data']);
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($json) {
+            ->with($this->callback(function ($json): bool {
                 $decoded = json_decode($json, true);
 
                 return $decoded['event'] === 'echo';
@@ -362,12 +364,10 @@ class HandlerRegistryTest extends TestCase
             ->method('handle')
             ->with(
                 $this->identicalTo($this->mockConnection),
-                $this->callback(function ($msg) use ($eventType, $data, $channel) {
-                    return $msg instanceof Message &&
-                           $msg->getEvent() === $eventType &&
-                           $msg->getData() === $data &&
-                           $msg->getChannel() === $channel;
-                }),
+                $this->callback(fn($msg): bool => $msg instanceof Message &&
+                       $msg->getEvent() === $eventType &&
+                       $msg->getData() === $data &&
+                       $msg->getChannel() === $channel),
             );
 
         $this->registry->register($handler);

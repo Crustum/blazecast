@@ -70,7 +70,7 @@ class UsersTerminateControllerTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -293,7 +293,7 @@ class UsersTerminateControllerTest extends TestCase
                 ['user_id', null, $userId],
                 ['userId', null, null],
             ]);
-        $connection->method('close')->willReturnCallback(function () {
+        $connection->method('close')->willReturnCallback(function (): void {
         });
 
         return $connection;
@@ -363,8 +363,6 @@ class UsersTerminateControllerTest extends TestCase
     private function setupChannelManagerMock(array $channels): void
     {
         $this->channelManager->method('getChannel')
-            ->willReturnCallback(function ($channelName) use ($channels) {
-                return $channels[$channelName] ?? null;
-            });
+            ->willReturnCallback(fn($channelName) => $channels[$channelName] ?? null);
     }
 }

@@ -132,7 +132,7 @@ class ApplicationManager
         }
 
         $blazeCastApps = Configure::read('BlazeCast.apps');
-        $configApps = is_array($blazeCastApps) && !empty($blazeCastApps) ? $blazeCastApps : Configure::read('Pusher.applications');
+        $configApps = is_array($blazeCastApps) && $blazeCastApps !== [] ? $blazeCastApps : Configure::read('Pusher.applications');
         if (is_array($configApps)) {
             foreach ($configApps as $appConfig) {
                 if (isset($appConfig['id'], $appConfig['key'], $appConfig['secret'])) {
@@ -357,7 +357,7 @@ class ApplicationManager
         $safeConfig = [];
 
         foreach ($config as $key => $value) {
-            if (!in_array($key, $protectedFields)) {
+            if (!in_array($key, $protectedFields, true)) {
                 $safeConfig[$key] = $value;
             }
         }

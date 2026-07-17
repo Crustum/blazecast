@@ -107,7 +107,7 @@ class ConnectionMessageRateLimiter
     public function shouldTerminateOnLimit(?string $appId = null): bool
     {
         if ($appId !== null && array_key_exists('terminate_on_limit', $this->appConfigs[$appId] ?? [])) {
-            return (bool)$this->appConfigs[$appId]['terminate_on_limit'];
+            return $this->appConfigs[$appId]['terminate_on_limit'];
         }
 
         return $this->defaultTerminateOnLimit;
@@ -141,7 +141,7 @@ class ConnectionMessageRateLimiter
     protected function resolveMaxMessagesPerSecond(?string $appId): int
     {
         if ($appId !== null && isset($this->appConfigs[$appId]['max_messages_per_second'])) {
-            return (int)$this->appConfigs[$appId]['max_messages_per_second'];
+            return $this->appConfigs[$appId]['max_messages_per_second'];
         }
 
         return $this->defaultMaxMessagesPerSecond;

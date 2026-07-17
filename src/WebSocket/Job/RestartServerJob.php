@@ -56,7 +56,7 @@ class RestartServerJob implements JobInterface
      */
     public function stop(): void
     {
-        if ($this->timerId !== null) {
+        if ($this->timerId instanceof TimerInterface) {
             $this->loop->cancelTimer($this->timerId);
             $this->timerId = null;
 
@@ -83,8 +83,8 @@ class RestartServerJob implements JobInterface
 
                 Log::info('WebSocket server restarted successfully');
             });
-        } catch (Exception $e) {
-            Log::error('Error restarting WebSocket server: ' . $e->getMessage());
+        } catch (Exception $exception) {
+            Log::error('Error restarting WebSocket server: ' . $exception->getMessage());
         }
     }
 

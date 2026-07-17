@@ -36,7 +36,7 @@ class JobManager
      */
     public function startAll(): void
     {
-        if (empty($this->jobs)) {
+        if ($this->jobs === []) {
             BlazeCastLogger::info('No jobs to start.', ['scope' => ['socket.job', 'socket.job.manager']]);
 
             return;
@@ -62,7 +62,7 @@ class JobManager
      */
     public function stopAll(): void
     {
-        if (empty($this->jobs)) {
+        if ($this->jobs === []) {
             return;
         }
 

@@ -20,6 +20,7 @@ use Throwable;
 class HttpRequestProcessor
 {
     protected PusherRouter $router;
+
     protected int $maxRequestSize;
 
     /**
@@ -42,7 +43,7 @@ class HttpRequestProcessor
      */
     public function isCompleteHttpRequest(string $buffer): bool
     {
-        return strpos($buffer, "\r\n\r\n") !== false;
+        return str_contains($buffer, "\r\n\r\n");
     }
 
     /**
@@ -99,16 +100,17 @@ class HttpRequestProcessor
         try {
             $response = $this->processHttpRequest($request, $connection);
 
-            if ($response) {
+            if ($response instanceof Response) {
                 $httpResponse = $this->formatHttpResponse($response);
                 $connection->send($httpResponse);
             }
+
             $connection->close();
-        } catch (Throwable $e) {
-                BlazeCastLogger::error('HTTP request failed: ' . $e->getMessage(), [
+        } catch (Throwable $throwable) {
+                BlazeCastLogger::error('HTTP request failed: ' . $throwable->getMessage(), [
                 'scope' => ['socket.http', 'socket.http.processor'],
                 'connection_id' => $connection->getId(),
-                'exception' => $e,
+                'exception' => $throwable,
                 ]);
             $this->closeConnection($connection, 500, 'Internal Server Error');
         }
@@ -167,7 +169,7 @@ class HttpRequestProcessor
         }
 
         if (!isset($headers['Access-Control-Allow-Headers'])) {
-            $response = $response->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Pusher-Key, X-Requested-With');
+            return $response->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Pusher-Key, X-Requested-With');
         }
 
         return $response;
@@ -188,9 +190,8 @@ class HttpRequestProcessor
         }
 
         $httpResponse .= "\r\n";
-        $httpResponse .= $response->getContent();
 
-        return $httpResponse;
+        return $httpResponse . $response->getContent();
     }
 
     /**

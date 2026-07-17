@@ -229,7 +229,7 @@ class PusherChannel implements PusherChannelInterface, JsonSerializable
      */
     public function broadcast(array $payload, ?Connection $except = null): void
     {
-        if ($except === null) {
+        if (!$except instanceof Connection) {
             $this->broadcastToAll($payload);
 
             return;
@@ -292,7 +292,7 @@ class PusherChannel implements PusherChannelInterface, JsonSerializable
             'name' => $this->name,
             'type' => $this->getType(),
             'connection_count' => count($this->connections),
-            'occupied' => !empty($this->connections),
+            'occupied' => $this->connections !== [],
         ];
     }
 
@@ -303,7 +303,7 @@ class PusherChannel implements PusherChannelInterface, JsonSerializable
      */
     public function isEmpty(): bool
     {
-        return empty($this->connections);
+        return $this->connections === [];
     }
 
     /**

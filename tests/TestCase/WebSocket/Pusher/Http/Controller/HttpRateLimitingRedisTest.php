@@ -26,11 +26,17 @@ use Redis;
 class HttpRateLimitingRedisTest extends TestCase
 {
     private PusherControllerTestHelper $helper;
+
     private RateLimiterInterface $rateLimiter;
+
     private Redis $redis;
+
     private string $appId = 'test-http-rate-limit-app-redis';
+
     private string $appKey = 'test-http-rate-limit-key-redis';
+
     private string $appSecret = 'test-http-rate-limit-secret-redis';
+
     private string $keyPrefix = 'blazecast:rate_limit:';
 
     protected function setUp(): void
@@ -62,8 +68,8 @@ class HttpRateLimitingRedisTest extends TestCase
             if (!empty($redisConfig['database'])) {
                 $this->redis->select($redisConfig['database']);
             }
-        } catch (Exception $e) {
-            $this->markTestSkipped('Could not connect to Redis: ' . $e->getMessage());
+        } catch (Exception $exception) {
+            $this->markTestSkipped('Could not connect to Redis: ' . $exception->getMessage());
         }
 
         $this->cleanupRedisKeys();
@@ -97,9 +103,11 @@ class HttpRateLimitingRedisTest extends TestCase
         if (isset($this->rateLimiter)) {
             $this->rateLimiter->disconnect();
         }
+
         if (isset($this->redis)) {
             $this->redis->close();
         }
+
         Configure::delete('BlazeCast.apps');
         parent::tearDown();
     }
@@ -165,7 +173,7 @@ class HttpRateLimitingRedisTest extends TestCase
                 ]),
             ]);
             $response = $controller->handle($request, $this->helper->getConnection(), []);
-            $this->assertEquals(200, $response->getStatusCode(), "Request $i should succeed");
+            $this->assertEquals(200, $response->getStatusCode(), "Request {$i} should succeed");
         }
 
         $controller = $this->helper->createController(EventsController::class, [null, $this->rateLimiter]);
@@ -295,7 +303,7 @@ class HttpRateLimitingRedisTest extends TestCase
                 ],
             ]);
             $response = $controller->handle($request, $this->helper->getConnection(), []);
-            $this->assertEquals(200, $response->getStatusCode(), "Request $i should succeed");
+            $this->assertEquals(200, $response->getStatusCode(), "Request {$i} should succeed");
         }
 
         $controller = $this->getMockBuilder(ChannelsController::class)
@@ -361,7 +369,7 @@ class HttpRateLimitingRedisTest extends TestCase
                 ],
             ]);
             $response = $controller->handle($request, $this->helper->getConnection(), $params);
-            $this->assertEquals(200, $response->getStatusCode(), "Request $i should succeed");
+            $this->assertEquals(200, $response->getStatusCode(), "Request {$i} should succeed");
         }
 
         $controller = $this->helper->createController(ConnectionsController::class, [null, $this->rateLimiter]);

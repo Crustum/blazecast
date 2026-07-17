@@ -22,7 +22,7 @@ class MessagesWidget extends BaseWidget
     {
         $period = $options['period'] ?? 60;
 
-        return $this->remember(function () use ($period) {
+        return $this->remember(function () use ($period): array {
             $messages = $this->rhythm->getStorage()->graph(
                 ['blazecast_message:sent', 'blazecast_message:received'],
                 'count',
@@ -76,7 +76,7 @@ class MessagesWidget extends BaseWidget
      *
      * @return string
      */
-    public function getRecorderName(): string
+    protected function getRecorderName(): string
     {
         return 'messages';
     }

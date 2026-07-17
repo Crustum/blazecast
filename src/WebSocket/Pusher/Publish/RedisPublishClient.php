@@ -75,7 +75,7 @@ class RedisPublishClient extends RedisClient
         /** @phpstan-ignore-next-line */
         return $this->client->publish($this->channel, json_encode($payload))->then(
             fn($result) => $result,
-            fn($error) => new RuntimeException('Redis publish failed: ' . $error->getMessage()),
+            fn($error): RuntimeException => new RuntimeException('Redis publish failed: ' . $error->getMessage()),
         );
     }
 

@@ -58,7 +58,7 @@ class ConnectionMessageRateLimiterTest extends TestCase
             'app-soft' => ['terminate_on_limit' => false],
         ]);
 
-        $this->assertTrue($limiter->shouldTerminateOnLimit(null));
+        $this->assertTrue($limiter->shouldTerminateOnLimit());
         $this->assertFalse($limiter->shouldTerminateOnLimit('app-soft'));
     }
 

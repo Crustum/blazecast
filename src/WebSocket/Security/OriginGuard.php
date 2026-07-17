@@ -30,7 +30,7 @@ class OriginGuard
         }
 
         foreach ($allowedOrigins as $allowedOrigin) {
-            if (self::matchesPattern((string)$allowedOrigin, $originHost)) {
+            if (self::matchesPattern($allowedOrigin, $originHost)) {
                 return true;
             }
         }

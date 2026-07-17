@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Crustum\BlazeCast\WebSocket\Http;
 
+use Stringable;
+
 /**
  * HTTP Response
  *
@@ -10,7 +12,7 @@ namespace Crustum\BlazeCast\WebSocket\Http;
  *
  * @phpstan-type ResponseHeaders array<string, string>
  */
-class Response
+class Response implements Stringable
 {
     /**
      * Response body

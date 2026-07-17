@@ -53,9 +53,7 @@ class PubSubIncomingMessageHandlerTest extends TestCase
         $channel->subscribe($other);
 
         $connectionManager = $this->createMock(ChannelConnectionManager::class);
-        $connectionManager->method('getConnection')->willReturnCallback(function (string $id) use ($excluded) {
-            return $id === '1.excluded' ? $excluded : null;
-        });
+        $connectionManager->method('getConnection')->willReturnCallback(fn(string $id): ?Connection => $id === '1.excluded' ? $excluded : null);
 
         $handler = new PubSubIncomingMessageHandler($applicationManager, $connectionManager);
         $handler->handle(json_encode([

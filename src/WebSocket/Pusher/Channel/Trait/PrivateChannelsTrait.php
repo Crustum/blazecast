@@ -65,7 +65,7 @@ trait PrivateChannelsTrait
         [$key, $providedSignature] = $authParts;
         $secret = $this->getApplicationSecret($key);
 
-        $expectedSignature = hash_hmac('sha256', $signature, $secret);
+        $expectedSignature = hash_hmac('sha256', $signature, (string)$secret);
 
         if (!hash_equals($expectedSignature, $providedSignature)) {
             throw new ConnectionUnauthorizedException('Invalid authentication signature');

@@ -88,7 +88,7 @@ trait PresenceChannelsTrait
     protected function addMember(Connection $connection, array $userData): void
     {
         $userId = (string)($userData['user_id'] ?? '');
-        if (!$userId) {
+        if ($userId === '' || $userId === '0') {
             return;
         }
 
@@ -192,7 +192,7 @@ trait PresenceChannelsTrait
         $connections = new Collection($this->getConnections());
 
         return $connections
-            ->map(fn($connection) => (string)$connection->getAttribute('user_id'))
+            ->map(fn($connection): string => (string)$connection->getAttribute('user_id'))
             ->contains($userId);
     }
 

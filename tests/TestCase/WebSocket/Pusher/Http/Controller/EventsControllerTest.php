@@ -294,7 +294,9 @@ class EventsControllerTest extends TestCase
             ->willReturnCallback(function ($name) use ($testChannel1, $testChannel2) {
                 if ($name === 'test-channel-1') {
                     return $testChannel1;
-                } elseif ($name === 'test-channel-2') {
+                }
+
+                if ($name === 'test-channel-2') {
                     return $testChannel2;
                 }
 

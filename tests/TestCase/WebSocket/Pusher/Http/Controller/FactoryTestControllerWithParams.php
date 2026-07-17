@@ -16,13 +16,25 @@ use Psr\Http\Message\RequestInterface;
  */
 class FactoryTestControllerWithParams implements PusherControllerInterface
 {
-    /** @phpstan-ignore-next-line TODO: Test class - unused parameters are intentional for testing */
+    private PusherApplicationManager $applicationManager;
+
+    private ChannelManager $channelManager;
+
+    private ChannelConnectionManager $connectionManager;
+
+    /**
+     * @param \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager $applicationManager Application manager
+     * @param \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager $channelManager Channel manager
+     * @param \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager $connectionManager Connection manager
+     */
     public function __construct(
         PusherApplicationManager $applicationManager,
         ChannelManager $channelManager,
         ChannelConnectionManager $connectionManager,
     ) {
-        // Constructor with required parameters
+        $this->applicationManager = $applicationManager;
+        $this->channelManager = $channelManager;
+        $this->connectionManager = $connectionManager;
     }
 
     public function __invoke(RequestInterface $request, Connection $connection, array $params = []): Response
@@ -32,6 +44,10 @@ class FactoryTestControllerWithParams implements PusherControllerInterface
 
     public function handle(RequestInterface $request, Connection $connection, array $params): Response
     {
-        return new Response('test');
+        return new Response(
+            $this->applicationManager::class
+            . $this->channelManager::class
+            . $this->connectionManager::class,
+        );
     }
 }

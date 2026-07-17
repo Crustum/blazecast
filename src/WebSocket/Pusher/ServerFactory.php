@@ -114,7 +114,7 @@ class ServerFactory
             $rateLimiter = static::createWebSocketRateLimiter($applicationManager, $loop);
         }
 
-        if ($connectionMessageRateLimiter === null) {
+        if (!$connectionMessageRateLimiter instanceof ConnectionMessageRateLimiter) {
             $connectionMessageRateLimiter = static::createConnectionMessageRateLimiter($applicationManager);
         }
 
@@ -122,7 +122,8 @@ class ServerFactory
         $router = static::createPusherRouter($config, $applicationManager, $connectionManager, $httpRateLimiter);
 
         $placeholderChannelManager = new ChannelManager();
-        $server = new Server(
+
+        return new Server(
             $router,
             $placeholderChannelManager,
             $connectionManager,
@@ -135,8 +136,6 @@ class ServerFactory
             $rateLimiter,
             $connectionMessageRateLimiter,
         );
-
-        return $server;
     }
 
     /**
@@ -151,7 +150,7 @@ class ServerFactory
 
         $applications = $applicationManager->getApplications();
 
-        foreach ($applications as $appId => $application) {
+        foreach (array_keys($applications) as $appId) {
             $channelManager = new ChannelManager();
 
             $applicationManager->updateApplication((string)$appId, [
@@ -159,7 +158,7 @@ class ServerFactory
             ]);
         }
 
-        if (empty($applications)) {
+        if ($applications === []) {
             $defaultApp = [
                 'id' => 'default-app',
                 'key' => $config['app_key'] ?? 'default-key',
@@ -200,6 +199,7 @@ class ServerFactory
         if (!is_array($serverConfig)) {
             $serverConfig = [];
         }
+
         /** @var BlazeCastServerConfig $serverConfig */
         $pathPrefix = ServerPath::prefix($serverConfig);
         if ($pathPrefix !== '') {
@@ -216,9 +216,7 @@ class ServerFactory
             $rateLimiter,
         );
 
-        $router = new PusherRouter($routes, $controllerFactory);
-
-        return $router;
+        return new PusherRouter($routes, $controllerFactory);
     }
 
     /**
@@ -347,11 +345,13 @@ class ServerFactory
         foreach ($applicationManager->getApplications() as $appId => $appConfig) {
             $overrides = [];
             if (isset($appConfig['max_connection_messages_per_second'])) {
-                $overrides['max_messages_per_second'] = (int)$appConfig['max_connection_messages_per_second'];
+                $overrides['max_messages_per_second'] = $appConfig['max_connection_messages_per_second'];
             }
+
             if (array_key_exists('connection_rate_limit_terminate', $appConfig)) {
-                $overrides['terminate_on_limit'] = (bool)$appConfig['connection_rate_limit_terminate'];
+                $overrides['terminate_on_limit'] = $appConfig['connection_rate_limit_terminate'];
             }
+
             if ($overrides !== []) {
                 $appConfigs[(string)$appId] = $overrides;
             }

@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Http\Response;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
 use Crustum\BlazeCast\WebSocket\Pusher\Event\EventDispatcher;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
+use Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface;
 use InvalidArgumentException;
 use JsonException;
 use Psr\Http\Message\RequestInterface;
@@ -48,7 +49,7 @@ class EventsController extends PusherController
     public function handle(RequestInterface $request, Connection $connection, array $params): Response
     {
         try {
-            $payload = json_decode($this->body, true, 512, JSON_THROW_ON_ERROR);
+            $payload = json_decode((string)$this->body, true, 512, JSON_THROW_ON_ERROR);
 
             $this->validateEventPayload($payload);
 
@@ -61,7 +62,7 @@ class EventsController extends PusherController
                 $points = count($payload['channels']);
             }
 
-            if ($this->rateLimiter !== null) {
+            if ($this->rateLimiter instanceof RateLimiterInterface) {
                 $rateLimitResult = $this->rateLimiter->consumeBackendEventPoints($points, $appId);
 
                 if ($rateLimitResult->isExceeded()) {
@@ -79,7 +80,7 @@ class EventsController extends PusherController
             }
 
             return $this->handleSingleEvent($payload);
-        } catch (JsonException $e) {
+        } catch (JsonException) {
             return $this->errorResponse('Invalid JSON payload', 400);
         } catch (InvalidArgumentException $e) {
             return $this->errorResponse($e->getMessage(), 400);
@@ -118,7 +119,7 @@ class EventsController extends PusherController
             $appId,
             $channels,
             $event,
-            (string)$encodedData,
+            $encodedData,
             $exceptConnection,
             $socketId,
         );
@@ -195,7 +196,7 @@ class EventsController extends PusherController
                 $appId,
                 $item['channel'],
                 $item['name'],
-                (string)$encodedData,
+                $encodedData,
                 $exceptConnection,
                 is_string($itemSocketId) ? $itemSocketId : null,
             );
@@ -257,7 +258,7 @@ class EventsController extends PusherController
                 try {
                     $this->validateRequiredFields((array)$item, ['name', 'data', 'channel']);
                 } catch (InvalidArgumentException $e) {
-                    throw new InvalidArgumentException("Batch item {$index}: " . $e->getMessage());
+                    throw new InvalidArgumentException("Batch item {$index}: " . $e->getMessage(), $e->getCode(), $e);
                 }
             }
 

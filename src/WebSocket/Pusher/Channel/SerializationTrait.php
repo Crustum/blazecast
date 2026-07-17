@@ -67,7 +67,7 @@ trait SerializationTrait
             'occupied' => $connectionCount > 0,
         ];
 
-        if (strpos($name, 'presence-') === 0) {
+        if (str_starts_with((string)$name, 'presence-')) {
             $users = $this->getChannelUsers($channel);
             $data['user_count'] = count($users);
         }

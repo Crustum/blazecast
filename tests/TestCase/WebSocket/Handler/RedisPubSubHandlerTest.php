@@ -21,11 +21,14 @@ use ReflectionClass;
 class RedisPubSubHandlerTest extends TestCase
 {
     private RedisPubSubHandler $handler;
+
     private PubSub&MockObject $mockPubSub;
+
     /**
      * @var \PHPUnit\Framework\MockObject\Stub&Server
      */
     private Server&Stub $stubServer;
+
     private Connection&MockObject $mockConnection;
 
     protected function setUp(): void

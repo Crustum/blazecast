@@ -27,8 +27,8 @@ class RedisSubscribeClient extends RedisClient
         if ($this->isConnected()) {
             /** @phpstan-ignore-next-line */
             $this->client->subscribe($this->channel)->then(
-                fn($result) => Log::info("Subscribed to channel: {$this->channel}"),
-                fn($error) => Log::error("Failed to subscribe to channel {$this->channel}: " . $error->getMessage()),
+                fn($result): bool => Log::info("Subscribed to channel: {$this->channel}"),
+                fn($error): bool => Log::error("Failed to subscribe to channel {$this->channel}: " . $error->getMessage()),
             );
         } else {
             Log::error('RedisSubscribeClient is not connected to Redis');

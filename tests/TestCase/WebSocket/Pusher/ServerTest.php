@@ -24,12 +24,16 @@ use ReflectionClass;
 class ServerTest extends TestCase
 {
     protected PusherRouter $router;
+
     protected ChannelManager $channelManager;
+
     protected ChannelConnectionManager $connectionManager;
+
     protected ApplicationManager $applicationManager;
+
     protected LoopInterface $loop;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 

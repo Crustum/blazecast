@@ -9,6 +9,8 @@ use Cake\Core\ContainerInterface;
 use Cake\Event\Event;
 use Cake\Event\EventManager;
 use Cake\I18n\DateTime;
+use Crustum\BlazeCast\Recorder\BlazeCastConnectionsRecorder;
+use Crustum\BlazeCast\Recorder\BlazeCastMessagesRecorder;
 use Crustum\BlazeCast\WebSocket\ApplicationContextResolver;
 use Crustum\BlazeCast\WebSocket\ChannelOperationsManager;
 use Crustum\BlazeCast\WebSocket\Connection;
@@ -294,12 +296,14 @@ class Server implements WebSocketServerInterface
                 if ($this->usesTls($socketOptions)) {
                     $uri = "tls://{$host}:{$port}";
                 }
+
                 $this->socket = new SocketServer($uri, $socketOptions, $this->loop);
-                $this->socket->on('connection', [$this, 'handleIncomingConnection']);
+                $this->socket->on('connection', $this->handleIncomingConnection(...));
             } catch (RuntimeException $e) {
-                if (strpos($e->getMessage(), 'Address already in use') !== false) {
+                if (str_contains($e->getMessage(), 'Address already in use')) {
                     throw new RuntimeException("Port {$port} is already in use on {$host}. Cannot start WebSocket server.", 0, $e);
                 }
+
                 throw $e;
             }
         }
@@ -348,14 +352,17 @@ class Server implements WebSocketServerInterface
 
         $pusherHandler = new PusherEventHandler();
         $pusherHandler->setServer($this);
+
         $this->handlerRegistry->register($pusherHandler);
 
         $pingHandler = new PingHandler();
         $pingHandler->setServer($this);
+
         $this->handlerRegistry->register($pingHandler);
 
         $defaultHandler = new DefaultHandler();
         $defaultHandler->setServer($this);
+
         $this->handlerRegistry->register($defaultHandler);
 
         $this->log('info', sprintf('Handler registry initialized with PusherEventHandler priority. Handlers: %s', implode(', ', ['PusherEventHandler', 'PingHandler', 'DefaultHandler'])), [
@@ -467,7 +474,7 @@ class Server implements WebSocketServerInterface
      */
     public function start(): void
     {
-        if (!$this->socket) {
+        if (!$this->socket instanceof ServerInterface) {
             BlazeCastLogger::warning(__('Server: Cannot start server - socket not initialized (test mode?)'), [
                 'scope' => ['socket.server'],
             ]);
@@ -536,7 +543,7 @@ class Server implements WebSocketServerInterface
             $pubSubProvider = new RedisPubSubProvider(
                 $scalingConfig['channel'] ?? 'blazecast:broadcast',
                 $scalingConfig['server'] ?? [],
-                [$incomingHandler, 'handle'],
+                $incomingHandler->handle(...),
             );
 
             $pubSubProvider->connect($this->loop);
@@ -545,9 +552,9 @@ class Server implements WebSocketServerInterface
             $this->log('info', __('Server: Redis PubSub initialized for horizontal scaling on channel {0}', $scalingConfig['channel'] ?? 'blazecast:broadcast'), [
                 'scope' => ['socket.server', 'socket.server.redis'],
             ]);
-        } catch (Throwable $e) {
+        } catch (Throwable $throwable) {
             EventDispatcher::setPubSubProvider(null);
-            $this->log('error', __('Server: Failed to initialize Redis PubSub: {0}', $e->getMessage()), [
+            $this->log('error', __('Server: Failed to initialize Redis PubSub: {0}', $throwable->getMessage()), [
                 'scope' => ['socket.server', 'socket.server.redis'],
             ]);
         }
@@ -572,7 +579,7 @@ class Server implements WebSocketServerInterface
             $tls = [];
         }
 
-        $tls = array_filter($tls, static fn($value) => $value !== null);
+        $tls = array_filter($tls, static fn($value): bool => $value !== null);
         $hostname = $serverConfig['hostname'] ?? null;
 
         if (!$this->usesTls(['tls' => $tls]) && is_string($hostname) && $hostname !== '') {
@@ -614,7 +621,7 @@ class Server implements WebSocketServerInterface
     protected function ensureRhythmEventsAreCollected(): void
     {
         $this->initializeRhythm();
-        if (!$this->rhythm) {
+        if (!$this->rhythm instanceof Rhythm) {
             $this->log('info', __('Server: Rhythm not available, skipping ingestion scheduling'), [
                 'scope' => ['socket.server', 'socket.server.rhythm'],
             ]);
@@ -627,8 +634,8 @@ class Server implements WebSocketServerInterface
             try {
                 $this->eventManager->dispatch(new SharedBeat(DateTime::now(), gethostname()));
                 $this->ingestRhythmMetrics();
-            } catch (Exception $e) {
-                debug($e);
+            } catch (Exception $exception) {
+                debug($exception);
             }
         });
 
@@ -654,16 +661,17 @@ class Server implements WebSocketServerInterface
 
         $this->rhythm = $this->container->get(Rhythm::class);
         $this->rhythm->clearRecorders();
+
         $recordersToInit = Configure::read('Rhythm');
         $recordersToInit = [
             'recorders' => [
                 'Blazecast.messages' => [
-                    'className' => 'Crustum\BlazeCast\Recorder\BlazeCastMessagesRecorder',
+                    'className' => BlazeCastMessagesRecorder::class,
                     'enabled' => true,
                     'sample_rate' => 1,
                   ],
                   'Blazecast.connections' => [
-                    'className' => 'Crustum\BlazeCast\Recorder\BlazeCastConnectionsRecorder',
+                    'className' => BlazeCastConnectionsRecorder::class,
                     'enabled' => true,
                     'sample_rate' => 1,
                     'throttle_seconds' => 15,
@@ -682,10 +690,8 @@ class Server implements WebSocketServerInterface
 
         $recorders = $this->rhythm->getRecorders();
         // @phpstan-ignore-next-line
-        if (empty($recorders) && !empty($recordersToInit['recorders'])) {
-            $recorders = array_filter($recordersToInit['recorders'], function ($recorder) {
-                return str_starts_with($recorder['className'], 'BlazeCast');
-            });
+        if ($recorders === [] && !empty($recordersToInit['recorders'])) {
+            $recorders = array_filter($recordersToInit['recorders'], fn(array $recorder): bool => str_starts_with($recorder['className'], 'BlazeCast'));
             $this->rhythm->register($recorders);
         }
 
@@ -728,13 +734,13 @@ class Server implements WebSocketServerInterface
      */
     protected function ingestRhythmMetrics(): int
     {
-        if (!$this->rhythm) {
+        if (!$this->rhythm instanceof Rhythm) {
             return 0;
         }
 
         try {
             $recorders = $this->rhythm->getRecorders();
-            if (empty($recorders)) {
+            if ($recorders === []) {
                 $this->log('info', __('Server: No recorders registered in Rhythm, skipping ingestion'), [
                     'scope' => ['socket.server.rhythm'],
                 ]);
@@ -751,8 +757,8 @@ class Server implements WebSocketServerInterface
             }
 
             return $ingestedCount;
-        } catch (Exception $e) {
-            BlazeCastLogger::error(__('Server: Failed to ingest Rhythm events: {0}', $e->getMessage()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('Server: Failed to ingest Rhythm events: {0}', $exception->getMessage()), [
                 'scope' => ['socket.server', 'socket.server.rhythm'],
             ]);
 
@@ -781,7 +787,7 @@ class Server implements WebSocketServerInterface
             'scope' => ['socket.server', 'socket.server.disconnect'],
         ]);
 
-        if ($this->socket) {
+        if ($this->socket instanceof ServerInterface) {
             $this->socket->close();
             $this->socket = null;
         }
@@ -844,7 +850,7 @@ class Server implements WebSocketServerInterface
     {
         $this->connectionMessageRateLimiter?->forget($connection->getId());
 
-        $this->connectionRegistry->handleConnectionDisconnect($connection, function ($conn, $channelName): void {
+        $this->connectionRegistry->handleConnectionDisconnect($connection, function ($conn, string $channelName): void {
             $this->unsubscribeFromChannel($conn, $channelName);
         });
     }
@@ -887,8 +893,8 @@ class Server implements WebSocketServerInterface
             } else {
                 $this->httpRequestProcessor->handleHttpRequest($request, $connection);
             }
-        } catch (Throwable $e) {
-            BlazeCastLogger::error(__('Server: Failed to parse HTTP request on connection {0}: {1}', $connection->getId(), $e->getMessage()), [
+        } catch (Throwable $throwable) {
+            BlazeCastLogger::error(__('Server: Failed to parse HTTP request on connection {0}: {1}', $connection->getId(), $throwable->getMessage()), [
                 'scope' => ['socket.server'],
             ]);
             $this->closeConnection($connection, 400, 'Bad Request');
@@ -1120,8 +1126,8 @@ class Server implements WebSocketServerInterface
             // $this->log('info', __('Server: Pusher connection established message sent for connection {0}, socketId: {1}, event: {2}', $baseId, $socketId, 'pusher:connection_established'), [
             //     'scope' => ['socket.server'],
             // ]);
-        } catch (Exception $e) {
-            BlazeCastLogger::error(__('Server: Error sending Pusher connection established message for connection {0}: {1} {2}', $connection->getId(), $e->getMessage(), $e->getTraceAsString()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('Server: Error sending Pusher connection established message for connection {0}: {1} {2}', $connection->getId(), $exception->getMessage(), $exception->getTraceAsString()), [
                 'scope' => ['socket.server'],
             ]);
         }
@@ -1141,7 +1147,7 @@ class Server implements WebSocketServerInterface
         if (is_string($appId) && $appId !== '') {
             $application = $this->applicationManager->getApplication($appId);
             if ($application !== null && isset($application['activity_timeout'])) {
-                return (int)$application['activity_timeout'];
+                return $application['activity_timeout'];
             }
         }
 
@@ -1167,7 +1173,7 @@ class Server implements WebSocketServerInterface
      */
     protected function ensureWithinConnectionMessageRateLimit(Connection $connection): bool
     {
-        if ($this->connectionMessageRateLimiter === null) {
+        if (!$this->connectionMessageRateLimiter instanceof ConnectionMessageRateLimiter) {
             return true;
         }
 
@@ -1236,7 +1242,7 @@ class Server implements WebSocketServerInterface
         if ($appId) {
             $application = $this->applicationManager->getApplication($appId);
             if ($application !== null && isset($application['max_message_size'])) {
-                $maxMessageSize = (int)$application['max_message_size'];
+                $maxMessageSize = $application['max_message_size'];
             }
         }
 
@@ -1296,13 +1302,13 @@ class Server implements WebSocketServerInterface
                 ]);
                 $this->handleDefaultMessage($connection, $message);
             }
-        } catch (Exception $e) {
-            BlazeCastLogger::error(__('Server: Error handling WebSocket on connection {0} message: {1}', $connection->getId(), $e->getMessage()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('Server: Error handling WebSocket on connection {0} message: {1}', $connection->getId(), $exception->getMessage()), [
                 'scope' => ['socket.server'],
             ]);
 
             $errorMessage = new WebSocketMessage('error', [
-                'message' => 'Invalid message format: ' . $e->getMessage(),
+                'message' => 'Invalid message format: ' . $exception->getMessage(),
                 'error_type' => 'message_format_error',
             ]);
 
@@ -1357,7 +1363,7 @@ class Server implements WebSocketServerInterface
         $isMasked = (bool)($secondByte & 0x80);
         $payloadLength = $secondByte & 0x7F;
 
-        if ($opcode === 0x8 || $opcode === 0x9 || $opcode === 0xA) {
+        if (in_array($opcode, [0x8, 0x9, 0xA], true)) {
             return null;
         }
 
@@ -1370,12 +1376,14 @@ class Server implements WebSocketServerInterface
             if (strlen($data) < 4) {
                 return null;
             }
+
             $payloadLength = unpack('n', substr($data, 2, 2))[1];
             $offset = 4;
         } elseif ($payloadLength === 127) {
             if (strlen($data) < 10) {
                 return null;
             }
+
             $payloadLength = unpack('J', substr($data, 2, 8))[1];
             $offset = 10;
         }
@@ -1385,6 +1393,7 @@ class Server implements WebSocketServerInterface
             if (strlen($data) < $offset + 4) {
                 return null;
             }
+
             $maskingKey = substr($data, $offset, 4);
             $offset += 4;
         }
@@ -1400,6 +1409,7 @@ class Server implements WebSocketServerInterface
             for ($i = 0; $i < $payloadLength; $i++) {
                 $unmaskedPayload .= $payload[$i] ^ $maskingKey[$i % 4];
             }
+
             $payload = $unmaskedPayload;
         }
 
@@ -1652,7 +1662,7 @@ class Server implements WebSocketServerInterface
                 $connection = $event->getConnection();
                 $appId = $connection->getAttribute('app_id');
                 if ($appId) {
-                    $bytes = strlen($event->getData());
+                    $bytes = strlen((string)$event->getData());
                     $this->connectionManager->recordWsMessageSent($appId, $bytes);
                 }
             }
@@ -1722,6 +1732,6 @@ class Server implements WebSocketServerInterface
         $result = socket_bind($socket, $host, $port);
         socket_close($socket);
 
-        return $result !== false;
+        return $result;
     }
 }
