@@ -112,9 +112,9 @@ interface PusherChannelInterface
      *
      * @param BroadcastPayload $payload Message payload
      * @param \Crustum\BlazeCast\WebSocket\Connection|null $except Connection to exclude
-     * @return void
+     * @return list<string> Connection ids that received the frame
      */
-    public function broadcast(array $payload, ?Connection $except = null): void;
+    public function broadcast(array $payload, ?Connection $except = null): array;
 
     /**
      * Find a connection by ID

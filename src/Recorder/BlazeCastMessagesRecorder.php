@@ -95,8 +95,8 @@ class BlazeCastMessagesRecorder extends BaseRecorder implements EventListenerInt
     public function implementedEvents(): array
     {
         return [
-            MessageSentEvent::class => 'record',
-            MessageReceivedEvent::class => 'record',
+            MessageSentEvent::EVENT_NAME => 'record',
+            MessageReceivedEvent::EVENT_NAME => 'record',
             HttpApiEvent::class => 'record',
             // SharedBeat::class => 'record',
         ];

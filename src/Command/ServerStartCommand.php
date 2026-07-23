@@ -16,6 +16,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use Crustum\BlazeCast\WebSocket\Pusher\ServerFactory;
 use Exception;
+use Override;
 use ReflectionClass;
 use RuntimeException;
 use Throwable;
@@ -69,7 +70,6 @@ class ServerStartCommand extends Command
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
         $parser
-            ->setDescription('Start the unified Pusher server that handles both HTTP API and WebSocket connections')
             ->addOption('host', [
                 'short' => 'H',
                 'default' => '0.0.0.0',
@@ -103,6 +103,15 @@ class ServerStartCommand extends Command
             ]);
 
         return $parser;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public static function getDescription(): string
+    {
+        return 'Start the unified Pusher server that handles both HTTP API and WebSocket connections';
     }
 
     /**

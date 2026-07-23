@@ -3,11 +3,17 @@ declare(strict_types=1);
 
 namespace Crustum\BlazeCast\WebSocket\Pusher\Event;
 
+use Cake\Event\EventManager;
+use Crustum\BlazeCast\BlazeCastPlugin;
+use Crustum\BlazeCast\Support\CrustumMeta;
 use Crustum\BlazeCast\WebSocket\Connection;
+use Crustum\BlazeCast\WebSocket\Event\AfterClientSendEvent;
+use Crustum\BlazeCast\WebSocket\Event\BeforeClientSendEvent;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Publish\RedisPubSubProvider;
+use JsonException;
 
 /**
  * EventDispatcher
@@ -204,20 +210,67 @@ class EventDispatcher
         }
 
         $channel = $channelManager->getChannel($channelName);
+        $enrichedPayload = CrustumMeta::decodePayload($data);
+        $cleanPayload = self::resolveClientPayload($appId, $channelName, $event, $enrichedPayload);
+
+        try {
+            $cleanData = CrustumMeta::encodePayload($cleanPayload);
+        } catch (JsonException $jsonException) {
+            BlazeCastLogger::error(sprintf('Failed to encode cleaned broadcast payload. app_id=%s, channel=%s, event=%s, error=%s', $appId, $channelName, $event, $jsonException->getMessage()), [
+                'scope' => ['socket.handler', 'socket.handler.dispatcher'],
+            ]);
+            $cleanData = $data;
+            $cleanPayload = $enrichedPayload;
+        }
 
         $message = [
             'event' => $event,
             'channel' => $channelName,
-            'data' => $data,
+            'data' => $cleanData,
         ];
 
-        $channel->broadcast($message, $excludeConnection);
+        $recipientIds = $channel->broadcast($message, $excludeConnection);
+        $deliveredTo = count($recipientIds);
+        $sampleIds = array_slice($recipientIds, 0, BlazeCastPlugin::CLIENT_SEND_CONNECTION_ID_CAP);
 
-        $connectionCount = count($channel->getConnections());
+        EventManager::instance()->dispatch(new AfterClientSendEvent(
+            $appId,
+            $channelName,
+            $event,
+            $cleanPayload,
+            $enrichedPayload,
+            $deliveredTo,
+            $sampleIds,
+        ));
+
         $excludeConnectionId = $excludeConnection?->getId();
-        BlazeCastLogger::info(sprintf('Event broadcasted to channel via application-specific ChannelManager. app_id=%s, channel=%s, event=%s, connection_count=%d, excluded_connection=%s', $appId, $channelName, $event, $connectionCount, $excludeConnectionId ?? 'null'), [
+        BlazeCastLogger::info(sprintf('Event broadcasted to channel via application-specific ChannelManager. app_id=%s, channel=%s, event=%s, connection_count=%d, excluded_connection=%s', $appId, $channelName, $event, $deliveredTo, $excludeConnectionId ?? 'null'), [
             'scope' => ['socket.handler', 'socket.handler.dispatcher'],
         ]);
+    }
+
+    /**
+     * Run before-client-send listeners then strip reserved metadata for clients.
+     *
+     * @param string $appId Application id.
+     * @param string $channelName Channel name.
+     * @param string $event Event name.
+     * @param array<string, mixed> $enrichedPayload Enriched payload.
+     * @return array<string, mixed>
+     */
+    protected static function resolveClientPayload(
+        string $appId,
+        string $channelName,
+        string $event,
+        array $enrichedPayload,
+    ): array {
+        $before = new BeforeClientSendEvent($appId, $channelName, $event, $enrichedPayload);
+        EventManager::instance()->dispatch($before);
+
+        $result = $before->getResult();
+        $candidate = is_array($result) ? $result : $enrichedPayload;
+
+        return CrustumMeta::strip($candidate);
     }
 
     /**
