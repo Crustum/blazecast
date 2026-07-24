@@ -274,7 +274,7 @@ class ChannelUsersControllerTest extends TestCase
      */
     private function createAuthenticatedRequest(string $method, string $path, array $headers = []): RequestInterface
     {
-        $authPath = $path . (strpos($path, '?') === false ? '?' : '&') . 'auth_key=test-key&auth_signature=test-signature';
+        $authPath = $path . (str_contains($path, '?') ? '&' : '?') . 'auth_key=test-key&auth_signature=test-signature';
 
         return $this->createRequest($method, $authPath, $headers);
     }

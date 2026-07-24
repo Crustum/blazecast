@@ -37,9 +37,7 @@ class BlazeCastPlugin extends BasePlugin implements ManifestInterface
      */
     public function services(ContainerInterface $container): void
     {
-        $container->addShared('blazecast.config', function () {
-            return Configure::read('BlazeCast', []);
-        });
+        $container->addShared('blazecast.config', fn(): mixed => Configure::read('BlazeCast', []));
 
         $container->addShared(ChannelConnectionManager::class);
 
@@ -53,9 +51,7 @@ class BlazeCastPlugin extends BasePlugin implements ManifestInterface
         $container->addShared(EventDispatcherService::class)
             ->addArgument(EventManager::class);
 
-        $container->addShared(EventManager::class, function () {
-            return EventManager::instance();
-        });
+        $container->addShared(EventManager::class, fn(): EventManager => EventManager::instance());
     }
 
     /**

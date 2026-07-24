@@ -14,6 +14,7 @@ use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\Utils;
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\StreamInterface;
 
 /**
  * AppInfoControllerTest
@@ -112,7 +113,7 @@ class AppInfoControllerTest extends TestCase
 
         $this->assertEquals(200, $response->getStatusCode());
 
-        $responseData = json_decode($response->getContent(), true);
+        $responseData = json_decode((string)$response->getContent(), true);
 
         $this->assertIsArray($responseData);
         $this->assertEquals($appId, $responseData['id']);
@@ -143,7 +144,7 @@ class AppInfoControllerTest extends TestCase
 
         $this->assertEquals(200, $response->getStatusCode());
 
-        $responseData = json_decode($response->getContent(), true);
+        $responseData = json_decode((string)$response->getContent(), true);
 
         $this->assertIsArray($responseData);
         $this->assertEquals('unknown', $responseData['id']);
@@ -188,7 +189,7 @@ class AppInfoControllerTest extends TestCase
 
         $this->assertEquals(200, $response->getStatusCode());
 
-        $responseData = json_decode($response->getContent(), true);
+        $responseData = json_decode((string)$response->getContent(), true);
 
         $this->assertIsArray($responseData);
         $this->assertEquals($appId, $responseData['id']);
@@ -236,7 +237,7 @@ class AppInfoControllerTest extends TestCase
 
         $this->assertEquals(200, $response->getStatusCode());
 
-        $responseData = json_decode($response->getContent(), true);
+        $responseData = json_decode((string)$response->getContent(), true);
 
         $this->assertIsArray($responseData);
         $this->assertEquals(0, $responseData['channel_count']);
@@ -263,7 +264,7 @@ class AppInfoControllerTest extends TestCase
         $request = new ServerRequest($method, $uri, $headers);
 
         if ($body !== null) {
-            $request = $request->withBody($this->createStream($body));
+            return $request->withBody($this->createStream($body));
         }
 
         return $request;
@@ -275,7 +276,7 @@ class AppInfoControllerTest extends TestCase
      * @param string $content Stream content
      * @return \Psr\Http\Message\StreamInterface
      */
-    private function createStream(string $content)
+    private function createStream(string $content): StreamInterface
     {
         $stream = fopen('php://temp', 'r+');
         fwrite($stream, $content);

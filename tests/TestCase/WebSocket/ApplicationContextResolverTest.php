@@ -8,6 +8,7 @@ use Crustum\BlazeCast\WebSocket\ApplicationContextResolver;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
+use PHPUnit\Framework\MockObject\MockObject;
 
 /**
  * ApplicationContextResolverTest
@@ -15,17 +16,17 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 class ApplicationContextResolverTest extends TestCase
 {
     /**
-     * @var ApplicationContextResolver&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\ApplicationContextResolver
      */
     protected ApplicationContextResolver $resolver;
 
     /**
-     * @var ApplicationManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\MockObject
      */
-    protected ApplicationManager $applicationManager;
+    protected ApplicationManager&MockObject $applicationManager;
 
     /**
-     * @var ChannelManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\PHPUnit\Framework\MockObject\Stub
      */
     protected ChannelManager $defaultChannelManager;
 
@@ -34,11 +35,11 @@ class ApplicationContextResolverTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
-        $this->applicationManager = $this->createStub(ApplicationManager::class);
+        $this->applicationManager = $this->createMock(ApplicationManager::class);
         $this->defaultChannelManager = $this->createStub(ChannelManager::class);
 
         $this->resolver = new ApplicationContextResolver(
@@ -79,7 +80,7 @@ class ApplicationContextResolverTest extends TestCase
      */
     public function testGetAppIdForConnectionWithAttribute(): void
     {
-        $connection = $this->createStub(Connection::class);
+        $connection = $this->createMock(Connection::class);
         $connection->method('getId')->willReturn('conn-123');
         $connection->method('getAttribute')->with('app_id')->willReturn('app-789');
 
@@ -101,10 +102,11 @@ class ApplicationContextResolverTest extends TestCase
         $connection->method('getId')->willReturn('conn-123');
         $connection->expects($this->exactly(2))
             ->method('getAttribute')
-            ->willReturnCallback(function ($attribute) {
+            ->willReturnCallback(function ($attribute): ?string {
                 if ($attribute === 'app_id') {
                     return null;
                 }
+
                 if ($attribute === 'app_key') {
                     return 'test-key';
                 }

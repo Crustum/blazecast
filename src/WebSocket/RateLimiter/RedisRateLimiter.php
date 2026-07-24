@@ -222,7 +222,7 @@ LUA;
             $result = $this->redis->eval($this->luaScript, $args, 1);
 
             return $this->parseResult($result, $maxPoints);
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return new RateLimitResult(
                 canContinue: true,
                 remainingPoints: $maxPoints,

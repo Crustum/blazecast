@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -18,10 +19,12 @@ use ReflectionClass;
 class PingHandlerTest extends TestCase
 {
     private PingHandler $handler;
+
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&Server
+     * @var \PHPUnit\Framework\MockObject\Stub&Server
      */
-    private Server $stubServer;
+    private Server&Stub $stubServer;
+
     private Connection&MockObject $mockConnection;
 
     protected function setUp(): void
@@ -67,7 +70,7 @@ class PingHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'pong' &&
@@ -92,7 +95,7 @@ class PingHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) use ($beforeTime, $beforeServerTime) {
+            ->with($this->callback(function ($jsonMessage) use ($beforeTime, $beforeServerTime): bool {
                 $decoded = json_decode($jsonMessage, true);
                 $time = $decoded['data']['time'] ?? 0;
                 $serverTime = $decoded['data']['server_time'] ?? 0;
@@ -117,7 +120,7 @@ class PingHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'pong' &&
@@ -138,7 +141,7 @@ class PingHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'pong' &&
@@ -163,7 +166,7 @@ class PingHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->exactly(3))
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'pong';
@@ -184,7 +187,7 @@ class PingHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return json_last_error() === JSON_ERROR_NONE && is_array($decoded);
@@ -226,7 +229,7 @@ class PingHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'pong';
@@ -245,7 +248,7 @@ class PingHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): true {
                 $decoded = json_decode($jsonMessage, true);
 
                 $this->assertArrayHasKey('event', $decoded);

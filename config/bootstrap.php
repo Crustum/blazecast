@@ -1,8 +1,8 @@
 <?php
 /**
- * Reverb Plugin bootstrap file.
+ * BlazeCast plugin bootstrap file.
  *
- * This file contains initialization code for the Reverb WebSocket plugin.
+ * Initialization for the BlazeCast WebSocket plugin.
  */
 
 use Crustum\BlazeCast\WebSocket\Pusher\Handler\PusherEventHandler;

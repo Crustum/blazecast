@@ -15,7 +15,9 @@ use ReflectionClass;
 class RedisClientTest extends TestCase
 {
     private RedisClient $redisClient;
+
     private string $testChannel = 'test:channel';
+
     /**
      * @var array<string, mixed>
      */

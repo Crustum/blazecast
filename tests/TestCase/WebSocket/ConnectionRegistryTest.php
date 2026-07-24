@@ -8,6 +8,7 @@ use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\ConnectionRegistry;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
+use PHPUnit\Framework\MockObject\Stub;
 
 /**
  * ConnectionRegistryTest
@@ -15,21 +16,23 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 class ConnectionRegistryTest extends TestCase
 {
     protected ConnectionRegistry $registry;
+
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&ChannelConnectionManager
+     * @var \PHPUnit\Framework\MockObject\Stub&ChannelConnectionManager
      */
-    protected ChannelConnectionManager $connectionManager;
+    protected ChannelConnectionManager&Stub $connectionManager;
+
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&EventManager
+     * @var \PHPUnit\Framework\MockObject\Stub&EventManager
      */
-    protected EventManager $eventManager;
+    protected EventManager&Stub $eventManager;
 
     /**
      * Set up test fixtures
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 

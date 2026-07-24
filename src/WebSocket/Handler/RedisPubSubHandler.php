@@ -94,7 +94,7 @@ class RedisPubSubHandler implements HandlerInterface
      */
     public function handle(Connection $connection, Message $message): void
     {
-        if ($this->pubSub === null) {
+        if (!$this->pubSub instanceof PubSub) {
             Log::warning('Redis PubSub handler called but no PubSub instance is available');
             $this->sendError($connection, 'Redis PubSub is not available');
 
@@ -151,9 +151,9 @@ class RedisPubSubHandler implements HandlerInterface
             $connection->send($response->toJson());
 
             Log::info("Published to Redis channel {$channel} from connection {$connection->getId()}");
-        } catch (Exception $e) {
-            Log::error('Error publishing to Redis: ' . $e->getMessage());
-            $this->sendError($connection, 'Failed to publish message to Redis: ' . $e->getMessage());
+        } catch (Exception $exception) {
+            Log::error('Error publishing to Redis: ' . $exception->getMessage());
+            $this->sendError($connection, 'Failed to publish message to Redis: ' . $exception->getMessage());
         }
     }
 
@@ -205,9 +205,9 @@ class RedisPubSubHandler implements HandlerInterface
                 ]);
                 $connection->send($response->toJson());
             }
-        } catch (Exception $e) {
-            Log::error('Error subscribing to Redis: ' . $e->getMessage());
-            $this->sendError($connection, 'Failed to subscribe to Redis channel: ' . $e->getMessage());
+        } catch (Exception $exception) {
+            Log::error('Error subscribing to Redis: ' . $exception->getMessage());
+            $this->sendError($connection, 'Failed to subscribe to Redis channel: ' . $exception->getMessage());
         }
     }
 
@@ -235,9 +235,7 @@ class RedisPubSubHandler implements HandlerInterface
             if (in_array($channel, $redisChannels)) {
                 $this->pubSub->unsubscribe($channel);
 
-                $redisChannels = array_filter($redisChannels, function ($c) use ($channel) {
-                    return $c !== $channel;
-                });
+                $redisChannels = array_filter($redisChannels, fn($c): bool => $c !== $channel);
                 $connection->setAttribute('redis_channels', $redisChannels);
 
                 $response = new Message('redis.unsubscribed', [
@@ -255,9 +253,9 @@ class RedisPubSubHandler implements HandlerInterface
                 ]);
                 $connection->send($response->toJson());
             }
-        } catch (Exception $e) {
-            Log::error('Error unsubscribing from Redis: ' . $e->getMessage());
-            $this->sendError($connection, 'Failed to unsubscribe from Redis channel: ' . $e->getMessage());
+        } catch (Exception $exception) {
+            Log::error('Error unsubscribing from Redis: ' . $exception->getMessage());
+            $this->sendError($connection, 'Failed to unsubscribe from Redis channel: ' . $exception->getMessage());
         }
     }
 

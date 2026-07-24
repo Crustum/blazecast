@@ -17,11 +17,14 @@ use RuntimeException;
 class WebSocketTestClient
 {
     private LoopInterface $loop;
+
     private ?WebSocket $connection = null;
+
     /**
      * @var array<int, mixed>
      */
     private array $receivedMessages = [];
+
     /**
      * @var array<callable>
      */
@@ -43,10 +46,10 @@ class WebSocketTestClient
         $connector = new Connector($this->loop);
 
         return $connector($uri)
-            ->then(function (WebSocket $conn) {
+            ->then(function (WebSocket $conn): WebSocket {
                 $this->connection = $conn;
 
-                $conn->on('message', function (MessageInterface $msg) {
+                $conn->on('message', function (MessageInterface $msg): void {
                     $payload = $msg->getPayload();
                     $this->receivedMessages[] = $payload;
 
@@ -55,7 +58,7 @@ class WebSocketTestClient
                     }
                 });
 
-                $conn->on('close', function ($code = null, $reason = null) {
+                $conn->on('close', function ($code = null, $reason = null): void {
                     $this->connection = null;
                 });
 
@@ -70,7 +73,7 @@ class WebSocketTestClient
      */
     public function send(string $message): void
     {
-        if ($this->connection) {
+        if ($this->connection instanceof WebSocket) {
             $this->connection->send($message);
         }
     }
@@ -80,7 +83,7 @@ class WebSocketTestClient
      */
     public function close(): void
     {
-        if ($this->connection) {
+        if ($this->connection instanceof WebSocket) {
             $this->connection->close();
             $this->connection = null;
         }
@@ -91,7 +94,7 @@ class WebSocketTestClient
      */
     public function isConnected(): bool
     {
-        return $this->connection !== null;
+        return $this->connection instanceof WebSocket;
     }
 
     /**
@@ -131,11 +134,11 @@ class WebSocketTestClient
         $deferred = new Deferred();
         $startCount = count($this->receivedMessages);
 
-        $timer = $this->loop->addTimer($timeout, function () use ($deferred) {
+        $timer = $this->loop->addTimer($timeout, function () use ($deferred): void {
             $deferred->reject(new RuntimeException('Timeout waiting for message'));
         });
 
-        $checkForMessage = function () use ($deferred, $timer, $startCount) {
+        $checkForMessage = function () use ($deferred, $timer, $startCount): bool {
             if (count($this->receivedMessages) > $startCount) {
                 $this->loop->cancelTimer($timer);
                 $deferred->resolve($this->receivedMessages[count($this->receivedMessages) - 1]);
@@ -146,7 +149,7 @@ class WebSocketTestClient
             return false;
         };
 
-        $this->loop->addPeriodicTimer(0.01, function ($periodicTimer) use ($checkForMessage) {
+        $this->loop->addPeriodicTimer(0.01, function ($periodicTimer) use ($checkForMessage): void {
             if ($checkForMessage()) {
                 $this->loop->cancelTimer($periodicTimer);
             }
@@ -168,11 +171,11 @@ class WebSocketTestClient
         $startCount = count($this->receivedMessages);
         $targetCount = $startCount + $count;
 
-        $timer = $this->loop->addTimer($timeout, function () use ($deferred) {
+        $timer = $this->loop->addTimer($timeout, function () use ($deferred): void {
             $deferred->reject(new RuntimeException('Timeout waiting for messages'));
         });
 
-        $checkForMessages = function () use ($deferred, $timer, $targetCount) {
+        $checkForMessages = function () use ($deferred, $timer, $targetCount): bool {
             if (count($this->receivedMessages) >= $targetCount) {
                 $this->loop->cancelTimer($timer);
                 $deferred->resolve(array_slice($this->receivedMessages, -$targetCount));
@@ -183,7 +186,7 @@ class WebSocketTestClient
             return false;
         };
 
-        $this->loop->addPeriodicTimer(0.01, function ($periodicTimer) use ($checkForMessages) {
+        $this->loop->addPeriodicTimer(0.01, function ($periodicTimer) use ($checkForMessages): void {
             if ($checkForMessages()) {
                 $this->loop->cancelTimer($periodicTimer);
             }

@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPrivateChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Exception\ConnectionUnauthorizedException;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -23,17 +24,15 @@ class PusherPrivateChannelTest extends TestCase
 
     /**
      * Mock connection object
-     *
-     * @var \PHPUnit\Framework\MockObject\MockObject|\Crustum\BlazeCast\WebSocket\Connection
      */
-    private $connection;
+    private MockObject|Connection $connection;
 
     /**
      * Mock application manager
      *
      * @var \PHPUnit\Framework\MockObject\MockObject&\Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager
      */
-    private $applicationManager;
+    private ApplicationManager&MockObject $applicationManager;
 
     protected function setUp(): void
     {
@@ -44,7 +43,7 @@ class PusherPrivateChannelTest extends TestCase
         $this->connection = $this->createMock(Connection::class);
         $this->connection->method('getId')->willReturn('connection-123');
 
-        $this->applicationManager = $this->createStub(ApplicationManager::class);
+        $this->applicationManager = $this->createMock(ApplicationManager::class);
         $this->channel->setApplicationManager($this->applicationManager);
     }
 
@@ -152,7 +151,7 @@ class PusherPrivateChannelTest extends TestCase
         $this->connection->expects($this->once())
             ->method('setAttribute')
             ->with("channel_data_{$channelName}", $this->anything())
-            ->willReturnCallback(function ($key, $value) use (&$attributes) {
+            ->willReturnCallback(function ($key, $value) use (&$attributes): void {
                 $attributes[$key] = $value;
             });
 

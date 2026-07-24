@@ -65,7 +65,7 @@ trait PrivateChannelsTrait
         [$key, $providedSignature] = $authParts;
         $secret = $this->getApplicationSecret($key);
 
-        $expectedSignature = hash_hmac('sha256', $signature, $secret);
+        $expectedSignature = hash_hmac('sha256', $signature, (string)$secret);
 
         if (!hash_equals($expectedSignature, $providedSignature)) {
             throw new ConnectionUnauthorizedException('Invalid authentication signature');
@@ -123,7 +123,25 @@ trait PrivateChannelsTrait
      */
     public function allowsClientEvents(): bool
     {
-        return true;
+        if ($this->applicationManager === null) {
+            return true;
+        }
+
+        $applications = $this->applicationManager->getApplications();
+        if ($applications === []) {
+            return true;
+        }
+
+        foreach ($applications as $application) {
+            $acceptFrom = $application['accept_client_events_from']
+                ?? ($application['enable_client_messages'] ?? true ? 'all' : 'none');
+
+            if (in_array($acceptFrom, ['all', 'members'], true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

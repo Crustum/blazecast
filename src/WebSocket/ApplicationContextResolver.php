@@ -31,6 +31,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 class ApplicationContextResolver
 {
     protected ApplicationManager $applicationManager;
+
     protected ChannelManager $defaultChannelManager;
 
     /**

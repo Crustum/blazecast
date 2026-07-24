@@ -148,8 +148,8 @@ class Connection implements ConnectionInterface
             BlazeCastLogger::debug(__('Data sent via unified connection {0}. Data length: {1}, is websocket: {2}', $this->getId(), strlen($data), $this->connected), [
                 'scope' => ['socket.connection'],
             ]);
-        } catch (Exception $e) {
-            BlazeCastLogger::error(__('Error sending data to connection {0}: {1}', $this->getId(), $e->getMessage()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('Error sending data to connection {0}: {1}', $this->getId(), $exception->getMessage()), [
                 'scope' => ['socket.connection'],
             ]);
         }
@@ -167,8 +167,8 @@ class Connection implements ConnectionInterface
             $event = new MessageSentEvent($this, $data);
             $eventManager = EventManager::instance();
             $eventManager->dispatch($event);
-        } catch (Exception $e) {
-            BlazeCastLogger::warning(__('Failed to dispatch MessageSentEvent: {0}', $e->getMessage()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::warning(__('Failed to dispatch MessageSentEvent: {0}', $exception->getMessage()), [
                 'scope' => ['socket.connection', 'socket.connection.events'],
             ]);
         }
@@ -188,8 +188,8 @@ class Connection implements ConnectionInterface
             BlazeCastLogger::info(__('Connection closed {0}', $this->getId()), [
                 'scope' => ['socket.connection'],
             ]);
-        } catch (Exception $e) {
-            BlazeCastLogger::error(__('Error closing connection {0}: {1}', $this->getId(), $e->getMessage()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('Error closing connection {0}: {1}', $this->getId(), $exception->getMessage()), [
                 'scope' => ['socket.connection'],
             ]);
         }
@@ -243,8 +243,8 @@ class Connection implements ConnectionInterface
             BlazeCastLogger::debug(__('Ping sent to connection {0} ({1}), pending pings: {2}', $this->getId(), $type, $this->pingState['pending_pings']), [
                 'scope' => ['socket.connection', 'socket.connection.ping'],
             ]);
-        } catch (Exception $e) {
-            BlazeCastLogger::error(__('Error sending {0} ping to connection {1}: {2}', $type, $this->getId(), $e->getMessage()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('Error sending {0} ping to connection {1}: {2}', $type, $this->getId(), $exception->getMessage()), [
                 'scope' => ['socket.connection', 'socket.connection.ping'],
             ]);
         }
@@ -411,8 +411,8 @@ class Connection implements ConnectionInterface
             BlazeCastLogger::debug(__('Control frame sent to connection {0} ({1}), payload length: {2}', $this->getId(), $opcode, strlen($payload)), [
                 'scope' => ['socket.connection', 'socket.connection.control'],
             ]);
-        } catch (Exception $e) {
-            BlazeCastLogger::error(__('Error sending control frame to connection {0}: {1}', $this->getId(), $e->getMessage()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('Error sending control frame to connection {0}: {1}', $this->getId(), $exception->getMessage()), [
                 'scope' => ['socket.connection'],
             ]);
         }
@@ -561,7 +561,7 @@ class Connection implements ConnectionInterface
      */
     protected function getEventManager(): EventManager
     {
-        if ($this->eventManager === null) {
+        if (!$this->eventManager instanceof EventManager) {
             $this->eventManager = EventManager::instance();
         }
 
@@ -588,8 +588,6 @@ class Connection implements ConnectionInterface
             $frame .= chr(127) . pack('J', $payloadLength);
         }
 
-        $frame .= $payload;
-
-        return $frame;
+        return $frame . $payload;
     }
 }

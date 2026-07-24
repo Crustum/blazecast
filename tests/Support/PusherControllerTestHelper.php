@@ -13,6 +13,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use PHPUnit\Framework\MockObject\MockBuilder;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Rule\AnyInvokedCount;
 use ReflectionClass;
 use stdClass;
@@ -111,7 +112,7 @@ class PusherControllerTestHelper
             $this->connectionManager,
         ];
 
-        if (!empty($additionalDependencies)) {
+        if ($additionalDependencies !== []) {
             $dependencies = array_merge($dependencies, $additionalDependencies);
         }
 
@@ -131,6 +132,12 @@ class PusherControllerTestHelper
     {
         $testAppWithChannelManager = array_merge($this->testApp, [
             'channel_manager' => $this->channelManager,
+        ]);
+
+        $reflectionManager = new ReflectionClass($this->applicationManager);
+        $appsProperty = $reflectionManager->getProperty('applications');
+        $appsProperty->setValue($this->applicationManager, [
+            $this->testApp['id'] => $testAppWithChannelManager,
         ]);
 
         $defaults = [
@@ -172,6 +179,10 @@ class PusherControllerTestHelper
         $channel->expects($this->any())
             ->method('getConnectionCount')
             ->willReturn($connectionCount);
+
+        $channel->expects($this->any())
+            ->method('getConnections')
+            ->willReturn(array_fill(0, $connectionCount, null));
 
         return $channel;
     }
@@ -222,7 +233,7 @@ class PusherControllerTestHelper
             $map[] = [$channel->getName(), $channel];
         }
 
-        if (!empty($map)) {
+        if ($map !== []) {
             $this->channelManager->expects($this->any())
                 ->method('getChannel')
                 ->willReturnMap($map);
@@ -237,7 +248,7 @@ class PusherControllerTestHelper
      * @param array<mixed> $parameters Method parameters
      * @return mixed
      */
-    public function callProtectedMethod(object $controller, string $methodName, array $parameters = [])
+    public function callProtectedMethod(object $controller, string $methodName, array $parameters = []): mixed
     {
         $reflection = new ReflectionClass($controller);
         $method = $reflection->getMethod($methodName);
@@ -315,7 +326,7 @@ class PusherControllerTestHelper
         if ($expectedBody !== null) {
             $body = $response->getBody();
 
-            if (is_object($body) && $body instanceof stdClass) {
+            if ($body instanceof stdClass) {
                 $body = json_decode(json_encode($body), true);
             }
 
@@ -335,7 +346,7 @@ class PusherControllerTestHelper
      * @param string $methodName Method name
      * @return \PHPUnit\Framework\MockObject\MockObject
      */
-    public function mockStaticMethod(string $className, string $methodName)
+    public function mockStaticMethod(string $className, string $methodName): MockObject
     {
         /** @phpstan-ignore-next-line */
         return $this->testCase->getMockBuilder($className)
@@ -346,6 +357,6 @@ class PusherControllerTestHelper
 
     public function any(): AnyInvokedCount
     {
-        return new AnyInvokedCount;
+        return new AnyInvokedCount();
     }
 }

@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Event\ChannelUnsubscribedEvent;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
+use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Exception;
 
 /**
@@ -19,9 +20,13 @@ use Exception;
 class ChannelOperationsManager
 {
     protected ApplicationManager $applicationManager;
+
     protected ConnectionRegistry $connectionRegistry;
+
     protected ChannelConnectionManager $connectionManager;
+
     protected EventManager $eventManager;
+
     protected ApplicationContextResolver $contextResolver;
 
     /**
@@ -88,7 +93,7 @@ class ChannelOperationsManager
         ]);
 
         $applications = $this->applicationManager->getApplications();
-        if (!empty($applications)) {
+        if ($applications !== []) {
             $firstApp = array_values($applications)[0];
             $this->broadcastToChannelForApp($firstApp['id'], $channelName, $message, $exceptConnectionId);
         } else {
@@ -285,7 +290,7 @@ class ChannelOperationsManager
     public function subscribeToChannel(Connection $connection, string $channelName): void
     {
         $channelManager = $this->contextResolver->getChannelManagerForConnection($connection, []);
-        if (!$channelManager) {
+        if (!$channelManager instanceof ChannelManager) {
             BlazeCastLogger::error(__('ChannelOperationsManager: No ChannelManager found for connection {0} on channel {1}', $connection->getId(), $channelName), [
                 'scope' => ['socket.manager', 'socket.manager.operations'],
             ]);
@@ -319,7 +324,7 @@ class ChannelOperationsManager
     public function subscribeToChannelWithAuth(Connection $connection, string $channelName, ?string $auth = null, ?string $channelData = null): void
     {
         $channelManager = $this->contextResolver->getChannelManagerForConnection($connection, []);
-        if (!$channelManager) {
+        if (!$channelManager instanceof ChannelManager) {
             BlazeCastLogger::error('No ChannelManager found for connection', [
                 'scope' => ['socket.manager', 'socket.manager.operations'],
                 'connection_id' => $connection->getId(),
@@ -331,7 +336,7 @@ class ChannelOperationsManager
         $channel = $channelManager->getChannel($channelName);
 
         if (is_callable([$channel, 'setApplicationManager'])) {
-            call_user_func([$channel, 'setApplicationManager'], $this->applicationManager);
+            $channel->setApplicationManager($this->applicationManager);
         }
 
         $channel->subscribe($connection, $auth, $channelData);
@@ -356,7 +361,7 @@ class ChannelOperationsManager
     public function unsubscribeFromChannel(Connection $connection, string $channelName): void
     {
         $channelManager = $this->contextResolver->getChannelManagerForConnection($connection, []);
-        if (!$channelManager) {
+        if (!$channelManager instanceof ChannelManager) {
             BlazeCastLogger::error(__('ChannelOperationsManager: No ChannelManager found for connection {0} on channel {1} for unsubscribe', $connection->getId(), $channelName), [
                 'scope' => ['socket.manager', 'socket.manager.operations'],
             ]);

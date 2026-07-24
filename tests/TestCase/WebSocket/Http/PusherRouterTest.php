@@ -52,7 +52,7 @@ class PusherRouterTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -84,7 +84,7 @@ class PusherRouterTest extends TestCase
         $response = new Response(['health' => 'OK']);
         $connection = $this->createStub(Connection::class);
 
-        $controller = function ($req, $conn, $params) use ($request, $response, $connection) {
+        $controller = function ($req, $conn, $params) use ($request, $response, $connection): Response {
             $this->assertSame($request, $req);
             $this->assertSame($connection, $conn);
             $this->assertEquals([], $params);
@@ -115,7 +115,7 @@ class PusherRouterTest extends TestCase
         $response = new Response(['channels' => []]);
         $connection = $this->createStub(Connection::class);
 
-        $controller = function ($req, $conn, $params) use ($request, $response, $connection) {
+        $controller = function ($req, $conn, $params) use ($request, $response, $connection): Response {
             $this->assertSame($request, $req);
             $this->assertSame($connection, $conn);
             $this->assertEquals(['appId' => 'app-id'], $params);

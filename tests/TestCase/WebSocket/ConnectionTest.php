@@ -75,7 +75,6 @@ class ConnectionTest extends TestCase
     {
         $connection = new Connection($this->mockReactConnection);
         $this->assertNotEmpty($connection->getId());
-        $this->assertIsString($connection->getId());
     }
 
     /**
@@ -110,10 +109,7 @@ class ConnectionTest extends TestCase
 
         $this->mockReactConnection->expects($this->once())
             ->method('write')
-            ->with($this->callback(function ($data) {
-                // Check if it's a WebSocket frame
-                return strlen($data) > 0;
-            }));
+            ->with($this->callback(fn($data): bool => (string)$data !== ''));
 
         $this->connection->send('test data');
     }
@@ -268,10 +264,7 @@ class ConnectionTest extends TestCase
 
         $this->mockReactConnection->expects($this->once())
             ->method('write')
-            ->with($this->callback(function ($data) {
-                // Check if it's a WebSocket ping frame
-                return strlen($data) > 0;
-            }));
+            ->with($this->callback(fn($data): bool => (string)$data !== ''));
 
         $this->connection->ping('websocket');
     }
@@ -285,7 +278,7 @@ class ConnectionTest extends TestCase
     {
         $this->mockReactConnection->expects($this->once())
             ->method('write')
-            ->with($this->callback(function ($data) {
+            ->with($this->callback(function ($data): bool {
                 $decoded = json_decode($data, true);
 
                 return $decoded['event'] === 'pusher:ping';
@@ -442,10 +435,7 @@ class ConnectionTest extends TestCase
 
         $this->mockReactConnection->expects($this->once())
             ->method('write')
-            ->with($this->callback(function ($data) {
-                // Check if it's a WebSocket control frame
-                return strlen($data) > 0;
-            }));
+            ->with($this->callback(fn($data): bool => (string)$data !== ''));
 
         $this->connection->control(0x8, 'close payload');
     }
