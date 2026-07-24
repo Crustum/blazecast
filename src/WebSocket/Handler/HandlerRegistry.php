@@ -52,7 +52,7 @@ class HandlerRegistry
      */
     public function register(HandlerInterface $handler): void
     {
-        if ($this->server !== null) {
+        if ($this->server instanceof WebSocketServerInterface) {
             $handler->setServer($this->server);
         }
 

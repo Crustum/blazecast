@@ -9,7 +9,6 @@ use React\Promise\PromiseInterface;
 
 /**
  * Factory for creating Redis client instances
- * Following Laravel Reverb's RedisClientFactory pattern
  */
 class RedisClientFactory
 {

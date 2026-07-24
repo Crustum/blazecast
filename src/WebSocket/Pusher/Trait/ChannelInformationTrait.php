@@ -56,7 +56,7 @@ trait ChannelInformationTrait
     protected function infoForChannels(array $application, array $channels, string $info = ''): array
     {
         return (new Collection($channels))
-            ->map(fn($channel) => $channel instanceof PusherChannelInterface ? $channel->getName() : (string)$channel)
+            ->map(fn($channel): string => $channel instanceof PusherChannelInterface ? $channel->getName() : (string)$channel)
             ->combine(
                 fn($channelName) => $channelName,
                 fn($channelName) => $this->info($application, $channelName, $info),
@@ -125,12 +125,18 @@ trait ChannelInformationTrait
      */
     protected function extractUniqueUsers(array $connections): array
     {
-        $users = (new Collection($connections))
-            ->map(fn($connection) => $this->extractUserId($connection))
-            ->filter(fn($userId) => $userId !== null)
-            ->toArray();
+        $userIds = [];
+        foreach ($connections as $connection) {
+            $userId = $this->extractUserId($connection);
+            if ($userId !== null && $userId !== '') {
+                $userIds[] = $userId;
+            }
+        }
 
-        return array_values(array_unique($users));
+        /** @var list<string> $uniqueUsers */
+        $uniqueUsers = array_values(array_unique($userIds));
+
+        return $uniqueUsers;
     }
 
     /**
@@ -170,12 +176,12 @@ trait ChannelInformationTrait
      */
     protected function parseInfoFields(string $info): array
     {
-        if (!$info) {
+        if ($info === '' || $info === '0') {
             return [];
         }
 
         $allowedFields = ['user_count', 'subscription_count', 'member_count', 'occupied'];
-        $requestedFields = array_map('trim', explode(',', $info));
+        $requestedFields = array_map(trim(...), explode(',', $info));
 
         return array_intersect($requestedFields, $allowedFields);
     }

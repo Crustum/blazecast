@@ -65,9 +65,11 @@ class ConnectionRegistry
         if ($connection->getAttribute('app_id')) {
             $appContext['app_id'] = $connection->getAttribute('app_id');
         }
+
         if ($connection->getAttribute('app_key')) {
             $appContext['app_key'] = $connection->getAttribute('app_key');
         }
+
         if ($connection->getAttribute('app_context')) {
             $appContext['app_context'] = $connection->getAttribute('app_context');
         }
@@ -186,7 +188,7 @@ class ConnectionRegistry
             $connection->close();
         }
 
-        if ($unsubscribeCallback) {
+        if ($unsubscribeCallback !== null) {
             $subscribedChannelNames = $this->connectionManager->getChannelNamesForConnection($connection);
 
             foreach ($subscribedChannelNames as $channelName) {

@@ -5,6 +5,7 @@ namespace Crustum\BlazeCast\WebSocket\Pusher\Http\Controller;
 
 use Crustum\BlazeCast\WebSocket\Http\Response;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
+use Crustum\BlazeCast\WebSocket\Security\OriginGuard;
 
 /**
  * ResponseTrait
@@ -28,12 +29,33 @@ trait ResponseTrait
     {
         $defaultHeaders = [
             'Content-Type' => 'application/json',
-            'Access-Control-Allow-Origin' => '*',
             'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS',
             'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With',
         ];
 
+        $corsOrigin = $this->resolveCorsAllowOrigin();
+        if ($corsOrigin !== null) {
+            $defaultHeaders['Access-Control-Allow-Origin'] = $corsOrigin;
+        }
+
         return new Response($data, $statusCode, array_merge($defaultHeaders, $headers));
+    }
+
+    /**
+     * Resolve Access-Control-Allow-Origin from the current application allow-list.
+     *
+     * @return string|null
+     */
+    protected function resolveCorsAllowOrigin(): ?string
+    {
+        $allowedOrigins = ['*'];
+        if ($this->application !== null) {
+            $allowedOrigins = $this->application['allowed_origins'] ?? ['*'];
+        }
+
+        $originHeader = $this->requestOrigin ?? null;
+
+        return OriginGuard::resolveCorsOrigin($allowedOrigins, $originHeader);
     }
 
     /**

@@ -25,14 +25,20 @@ use Throwable;
 class TestServer
 {
     private ?Server $server = null;
+
     private ?LoopInterface $loop = null;
+
     private string $host;
+
     private int $port;
+
     /**
      * @var array<string, mixed>
      */
     private array $config;
+
     private bool $running = false;
+
     private bool $useSharedLoop;
 
     /**
@@ -68,11 +74,7 @@ class TestServer
      */
     private function setupEventLoop(): void
     {
-        if ($this->useSharedLoop) {
-            $this->loop = Loop::get();
-        } else {
-            $this->loop = new StreamSelectLoop();
-        }
+        $this->loop = $this->useSharedLoop ? Loop::get() : new StreamSelectLoop();
     }
 
     /**
@@ -179,7 +181,7 @@ class TestServer
 
         $uri = "{$this->host}:{$this->port}";
         $socket = new SocketServer($uri, [], $serverLoop);
-        $socket->on('connection', [$this->server, 'handleIncomingConnection']);
+        $socket->on('connection', $this->server->handleIncomingConnection(...));
 
         $socketProperty->setValue($this->server, $socket);
     }
@@ -201,13 +203,13 @@ class TestServer
             // Allow some time for cleanup
             if (!$this->useSharedLoop && $this->loop) {
                 // Stop the loop if we're managing our own
-                $this->loop->futureTick(function () {
+                $this->loop->futureTick(function (): void {
                     if ($this->loop && !$this->useSharedLoop) {
                         $this->loop->stop();
                     }
                 });
             }
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             // Ignore cleanup errors in tests
         }
 
@@ -220,11 +222,11 @@ class TestServer
      */
     public function runFor(float $seconds): void
     {
-        if (!$this->loop) {
+        if (!$this->loop instanceof LoopInterface) {
             return;
         }
 
-        $timer = $this->loop->addTimer($seconds, function () {
+        $timer = $this->loop->addTimer($seconds, function (): void {
             if ($this->loop && !$this->useSharedLoop) {
                 $this->loop->stop();
             }
@@ -263,9 +265,11 @@ class TestServer
 
                 return true;
             }
+
             if ($socket) {
                 socket_close($socket);
             }
+
             usleep(50000); // 50ms
         }
 
@@ -355,7 +359,7 @@ class TestServer
      */
     public function createClient(): WebSocketTestClient
     {
-        if (!$this->loop) {
+        if (!$this->loop instanceof LoopInterface) {
             throw new RuntimeException('No event loop available');
         }
 
@@ -383,7 +387,7 @@ class TestServer
      */
     private function getServerSocket(): mixed
     {
-        if (!$this->server) {
+        if (!$this->server instanceof Server) {
             return null;
         }
 
@@ -398,7 +402,7 @@ class TestServer
      */
     private function getJobManager(): mixed
     {
-        if (!$this->server) {
+        if (!$this->server instanceof Server) {
             return null;
         }
 

@@ -16,6 +16,7 @@ use React\EventLoop\Loop;
 class RealWebSocketConnectionTest extends TestCase
 {
     private const SERVER_HOST = '127.0.0.1';
+
     private const SERVER_PORT = 8091;
 
     private Application $application;
@@ -98,7 +99,7 @@ class RealWebSocketConnectionTest extends TestCase
         ];
 
         foreach ($expectedHeaders as $header) {
-            if (strpos($header, ':') !== false) {
+            if (str_contains($header, ':')) {
                 [$name, $value] = explode(':', $header, 2);
                 $this->assertNotEmpty(trim($name));
                 $this->assertNotEmpty(trim($value));

@@ -14,6 +14,7 @@ use React\Promise\PromiseInterface;
 class RedisClientFactoryTest extends TestCase
 {
     private RedisClientFactory $factory;
+
     private LoopInterface $mockLoop;
 
     protected function setUp(): void

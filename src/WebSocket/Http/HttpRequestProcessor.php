@@ -20,6 +20,7 @@ use Throwable;
 class HttpRequestProcessor
 {
     protected PusherRouter $router;
+
     protected int $maxRequestSize;
 
     /**
@@ -42,7 +43,7 @@ class HttpRequestProcessor
      */
     public function isCompleteHttpRequest(string $buffer): bool
     {
-        return strpos($buffer, "\r\n\r\n") !== false;
+        return str_contains($buffer, "\r\n\r\n");
     }
 
     /**
@@ -99,16 +100,17 @@ class HttpRequestProcessor
         try {
             $response = $this->processHttpRequest($request, $connection);
 
-            if ($response) {
+            if ($response instanceof Response) {
                 $httpResponse = $this->formatHttpResponse($response);
                 $connection->send($httpResponse);
             }
+
             $connection->close();
-        } catch (Throwable $e) {
-                BlazeCastLogger::error('HTTP request failed: ' . $e->getMessage(), [
+        } catch (Throwable $throwable) {
+                BlazeCastLogger::error('HTTP request failed: ' . $throwable->getMessage(), [
                 'scope' => ['socket.http', 'socket.http.processor'],
                 'connection_id' => $connection->getId(),
-                'exception' => $e,
+                'exception' => $throwable,
                 ]);
             $this->closeConnection($connection, 500, 'Internal Server Error');
         }
@@ -150,17 +152,27 @@ class HttpRequestProcessor
     }
 
     /**
-     * Add CORS headers to response
+     * Add CORS headers to response when not already set by the controller.
      *
      * @param \Crustum\BlazeCast\WebSocket\Http\Response $response Original response
      * @return \Crustum\BlazeCast\WebSocket\Http\Response Response with CORS headers
      */
     protected function addCorsHeaders(Response $response): Response
     {
-        return $response
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-            ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Pusher-Key, X-Requested-With');
+        $headers = $response->getHeaders();
+        if (!isset($headers['Access-Control-Allow-Origin'])) {
+            $response = $response->withHeader('Access-Control-Allow-Origin', '*');
+        }
+
+        if (!isset($headers['Access-Control-Allow-Methods'])) {
+            $response = $response->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        }
+
+        if (!isset($headers['Access-Control-Allow-Headers'])) {
+            return $response->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Pusher-Key, X-Requested-With');
+        }
+
+        return $response;
     }
 
     /**
@@ -178,9 +190,8 @@ class HttpRequestProcessor
         }
 
         $httpResponse .= "\r\n";
-        $httpResponse .= $response->getContent();
 
-        return $httpResponse;
+        return $httpResponse . $response->getContent();
     }
 
     /**

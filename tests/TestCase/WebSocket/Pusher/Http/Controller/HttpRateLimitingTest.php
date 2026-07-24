@@ -23,9 +23,13 @@ use GuzzleHttp\Psr7\Uri;
 class HttpRateLimitingTest extends TestCase
 {
     private PusherControllerTestHelper $helper;
+
     private RateLimiterInterface $rateLimiter;
+
     private string $appId = 'test-http-rate-limit-app';
+
     private string $appKey = 'test-http-rate-limit-key';
+
     private string $appSecret = 'test-http-rate-limit-secret';
 
     protected function setUp(): void
@@ -100,7 +104,7 @@ class HttpRateLimitingTest extends TestCase
                 ]),
             ]);
             $response = $controller->handle($request, $this->helper->getConnection(), []);
-            $this->assertEquals(200, $response->getStatusCode(), "Request $i should succeed");
+            $this->assertEquals(200, $response->getStatusCode(), "Request {$i} should succeed");
         }
 
         $controller = $this->helper->createController(EventsController::class, [null, $this->rateLimiter]);
@@ -227,7 +231,7 @@ class HttpRateLimitingTest extends TestCase
                 ],
             ]);
             $response = $controller->handle($request, $this->helper->getConnection(), []);
-            $this->assertEquals(200, $response->getStatusCode(), "Request $i should succeed");
+            $this->assertEquals(200, $response->getStatusCode(), "Request {$i} should succeed");
         }
 
         $controller = $this->getMockBuilder(ChannelsController::class)
@@ -292,7 +296,7 @@ class HttpRateLimitingTest extends TestCase
                 ],
             ]);
             $response = $controller->handle($request, $this->helper->getConnection(), $params);
-            $this->assertEquals(200, $response->getStatusCode(), "Request $i should succeed");
+            $this->assertEquals(200, $response->getStatusCode(), "Request {$i} should succeed");
         }
 
         $controller = $this->helper->createController(ConnectionsController::class, [null, $this->rateLimiter]);

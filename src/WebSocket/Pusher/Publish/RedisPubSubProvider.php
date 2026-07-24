@@ -11,6 +11,19 @@ use React\Promise\PromiseInterface;
  *
  * @phpstan-import-type RedisConfig from \Crustum\BlazeCast\WebSocket\Redis\ClientFactory
  * @phpstan-import-type BroadcastPayload from \Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel
+ * @phpstan-type ScalingMessageInnerPayload array{
+ *   event: string,
+ *   channels: list<string>,
+ *   data: string,
+ *   channel?: string
+ * }
+ * @phpstan-type ScalingMessagePayload array{
+ *   type: 'message',
+ *   app_id: string,
+ *   payload: ScalingMessageInnerPayload,
+ *   socket_id?: string
+ * }
+ * @phpstan-type RedisPublishPayload BroadcastPayload|ScalingMessagePayload
  */
 class RedisPubSubProvider
 {
@@ -60,7 +73,7 @@ class RedisPubSubProvider
         $properties = [$loop, $this->channel, $this->server];
 
         $this->publisher = new RedisPublishClient(...$properties);
-        $this->subscriber = new RedisSubscribeClient(...array_merge($properties, [fn() => $this->subscribe()]));
+        $this->subscriber = new RedisSubscribeClient(...array_merge($properties, [$this->subscribe(...)]));
 
         $this->publisher->connect();
         $this->subscriber->connect();
@@ -143,7 +156,7 @@ class RedisPubSubProvider
     /**
      * Publish a payload to the channel
      *
-     * @param BroadcastPayload $payload Payload to publish
+     * @param RedisPublishPayload $payload Payload to publish
      * @return \React\Promise\PromiseInterface<mixed>
      */
     public function publish(array $payload): PromiseInterface

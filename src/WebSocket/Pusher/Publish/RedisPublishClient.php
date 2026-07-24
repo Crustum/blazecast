@@ -14,6 +14,8 @@ use RuntimeException;
  * Handles Redis publishing with event queuing during disconnection.
  *
  * @phpstan-import-type BroadcastPayload from \Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel
+ * @phpstan-import-type ScalingMessagePayload from \Crustum\BlazeCast\WebSocket\Pusher\Publish\RedisPubSubProvider
+ * @phpstan-import-type RedisPublishPayload from \Crustum\BlazeCast\WebSocket\Pusher\Publish\RedisPubSubProvider
  */
 class RedisPublishClient extends RedisClient
 {
@@ -27,14 +29,14 @@ class RedisPublishClient extends RedisClient
     /**
      * Stream of events queued while disconnected from Redis
      *
-     * @var array<BroadcastPayload>
+     * @var array<int, RedisPublishPayload>
      */
     protected array $queuedEvents = [];
 
     /**
      * Queue the given publish event
      *
-     * @param BroadcastPayload $payload Event payload
+     * @param RedisPublishPayload $payload Event payload
      * @return void
      */
     protected function queueEvent(array $payload): void
@@ -59,7 +61,7 @@ class RedisPublishClient extends RedisClient
     /**
      * Publish an event to the given channel
      *
-     * @param BroadcastPayload $payload Event payload
+     * @param RedisPublishPayload $payload Event payload
      * @return \React\Promise\PromiseInterface<mixed>
      */
     public function publish(array $payload): PromiseInterface
@@ -73,7 +75,7 @@ class RedisPublishClient extends RedisClient
         /** @phpstan-ignore-next-line */
         return $this->client->publish($this->channel, json_encode($payload))->then(
             fn($result) => $result,
-            fn($error) => new RuntimeException('Redis publish failed: ' . $error->getMessage()),
+            fn($error): RuntimeException => new RuntimeException('Redis publish failed: ' . $error->getMessage()),
         );
     }
 

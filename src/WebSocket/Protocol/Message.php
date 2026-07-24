@@ -128,13 +128,11 @@ class Message implements MessageInterface
             }
         }
 
-        $message = new static(
+        return new static(
             $data['event'],
             $messageData,
             $data['channel'] ?? null,
         );
-
-        return $message;
     }
 
     /**

@@ -113,7 +113,7 @@ class ControllerFactory
         }
 
         try {
-            if ($this->container !== null && $this->container->has($controllerClass)) {
+            if ($this->container instanceof ContainerInterface && $this->container->has($controllerClass)) {
                 $controller = $this->container->get($controllerClass);
             } else {
                 $controller = new $controllerClass(
@@ -134,19 +134,19 @@ class ControllerFactory
             $this->instances[$controllerClass] = $controller;
 
             return $controller;
-        } catch (Exception $e) {
+        } catch (Exception $exception) {
             $errorMsg = sprintf(
                 'Error creating controller %s - %s in %s:%d - Trace: %s',
                 $controllerClass,
-                $e->getMessage(),
-                $e->getFile(),
-                $e->getLine(),
-                $e->getTraceAsString(),
+                $exception->getMessage(),
+                $exception->getFile(),
+                $exception->getLine(),
+                $exception->getTraceAsString(),
             );
             BlazeCastLogger::error($errorMsg, [
                 'scope' => ['socket.controller', 'socket.controller.factory'],
             ]);
-            throw $e;
+            throw $exception;
         }
     }
 

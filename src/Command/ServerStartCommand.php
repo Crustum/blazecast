@@ -310,7 +310,6 @@ class ServerStartCommand extends Command
 
             $reflection = new ReflectionClass($router);
             $factoryProperty = $reflection->getProperty('controllerFactory');
-            $factoryProperty->setAccessible(true);
             $controllerFactory = $factoryProperty->getValue($router);
 
             if ($controllerFactory) {
@@ -337,8 +336,8 @@ class ServerStartCommand extends Command
             } else {
                 $io->out('   No controller factory found!');
             }
-        } catch (Exception $e) {
-            $io->out(sprintf('   Could not retrieve applications: %s', $e->getMessage()));
+        } catch (Exception $exception) {
+            $io->out(sprintf('   Could not retrieve applications: %s', $exception->getMessage()));
         }
 
         $io->out('');
@@ -360,7 +359,6 @@ class ServerStartCommand extends Command
 
             $reflection = new ReflectionClass($router);
             $routesMethod = $reflection->getMethod('getAvailableRoutes');
-            $routesMethod->setAccessible(true);
             $routes = $routesMethod->invoke($router);
 
             if (empty($routes)) {
@@ -378,10 +376,10 @@ class ServerStartCommand extends Command
                     }
                 }
             }
-        } catch (Exception $e) {
-            print_r($e->getMessage());
-            print_r($e->getTraceAsString());
-            $io->out(sprintf('   Could not retrieve routes: %s', $e->getMessage()));
+        } catch (Exception $exception) {
+            print_r($exception->getMessage());
+            print_r($exception->getTraceAsString());
+            $io->out(sprintf('   Could not retrieve routes: %s', $exception->getMessage()));
         }
     }
 }

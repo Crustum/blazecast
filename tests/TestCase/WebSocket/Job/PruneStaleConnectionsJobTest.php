@@ -17,7 +17,7 @@ class PruneStaleConnectionsJobTest extends TestCase
     public function testRunPrunesStaleConnection(): void
     {
         $connection = $this->createMock(Connection::class);
-        $server = $this->createStub(Server::class);
+        $server = $this->createMock(Server::class);
         $connectionRegistry = $this->createStub(ConnectionRegistry::class);
         $applicationContextResolver = $this->createMock(ApplicationContextResolver::class);
         $appManager = $this->createMock(ApplicationManager::class);
@@ -50,7 +50,7 @@ class PruneStaleConnectionsJobTest extends TestCase
     public function testRunDoesNotPruneActiveConnection(): void
     {
         $connection = $this->createMock(Connection::class);
-        $server = $this->createStub(Server::class);
+        $server = $this->createMock(Server::class);
         $connectionRegistry = $this->createStub(ConnectionRegistry::class);
         $applicationContextResolver = $this->createMock(ApplicationContextResolver::class);
         $appManager = $this->createMock(ApplicationManager::class);

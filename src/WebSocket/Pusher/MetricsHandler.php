@@ -5,6 +5,7 @@ namespace Crustum\BlazeCast\WebSocket\Pusher;
 
 use Cake\Collection\Collection;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
+use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannelInterface;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Trait\ChannelInformationTrait;
@@ -119,12 +120,12 @@ class MetricsHandler
 
         $channelNames = $this->connectionManager->getActiveChannelNames();
         $channels = (new Collection($channelNames))
-            ->map(fn($name) => $this->channelManager->getChannel($name))
-            ->filter(fn($channel) => count($this->connectionManager->getConnectionsForChannel($channel)) > 0);
+            ->map(fn(string $name): PusherChannelInterface => $this->channelManager->getChannel($name))
+            ->filter(fn($channel): bool => $this->connectionManager->getConnectionsForChannel($channel) !== []);
 
         $filterPrefix = $options['filter'] ?? null;
         if ($filterPrefix) {
-            $channels = $channels->filter(fn($channel) => str_starts_with($channel->getName(), $filterPrefix));
+            $channels = $channels->filter(fn($channel): bool => str_starts_with((string)$channel->getName(), (string)$filterPrefix));
         }
 
         return $this->infoForChannels(
@@ -155,7 +156,7 @@ class MetricsHandler
         $uniqueUsers = $this->extractUniqueUsers($connections);
 
         return (new Collection($uniqueUsers))
-            ->map(fn($userId) => ['id' => $userId])
+            ->map(fn($userId): array => ['id' => $userId])
             ->toArray();
     }
 

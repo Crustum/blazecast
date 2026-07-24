@@ -11,6 +11,7 @@ use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\Utils;
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\StreamInterface;
 
 /**
  * ConnectionsControllerTest
@@ -94,7 +95,7 @@ class ConnectionsControllerTest extends TestCase
 
         $this->assertEquals(200, $response->getStatusCode());
 
-        $responseData = json_decode($response->getContent(), true);
+        $responseData = json_decode((string)$response->getContent(), true);
 
         $this->assertIsArray($responseData);
         $this->assertEquals(10, $responseData['connections']);
@@ -141,7 +142,7 @@ class ConnectionsControllerTest extends TestCase
 
         $this->assertEquals(200, $response->getStatusCode());
 
-        $responseData = json_decode($response->getContent(), true);
+        $responseData = json_decode((string)$response->getContent(), true);
 
         $this->assertIsArray($responseData);
         $this->assertEquals(0, $responseData['connections']);
@@ -169,7 +170,7 @@ class ConnectionsControllerTest extends TestCase
         $request = new ServerRequest($method, $uri, $headers);
 
         if ($body !== null) {
-            $request = $request->withBody($this->createStream($body));
+            return $request->withBody($this->createStream($body));
         }
 
         return $request;
@@ -181,7 +182,7 @@ class ConnectionsControllerTest extends TestCase
      * @param string $content Stream content
      * @return \Psr\Http\Message\StreamInterface
      */
-    private function createStream(string $content)
+    private function createStream(string $content): StreamInterface
     {
         $stream = fopen('php://temp', 'r+');
         fwrite($stream, $content);

@@ -9,6 +9,8 @@ use Cake\Core\ContainerInterface;
 use Cake\Event\Event;
 use Cake\Event\EventManager;
 use Cake\I18n\FrozenTime;
+use Crustum\BlazeCast\Recorder\BlazeCastConnectionsRecorder;
+use Crustum\BlazeCast\Recorder\BlazeCastMessagesRecorder;
 use Crustum\BlazeCast\WebSocket\ApplicationContextResolver;
 use Crustum\BlazeCast\WebSocket\ChannelOperationsManager;
 use Crustum\BlazeCast\WebSocket\Connection;
@@ -26,13 +28,20 @@ use Crustum\BlazeCast\WebSocket\Job\PingInactiveConnectionsJob;
 use Crustum\BlazeCast\WebSocket\Job\PruneStaleConnectionsJob;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
 use Crustum\BlazeCast\WebSocket\Protocol\Message as WebSocketMessage;
+use Crustum\BlazeCast\WebSocket\Pusher\Event\EventDispatcher;
 use Crustum\BlazeCast\WebSocket\Pusher\Exception\ConnectionLimitExceeded;
+use Crustum\BlazeCast\WebSocket\Pusher\Exception\InvalidOrigin;
 use Crustum\BlazeCast\WebSocket\Pusher\Handler\PusherEventHandler;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
+use Crustum\BlazeCast\WebSocket\Pusher\Publish\PubSubIncomingMessageHandler;
 use Crustum\BlazeCast\WebSocket\Pusher\Publish\RedisPubSubProvider;
 use Crustum\BlazeCast\WebSocket\RateLimiter\AsyncRateLimiterInterface;
+use Crustum\BlazeCast\WebSocket\RateLimiter\ConnectionMessageRateLimiter;
 use Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface;
+use Crustum\BlazeCast\WebSocket\RateLimiter\RateLimitResult;
+use Crustum\BlazeCast\WebSocket\Security\OriginGuard;
+use Crustum\BlazeCast\WebSocket\Support\ServerPath;
 use Crustum\BlazeCast\WebSocket\WebSocketServerInterface;
 use Crustum\Rhythm\Event\SharedBeat;
 use Crustum\Rhythm\Rhythm;
@@ -229,6 +238,13 @@ class Server implements WebSocketServerInterface
     protected RateLimiterInterface|AsyncRateLimiterInterface|null $rateLimiter = null;
 
     /**
+     * Local per-connection WebSocket text-frame rate limiter
+     *
+     * @var \Crustum\BlazeCast\WebSocket\RateLimiter\ConnectionMessageRateLimiter|null
+     */
+    protected ?ConnectionMessageRateLimiter $connectionMessageRateLimiter = null;
+
+    /**
      * Constructor
      *
      * @param \Crustum\BlazeCast\WebSocket\Http\PusherRouter $httpRouter HTTP router
@@ -241,6 +257,7 @@ class Server implements WebSocketServerInterface
      * @param \React\EventLoop\LoopInterface|null $loop Event loop
      * @param \Cake\Core\ContainerInterface|null $container Container for Rhythm integration
      * @param \Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface|\Crustum\BlazeCast\WebSocket\RateLimiter\AsyncRateLimiterInterface|null $rateLimiter Rate limiter
+     * @param \Crustum\BlazeCast\WebSocket\RateLimiter\ConnectionMessageRateLimiter|null $connectionMessageRateLimiter Connection message rate limiter
      */
     public function __construct(
         PusherRouter $httpRouter,
@@ -253,6 +270,7 @@ class Server implements WebSocketServerInterface
         ?LoopInterface $loop = null,
         ?ContainerInterface $container = null,
         RateLimiterInterface|AsyncRateLimiterInterface|null $rateLimiter = null,
+        ?ConnectionMessageRateLimiter $connectionMessageRateLimiter = null,
     ) {
         Configure::load('Crustum/BlazeCast.rhythm');
         $this->config = $config;
@@ -265,6 +283,7 @@ class Server implements WebSocketServerInterface
         $this->maxRequestSize = $config['max_request_size'] ?? 10000;
         $this->container = $container;
         $this->rateLimiter = $rateLimiter;
+        $this->connectionMessageRateLimiter = $connectionMessageRateLimiter;
 
         $uri = "{$host}:{$port}";
         if (!($config['test_mode'] ?? false)) {
@@ -273,12 +292,18 @@ class Server implements WebSocketServerInterface
             }
 
             try {
-                $this->socket = new SocketServer($uri, [], $this->loop);
-                $this->socket->on('connection', [$this, 'handleIncomingConnection']);
+                $socketOptions = $this->buildSocketOptions($config);
+                if ($this->usesTls($socketOptions)) {
+                    $uri = "tls://{$host}:{$port}";
+                }
+
+                $this->socket = new SocketServer($uri, $socketOptions, $this->loop);
+                $this->socket->on('connection', $this->handleIncomingConnection(...));
             } catch (RuntimeException $e) {
-                if (strpos($e->getMessage(), 'Address already in use') !== false) {
+                if (str_contains($e->getMessage(), 'Address already in use')) {
                     throw new RuntimeException("Port {$port} is already in use on {$host}. Cannot start WebSocket server.", 0, $e);
                 }
+
                 throw $e;
             }
         }
@@ -327,14 +352,17 @@ class Server implements WebSocketServerInterface
 
         $pusherHandler = new PusherEventHandler();
         $pusherHandler->setServer($this);
+
         $this->handlerRegistry->register($pusherHandler);
 
         $pingHandler = new PingHandler();
         $pingHandler->setServer($this);
+
         $this->handlerRegistry->register($pingHandler);
 
         $defaultHandler = new DefaultHandler();
         $defaultHandler->setServer($this);
+
         $this->handlerRegistry->register($defaultHandler);
 
         $this->log('info', sprintf('Handler registry initialized with PusherEventHandler priority. Handlers: %s', implode(', ', ['PusherEventHandler', 'PingHandler', 'DefaultHandler'])), [
@@ -408,6 +436,16 @@ class Server implements WebSocketServerInterface
     }
 
     /**
+     * Get the connection message rate limiter
+     *
+     * @return \Crustum\BlazeCast\WebSocket\RateLimiter\ConnectionMessageRateLimiter|null
+     */
+    public function getConnectionMessageRateLimiter(): ?ConnectionMessageRateLimiter
+    {
+        return $this->connectionMessageRateLimiter;
+    }
+
+    /**
      * Get application-specific ChannelManager for a connection
      *
      * @param \Crustum\BlazeCast\WebSocket\Connection $connection Connection
@@ -436,7 +474,7 @@ class Server implements WebSocketServerInterface
      */
     public function start(): void
     {
-        if (!$this->socket) {
+        if (!$this->socket instanceof ServerInterface) {
             BlazeCastLogger::warning(__('Server: Cannot start server - socket not initialized (test mode?)'), [
                 'scope' => ['socket.server'],
             ]);
@@ -488,6 +526,7 @@ class Server implements WebSocketServerInterface
         $redisEnabled = $scalingConfig['enabled'] ?? false;
 
         if (!$redisEnabled) {
+            EventDispatcher::setPubSubProvider(null);
             $this->log('info', __('Server: Redis PubSub scaling disabled'), [
                 'scope' => ['socket.server', 'socket.server.redis'],
             ]);
@@ -496,22 +535,82 @@ class Server implements WebSocketServerInterface
         }
 
         try {
+            $incomingHandler = new PubSubIncomingMessageHandler(
+                $this->applicationManager,
+                $this->connectionManager,
+            );
+
             $pubSubProvider = new RedisPubSubProvider(
                 $scalingConfig['channel'] ?? 'blazecast:broadcast',
                 $scalingConfig['server'] ?? [],
-                null,
+                $incomingHandler->handle(...),
             );
 
             $pubSubProvider->connect($this->loop);
+            EventDispatcher::setPubSubProvider($pubSubProvider);
 
             $this->log('info', __('Server: Redis PubSub initialized for horizontal scaling on channel {0}', $scalingConfig['channel'] ?? 'blazecast:broadcast'), [
                 'scope' => ['socket.server', 'socket.server.redis'],
             ]);
-        } catch (Throwable $e) {
-            $this->log('error', __('Server: Failed to initialize Redis PubSub: {0}', $e->getMessage()), [
+        } catch (Throwable $throwable) {
+            EventDispatcher::setPubSubProvider(null);
+            $this->log('error', __('Server: Failed to initialize Redis PubSub: {0}', $throwable->getMessage()), [
                 'scope' => ['socket.server', 'socket.server.redis'],
             ]);
         }
+    }
+
+    /**
+     * Build React SocketServer options including optional TLS context.
+     *
+     * @param array<string, mixed> $config Server configuration
+     * @return array<string, mixed>
+     */
+    protected function buildSocketOptions(array $config): array
+    {
+        $serverConfig = $config['servers']['blazecast'] ?? $config;
+        $options = $serverConfig['options'] ?? [];
+        if (!is_array($options)) {
+            $options = [];
+        }
+
+        $tls = $options['tls'] ?? [];
+        if (!is_array($tls)) {
+            $tls = [];
+        }
+
+        $tls = array_filter($tls, static fn($value): bool => $value !== null);
+        $hostname = $serverConfig['hostname'] ?? null;
+
+        if (!$this->usesTls(['tls' => $tls]) && is_string($hostname) && $hostname !== '') {
+            $cert = $tls['local_cert'] ?? null;
+            $key = $tls['local_pk'] ?? null;
+            if (is_string($cert) && $cert !== '' && is_string($key) && $key !== '') {
+                $tls['local_cert'] = $cert;
+                $tls['local_pk'] = $key;
+            }
+        }
+
+        if ($tls !== []) {
+            $options['tls'] = $tls;
+        } else {
+            unset($options['tls']);
+        }
+
+        return $options;
+    }
+
+    /**
+     * Determine whether socket options enable TLS.
+     *
+     * @param array<string, mixed> $options Socket options
+     * @return bool
+     */
+    protected function usesTls(array $options): bool
+    {
+        $tls = $options['tls'] ?? $options;
+
+        return !empty($tls['local_cert']) || !empty($tls['local_pk']);
     }
 
     /**
@@ -522,7 +621,7 @@ class Server implements WebSocketServerInterface
     protected function ensureRhythmEventsAreCollected(): void
     {
         $this->initializeRhythm();
-        if (!$this->rhythm) {
+        if (!$this->rhythm instanceof Rhythm) {
             $this->log('info', __('Server: Rhythm not available, skipping ingestion scheduling'), [
                 'scope' => ['socket.server', 'socket.server.rhythm'],
             ]);
@@ -535,8 +634,8 @@ class Server implements WebSocketServerInterface
             try {
                 $this->eventManager->dispatch(new SharedBeat(FrozenTime::now(), gethostname()));
                 $this->ingestRhythmMetrics();
-            } catch (Exception $e) {
-                debug($e);
+            } catch (Exception $exception) {
+                debug($exception);
             }
         });
 
@@ -562,16 +661,17 @@ class Server implements WebSocketServerInterface
 
         $this->rhythm = $this->container->get(Rhythm::class);
         $this->rhythm->clearRecorders();
+
         $recordersToInit = Configure::read('Rhythm');
         $recordersToInit = [
             'recorders' => [
                 'Blazecast.messages' => [
-                    'className' => 'Crustum\BlazeCast\Recorder\BlazeCastMessagesRecorder',
+                    'className' => BlazeCastMessagesRecorder::class,
                     'enabled' => true,
                     'sample_rate' => 1,
                   ],
                   'Blazecast.connections' => [
-                    'className' => 'Crustum\BlazeCast\Recorder\BlazeCastConnectionsRecorder',
+                    'className' => BlazeCastConnectionsRecorder::class,
                     'enabled' => true,
                     'sample_rate' => 1,
                     'throttle_seconds' => 15,
@@ -590,10 +690,8 @@ class Server implements WebSocketServerInterface
 
         $recorders = $this->rhythm->getRecorders();
         // @phpstan-ignore-next-line
-        if (empty($recorders) && !empty($recordersToInit['recorders'])) {
-            $recorders = array_filter($recordersToInit['recorders'], function ($recorder) {
-                return str_starts_with($recorder['className'], 'BlazeCast');
-            });
+        if ($recorders === [] && !empty($recordersToInit['recorders'])) {
+            $recorders = array_filter($recordersToInit['recorders'], fn(array $recorder): bool => str_starts_with($recorder['className'], 'BlazeCast'));
             $this->rhythm->register($recorders);
         }
 
@@ -636,13 +734,13 @@ class Server implements WebSocketServerInterface
      */
     protected function ingestRhythmMetrics(): int
     {
-        if (!$this->rhythm) {
+        if (!$this->rhythm instanceof Rhythm) {
             return 0;
         }
 
         try {
             $recorders = $this->rhythm->getRecorders();
-            if (empty($recorders)) {
+            if ($recorders === []) {
                 $this->log('info', __('Server: No recorders registered in Rhythm, skipping ingestion'), [
                     'scope' => ['socket.server.rhythm'],
                 ]);
@@ -659,8 +757,8 @@ class Server implements WebSocketServerInterface
             }
 
             return $ingestedCount;
-        } catch (Exception $e) {
-            BlazeCastLogger::error(__('Server: Failed to ingest Rhythm events: {0}', $e->getMessage()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('Server: Failed to ingest Rhythm events: {0}', $exception->getMessage()), [
                 'scope' => ['socket.server', 'socket.server.rhythm'],
             ]);
 
@@ -689,7 +787,7 @@ class Server implements WebSocketServerInterface
             'scope' => ['socket.server', 'socket.server.disconnect'],
         ]);
 
-        if ($this->socket) {
+        if ($this->socket instanceof ServerInterface) {
             $this->socket->close();
             $this->socket = null;
         }
@@ -750,7 +848,9 @@ class Server implements WebSocketServerInterface
      */
     protected function handleConnectionDisconnect(Connection $connection): void
     {
-        $this->connectionRegistry->handleConnectionDisconnect($connection, function ($conn, $channelName): void {
+        $this->connectionMessageRateLimiter?->forget($connection->getId());
+
+        $this->connectionRegistry->handleConnectionDisconnect($connection, function ($conn, string $channelName): void {
             $this->unsubscribeFromChannel($conn, $channelName);
         });
     }
@@ -793,8 +893,8 @@ class Server implements WebSocketServerInterface
             } else {
                 $this->httpRequestProcessor->handleHttpRequest($request, $connection);
             }
-        } catch (Throwable $e) {
-            BlazeCastLogger::error(__('Server: Failed to parse HTTP request on connection {0}: {1}', $connection->getId(), $e->getMessage()), [
+        } catch (Throwable $throwable) {
+            BlazeCastLogger::error(__('Server: Failed to parse HTTP request on connection {0}: {1}', $connection->getId(), $throwable->getMessage()), [
                 'scope' => ['socket.server'],
             ]);
             $this->closeConnection($connection, 400, 'Bad Request');
@@ -824,6 +924,8 @@ class Server implements WebSocketServerInterface
     protected function handleWebSocketUpgrade(RequestInterface $request, Connection $connection): void
     {
         $path = $request->getUri()->getPath();
+        $serverConfig = $this->config['servers']['blazecast'] ?? [];
+        $path = ServerPath::strip($path, is_array($serverConfig) ? $serverConfig : []);
 
         BlazeCastLogger::debug(__('Server: WebSocket upgrade requested on path {0} for connection {1}', $path, $connection->getId()), [
             'scope' => ['socket.server'],
@@ -840,12 +942,21 @@ class Server implements WebSocketServerInterface
                 $this->ensureWithinConnectionLimit($appContext['app_id']);
             }
 
+            $origin = $request->getHeaderLine('Origin') ?: null;
+            $connection->setAttribute('origin', $origin);
+            $this->verifyOrigin($appContext['app_id'] ?? null, $origin);
+
             $response = $this->negotiator->handshake($request)
                 ->withHeader('X-Powered-By', 'CakePHP BlazeCast');
 
             $connection->send(Message::toString($response));
 
             $connection->markAsConnected();
+
+            $application = $this->applicationManager->getApplication($appContext['app_id'] ?? '');
+            if ($application !== null) {
+                $connection->setAttribute('max_message_size', $application['max_message_size'] ?? 10000);
+            }
 
             $this->connectionRegistry->register($connection, [
                 'request' => $request,
@@ -888,11 +999,50 @@ class Server implements WebSocketServerInterface
             ]);
             $connection->send($errorMessage);
             $this->closeConnection($connection, 1008, 'Connection Limit Exceeded');
+        } catch (InvalidOrigin $e) {
+            BlazeCastLogger::warning(__('Server: Invalid origin for connection {0}: {1}', $connection->getId(), $e->getMessage()), [
+                'scope' => ['socket.server'],
+            ]);
+            $errorMessage = json_encode([
+                'event' => 'pusher:error',
+                'data' => json_encode([
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage(),
+                ]),
+            ]);
+            $connection->send($errorMessage);
+            $this->closeConnection($connection, 4003, 'Origin not allowed');
         } catch (Throwable $e) {
             BlazeCastLogger::error(__('Server: WebSocket upgrade failed on connection {0}: {1}', $connection->getId(), $e->getMessage()), [
                 'scope' => ['socket.server'],
             ]);
             $this->closeConnection($connection, 400, 'WebSocket Upgrade Failed');
+        }
+    }
+
+    /**
+     * Verify the Origin header against the application's allowed_origins.
+     *
+     * @param string|null $appId Application ID
+     * @param string|null $origin Origin header
+     * @return void
+     * @throws \Crustum\BlazeCast\WebSocket\Pusher\Exception\InvalidOrigin When origin is not allowed
+     */
+    protected function verifyOrigin(?string $appId, ?string $origin): void
+    {
+        if ($appId === null) {
+            return;
+        }
+
+        $application = $this->applicationManager->getApplication($appId);
+        if ($application === null) {
+            return;
+        }
+
+        $allowedOrigins = $application['allowed_origins'] ?? ['*'];
+
+        if (!OriginGuard::isAllowed($allowedOrigins, $origin)) {
+            throw new InvalidOrigin();
         }
     }
 
@@ -955,7 +1105,7 @@ class Server implements WebSocketServerInterface
             }
 
             $connection->setSocketId($socketId);
-            $activityTimeout = 120;
+            $activityTimeout = $this->resolveActivityTimeout($connection);
 
             $welcomeData = [
                 'event' => 'pusher:connection_established',
@@ -976,11 +1126,98 @@ class Server implements WebSocketServerInterface
             // $this->log('info', __('Server: Pusher connection established message sent for connection {0}, socketId: {1}, event: {2}', $baseId, $socketId, 'pusher:connection_established'), [
             //     'scope' => ['socket.server'],
             // ]);
-        } catch (Exception $e) {
-            BlazeCastLogger::error(__('Server: Error sending Pusher connection established message for connection {0}: {1} {2}', $connection->getId(), $e->getMessage(), $e->getTraceAsString()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('Server: Error sending Pusher connection established message for connection {0}: {1} {2}', $connection->getId(), $exception->getMessage(), $exception->getTraceAsString()), [
                 'scope' => ['socket.server'],
             ]);
         }
+    }
+
+    /**
+     * Resolve activity_timeout for the connection welcome payload.
+     *
+     * Prefers per-application config, then server config, then 120.
+     *
+     * @param \Crustum\BlazeCast\WebSocket\Connection $connection Connection
+     * @return int Timeout in seconds
+     */
+    protected function resolveActivityTimeout(Connection $connection): int
+    {
+        $appId = $connection->getAttribute('app_id');
+        if (is_string($appId) && $appId !== '') {
+            $application = $this->applicationManager->getApplication($appId);
+            if ($application !== null && isset($application['activity_timeout'])) {
+                return $application['activity_timeout'];
+            }
+        }
+
+        $serverConfig = $this->config['servers']['blazecast'] ?? [];
+        if (is_array($serverConfig) && isset($serverConfig['activity_timeout'])) {
+            return (int)$serverConfig['activity_timeout'];
+        }
+
+        if (isset($this->config['activity_timeout'])) {
+            return (int)$this->config['activity_timeout'];
+        }
+
+        return 120;
+    }
+
+    /**
+     * Ensure the connection is within the per-connection WebSocket message rate limit.
+     *
+     * Applies to all inbound text frames. Control frames are not counted.
+     *
+     * @param \Crustum\BlazeCast\WebSocket\Connection $connection Connection
+     * @return bool True when the message may proceed
+     */
+    protected function ensureWithinConnectionMessageRateLimit(Connection $connection): bool
+    {
+        if (!$this->connectionMessageRateLimiter instanceof ConnectionMessageRateLimiter) {
+            return true;
+        }
+
+        $appId = $connection->getAttribute('app_id');
+        $appId = is_string($appId) && $appId !== '' ? $appId : null;
+
+        $result = $this->connectionMessageRateLimiter->consume($connection->getId(), $appId);
+        if (!$result->isExceeded()) {
+            return true;
+        }
+
+        $this->sendConnectionMessageRateLimitError($connection, $result);
+
+        BlazeCastLogger::warning(__('Server: Connection message rate limit exceeded for connection {0}', $connection->getId()), [
+            'scope' => ['socket.server'],
+        ]);
+
+        if ($this->connectionMessageRateLimiter->shouldTerminateOnLimit($appId)) {
+            $this->connectionMessageRateLimiter->forget($connection->getId());
+            $connection->close();
+        }
+
+        return false;
+    }
+
+    /**
+     * Send a rate-limit error for the connection message limiter.
+     *
+     * @param \Crustum\BlazeCast\WebSocket\Connection $connection Connection
+     * @param \Crustum\BlazeCast\WebSocket\RateLimiter\RateLimitResult $rateLimitResult Rate limit result
+     * @return void
+     */
+    protected function sendConnectionMessageRateLimitError(Connection $connection, RateLimitResult $rateLimitResult): void
+    {
+        $errorData = [
+            'event' => 'pusher:error',
+            'data' => json_encode([
+                'code' => 4200,
+                'message' => 'Rate limit exceeded',
+                'retry_after' => $rateLimitResult->getRetryAfterSeconds(),
+            ]),
+        ];
+
+        $connection->send((string)json_encode($errorData));
     }
 
     /**
@@ -997,12 +1234,43 @@ class Server implements WebSocketServerInterface
         ]);
 
         $decodedData = $this->decodeWebSocketFrame($data);
-        $this->getEventManager()->dispatch(new MessageReceivedEvent($connection, $decodedData ?? $data));
+        $payload = $decodedData ?? $data;
+        $payloadSize = strlen($payload);
 
+        $maxMessageSize = (int)($connection->getAttribute('max_message_size') ?? 10000);
         $appId = $connection->getAttribute('app_id');
         if ($appId) {
-            $bytes = strlen($decodedData ?? $data);
-            $this->connectionManager->recordWsMessageReceived($appId, $bytes);
+            $application = $this->applicationManager->getApplication($appId);
+            if ($application !== null && isset($application['max_message_size'])) {
+                $maxMessageSize = $application['max_message_size'];
+            }
+        }
+
+        if ($payloadSize > $maxMessageSize) {
+            BlazeCastLogger::warning(__('Server: Message exceeds max_message_size for connection {0}: {1} > {2}', $connection->getId(), $payloadSize, $maxMessageSize), [
+                'scope' => ['socket.server'],
+            ]);
+            $errorMessage = json_encode([
+                'event' => 'pusher:error',
+                'data' => json_encode([
+                    'code' => 1009,
+                    'message' => 'Message too large',
+                ]),
+            ]);
+            $connection->send((string)$errorMessage);
+            $this->closeConnection($connection, 1009, 'Message too large');
+
+            return;
+        }
+
+        if ($decodedData !== null && !$this->ensureWithinConnectionMessageRateLimit($connection)) {
+            return;
+        }
+
+        $this->getEventManager()->dispatch(new MessageReceivedEvent($connection, $decodedData ?? $data));
+
+        if ($appId) {
+            $this->connectionManager->recordWsMessageReceived($appId, $payloadSize);
         }
 
         if ($decodedData === null) {
@@ -1027,10 +1295,6 @@ class Server implements WebSocketServerInterface
         try {
             $message = WebSocketMessage::fromJson($decodedData);
 
-            // $this->log('info', __('Server: WebSocket message received for connection {0}, event: {1}, channel: {2}', $connection->getId(), $message->getEvent(), $message->getChannel()), [
-            //     'scope' => ['socket.server'],
-            // ]);
-
             $handled = $this->handlerRegistry->handle($connection, $message);
             if (!$handled) {
                 $this->log('warning', sprintf('Message not handled by registry, using default handling. connection_id: %s, event: %s', $connection->getId(), $message->getEvent()), [
@@ -1038,13 +1302,13 @@ class Server implements WebSocketServerInterface
                 ]);
                 $this->handleDefaultMessage($connection, $message);
             }
-        } catch (Exception $e) {
-            BlazeCastLogger::error(__('Server: Error handling WebSocket on connection {0} message: {1}', $connection->getId(), $e->getMessage()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('Server: Error handling WebSocket on connection {0} message: {1}', $connection->getId(), $exception->getMessage()), [
                 'scope' => ['socket.server'],
             ]);
 
             $errorMessage = new WebSocketMessage('error', [
-                'message' => 'Invalid message format: ' . $e->getMessage(),
+                'message' => 'Invalid message format: ' . $exception->getMessage(),
                 'error_type' => 'message_format_error',
             ]);
 
@@ -1099,7 +1363,7 @@ class Server implements WebSocketServerInterface
         $isMasked = (bool)($secondByte & 0x80);
         $payloadLength = $secondByte & 0x7F;
 
-        if ($opcode === 0x8 || $opcode === 0x9 || $opcode === 0xA) {
+        if (in_array($opcode, [0x8, 0x9, 0xA], true)) {
             return null;
         }
 
@@ -1112,12 +1376,14 @@ class Server implements WebSocketServerInterface
             if (strlen($data) < 4) {
                 return null;
             }
+
             $payloadLength = unpack('n', substr($data, 2, 2))[1];
             $offset = 4;
         } elseif ($payloadLength === 127) {
             if (strlen($data) < 10) {
                 return null;
             }
+
             $payloadLength = unpack('J', substr($data, 2, 8))[1];
             $offset = 10;
         }
@@ -1127,6 +1393,7 @@ class Server implements WebSocketServerInterface
             if (strlen($data) < $offset + 4) {
                 return null;
             }
+
             $maskingKey = substr($data, $offset, 4);
             $offset += 4;
         }
@@ -1142,6 +1409,7 @@ class Server implements WebSocketServerInterface
             for ($i = 0; $i < $payloadLength; $i++) {
                 $unmaskedPayload .= $payload[$i] ^ $maskingKey[$i % 4];
             }
+
             $payload = $unmaskedPayload;
         }
 
@@ -1394,7 +1662,7 @@ class Server implements WebSocketServerInterface
                 $connection = $event->getConnection();
                 $appId = $connection->getAttribute('app_id');
                 if ($appId) {
-                    $bytes = strlen($event->getData());
+                    $bytes = strlen((string)$event->getData());
                     $this->connectionManager->recordWsMessageSent($appId, $bytes);
                 }
             }
@@ -1464,6 +1732,6 @@ class Server implements WebSocketServerInterface
         $result = socket_bind($socket, $host, $port);
         socket_close($socket);
 
-        return $result !== false;
+        return $result;
     }
 }

@@ -8,5 +8,10 @@ parameters:
     ignoreErrors:
         -
             identifier: missingType.generics
+        -
+            identifier: attribute.notFound
+            path: tests/*
+            message: '#AllowMockObjectsWithoutExpectations#'
+            reportUnmatched: false
 
 services:

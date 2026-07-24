@@ -32,7 +32,7 @@ class ChannelUsersController extends PusherController
             return $this->errorResponse('Channel name is required', 400);
         }
 
-        if (!str_starts_with($channelName, 'presence-')) {
+        if (!str_starts_with((string)$channelName, 'presence-')) {
             return $this->errorResponse('Only presence channels have users', 400);
         }
 

@@ -19,7 +19,9 @@ use RuntimeException;
 class SimpleWebSocketTestHelper
 {
     private LoopInterface $loop;
+
     private ?string $host = null;
+
     private ?int $port = null;
 
     public function __construct(LoopInterface $loop)
@@ -40,11 +42,11 @@ class SimpleWebSocketTestHelper
      * @param callable $callback Callback to execute
      * @return mixed
      */
-    public function runWithTimeout(float $timeout, callable $callback)
+    public function runWithTimeout(float $timeout, callable $callback): mixed
     {
         $deferred = new Deferred();
 
-        $timer = $this->loop->addTimer($timeout, function () use ($deferred, $timeout) {
+        $timer = $this->loop->addTimer($timeout, function () use ($deferred, $timeout): void {
             $deferred->reject(new RuntimeException("Test timeout after {$timeout} seconds"));
         });
 
@@ -52,11 +54,11 @@ class SimpleWebSocketTestHelper
             $result = $callback();
             if ($result instanceof PromiseInterface) {
                 $result->then(
-                    function ($value) use ($deferred, $timer) {
+                    function ($value) use ($deferred, $timer): void {
                         $this->loop->cancelTimer($timer);
                         $deferred->resolve($value);
                     },
-                    function ($error) use ($deferred, $timer) {
+                    function ($error) use ($deferred, $timer): void {
                         $this->loop->cancelTimer($timer);
                         $deferred->reject($error);
                     },
@@ -65,9 +67,9 @@ class SimpleWebSocketTestHelper
                 $this->loop->cancelTimer($timer);
                 $deferred->resolve($result);
             }
-        } catch (Exception $e) {
+        } catch (Exception $exception) {
             $this->loop->cancelTimer($timer);
-            $deferred->reject($e);
+            $deferred->reject($exception);
         }
 
         return Async\await($deferred->promise());
@@ -110,11 +112,11 @@ class SimpleWebSocketTestHelper
                    "\r\n";
 
         $responseData = '';
-        $connection->on('data', function ($data) use (&$responseData, $deferred, $connection) {
+        $connection->on('data', function ($data) use (&$responseData, $deferred, $connection): void {
             $responseData .= $data;
 
-            if (strpos($responseData, "\r\n\r\n") !== false) {
-                if (strpos($responseData, 'HTTP/1.1 101') === 0) {
+            if (str_contains($responseData, "\r\n\r\n")) {
+                if (str_starts_with($responseData, 'HTTP/1.1 101')) {
                     $deferred->resolve($connection);
                 } else {
                     $deferred->reject(new RuntimeException('WebSocket upgrade failed'));
@@ -179,9 +181,11 @@ class SimpleWebSocketTestHelper
 
                 return true;
             }
+
             if ($socket) {
                 socket_close($socket);
             }
+
             usleep(100000);
         }
 

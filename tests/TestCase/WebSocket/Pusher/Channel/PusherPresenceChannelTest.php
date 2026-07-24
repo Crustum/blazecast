@@ -8,6 +8,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPresenceChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Exception\ConnectionUnauthorizedException;
 use JsonException;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -23,17 +24,13 @@ class PusherPresenceChannelTest extends TestCase
 
     /**
      * Mock connection object
-     *
-     * @var \PHPUnit\Framework\MockObject\MockObject|\Crustum\BlazeCast\WebSocket\Connection
      */
-    private $connection;
+    private MockObject|Connection $connection;
 
     /**
      * Mock application manager
-     *
-     * @var \PHPUnit\Framework\MockObject\MockObject&\Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager
      */
-    private $applicationManager;
+    private MockObject&ApplicationManager $applicationManager;
 
     /**
      * Connection attributes storage
@@ -54,22 +51,26 @@ class PusherPresenceChannelTest extends TestCase
         $this->connection->method('getId')->willReturn('connection-123');
 
         $this->connection->method('setAttribute')
-            ->willReturnCallback(function ($key, $value) {
+            ->willReturnCallback(function ($key, $value): void {
                 $this->connectionAttributes[$key] = $value;
             });
 
         $this->connection->method('getAttribute')
-            ->willReturnCallback(function ($key) {
-                return $this->connectionAttributes[$key] ?? null;
+            ->willReturnCallback(function ($key): mixed {
+                if (!array_key_exists($key, $this->connectionAttributes)) {
+                    return null;
+                }
+
+                return $this->connectionAttributes[$key];
             });
 
         $this->connection->method('removeAttribute')
-            ->willReturnCallback(function ($key) {
+            ->willReturnCallback(function ($key): void {
                 unset($this->connectionAttributes[$key]);
             });
 
         $this->connection->method('send')
-            ->willReturnCallback(function (string $data) {
+            ->willReturnCallback(function (string $data): void {
             });
 
         $this->applicationManager = $this->createMock(ApplicationManager::class);
@@ -171,7 +172,7 @@ class PusherPresenceChannelTest extends TestCase
 
         $connection2Attributes = [];
         $connection2->method('setAttribute')
-            ->willReturnCallback(function ($key, $value) use (&$connection2Attributes) {
+            ->willReturnCallback(function ($key, $value) use (&$connection2Attributes): void {
                 $connection2Attributes[$key] = $value;
             });
 
@@ -181,7 +182,7 @@ class PusherPresenceChannelTest extends TestCase
             });
 
         $connection2->method('send')
-            ->willReturnCallback(function (string $data) {
+            ->willReturnCallback(function (string $data): void {
             });
 
         $this->subscribeTestMember($connection2, 'user-456', ['name' => 'User 2']);
@@ -219,7 +220,7 @@ class PusherPresenceChannelTest extends TestCase
         $connection2->method('getId')->willReturn('connection-456');
         $connection2Attributes = [];
         $connection2->method('setAttribute')
-            ->willReturnCallback(function ($key, $value) use (&$connection2Attributes) {
+            ->willReturnCallback(function ($key, $value) use (&$connection2Attributes): void {
                 $connection2Attributes[$key] = $value;
             });
         $connection2->method('getAttribute')
@@ -227,7 +228,7 @@ class PusherPresenceChannelTest extends TestCase
                 return $connection2Attributes[$key] ?? null;
             });
         $connection2->method('send')
-            ->willReturnCallback(function (string $data) {
+            ->willReturnCallback(function (string $data): void {
             });
 
         $this->subscribeTestMember($connection2, 'user-456', ['name' => 'User 2']);
@@ -250,7 +251,7 @@ class PusherPresenceChannelTest extends TestCase
         $receivedMessages = [];
         $connection2 = $this->createMock(Connection::class);
         $connection2->method('getId')->willReturn('connection-2');
-        $connection2->method('send')->willReturnCallback(function (string $data) use (&$receivedMessages) {
+        $connection2->method('send')->willReturnCallback(function (string $data) use (&$receivedMessages): void {
             $receivedMessages[] = $data;
         });
 
@@ -278,7 +279,7 @@ class PusherPresenceChannelTest extends TestCase
         $receivedMessages = [];
         $connection = $this->createMock(Connection::class);
         $connection->method('getId')->willReturn('connection-1');
-        $connection->method('send')->willReturnCallback(function (string $data) use (&$receivedMessages) {
+        $connection->method('send')->willReturnCallback(function (string $data) use (&$receivedMessages): void {
             $receivedMessages[] = $data;
         });
 
@@ -300,12 +301,12 @@ class PusherPresenceChannelTest extends TestCase
     /**
      * Helper method to subscribe a test member
      *
-     * @param mixed $connection Connection mock
+     * @param \PHPUnit\Framework\MockObject\MockObject|\Crustum\BlazeCast\WebSocket\Connection $connection Connection mock
      * @param string $userId User ID
      * @param array<string, mixed> $userInfo User info
      * @return void
      */
-    private function subscribeTestMember($connection, string $userId, array $userInfo): void
+    private function subscribeTestMember(MockObject|Connection $connection, string $userId, array $userInfo): void
     {
         $connectionId = $connection->getId();
         $channelName = 'presence-test-channel';

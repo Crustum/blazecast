@@ -57,8 +57,8 @@ class UsersTerminateController extends PusherController
                 'message' => 'User connections terminated',
                 'terminated_connections' => $terminatedCount,
             ]);
-        } catch (Exception $e) {
-            BlazeCastLogger::error(sprintf('UsersTerminateController: Error terminating user connections. app_id=%s, user_id=%s, error=%s, trace=%s', $appId, $userId, $e->getMessage(), $e->getTraceAsString()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(sprintf('UsersTerminateController: Error terminating user connections. app_id=%s, user_id=%s, error=%s, trace=%s', $appId, $userId, $exception->getMessage(), $exception->getTraceAsString()), [
                 'scope' => ['socket.controller', 'socket.controller.users'],
             ]);
 
@@ -125,7 +125,7 @@ class UsersTerminateController extends PusherController
             $connectionUserId = $attributes['user_id'] ?? $attributes['userId'] ?? null;
         }
 
-        return $connectionUserId && (string)$connectionUserId === (string)$userId;
+        return $connectionUserId && (string)$connectionUserId === $userId;
     }
 
     /**
@@ -158,7 +158,7 @@ class UsersTerminateController extends PusherController
             $connections = $this->connectionManager->getConnectionsForChannel($channel);
 
             foreach ($connections as $connectionId => $connection) {
-                if ($this->isUserConnection($connection, $userId) && !in_array($connectionId, $userConnections)) {
+                if ($this->isUserConnection($connection, $userId) && !in_array($connectionId, $userConnections, true)) {
                     $userConnections[] = $connectionId;
                 }
             }

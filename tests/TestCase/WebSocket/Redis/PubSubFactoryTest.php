@@ -111,7 +111,7 @@ class PubSubFactoryTest extends TestCase
 
     public function testCreateInstanceHandlesNullConfiguration(): void
     {
-        Configure::write('BlazeCast.redis', null);
+        Configure::write('BlazeCast.redis');
 
         $instance = PubSubFactory::getInstance();
 

@@ -25,6 +25,7 @@
         "phpunit/phpunit": "^9.6",
         "ratchet/pawl": "^0.4",
         "react/http": "^1.7",
+        "rector/rector": "^2.5",
         "cakephp/cakephp-codesniffer": "^5.0",
         "cakephp/bake": "^2.10"
     },
@@ -46,6 +47,8 @@
         "test:unit": "phpunit --testsuite=Unit",
         "test:integration": "phpunit --testsuite=Integration",
         "test:coverage": "phpunit --coverage-html coverage",
+        "rector-check": "vendor/bin/rector process --dry-run",
+        "rector-fix": "vendor/bin/rector process",
         "stan": "tools/phpstan analyse src/ tests/",
         "stan-test": "tools/phpstan analyse  tests/",
         "stan-baseline": "tools/phpstan analyse src/ tests/ --generate-baseline"

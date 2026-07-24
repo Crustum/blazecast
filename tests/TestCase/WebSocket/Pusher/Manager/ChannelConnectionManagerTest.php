@@ -15,9 +15,13 @@ use PHPUnit\Framework\TestCase;
 class ChannelConnectionManagerTest extends TestCase
 {
     private ChannelConnectionManager $manager;
+
     private Connection|MockObject $mockConnection1;
+
     private Connection|MockObject $mockConnection2;
+
     private PusherChannelInterface|MockObject $mockChannel1;
+
     private PusherChannelInterface|MockObject $mockChannel2;
 
     protected function setUp(): void

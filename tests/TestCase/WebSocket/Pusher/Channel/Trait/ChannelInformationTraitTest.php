@@ -24,6 +24,7 @@ class ChannelInformationTraitTest extends TestCase
             use ChannelInformationTrait;
 
             public mixed $channelManager = null;
+
             public mixed $connectionManager = null;
 
             /**

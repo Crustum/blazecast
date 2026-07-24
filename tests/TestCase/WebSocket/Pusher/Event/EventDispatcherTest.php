@@ -17,9 +17,10 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 class EventDispatcherTest extends TestCase
 {
     protected ChannelManager $channelManager;
+
     protected ApplicationManager $applicationManager;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->channelManager = new ChannelManager();
@@ -131,7 +132,7 @@ class EventDispatcherTest extends TestCase
 
         $connection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($message) {
+            ->with($this->callback(function ($message): bool {
                 $data = json_decode($message, true);
 
                 return isset($data['event']) &&

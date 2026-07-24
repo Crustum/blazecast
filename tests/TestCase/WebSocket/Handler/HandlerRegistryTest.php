@@ -11,6 +11,7 @@ use Crustum\BlazeCast\WebSocket\Handler\PingHandler;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -20,10 +21,12 @@ use ReflectionClass;
 class HandlerRegistryTest extends TestCase
 {
     private HandlerRegistry $registry;
+
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&Server
+     * @var \PHPUnit\Framework\MockObject\Stub&Server
      */
-    private Server $stubServer;
+    private Server&Stub $stubServer;
+
     private Connection&MockObject $mockConnection;
 
     protected function setUp(): void
@@ -74,6 +77,7 @@ class HandlerRegistryTest extends TestCase
 
     public function testRegisterAddsHandlerToRegistry(): void
     {
+        /** @var HandlerInterface&Stub $handler */
         $handler = $this->createStub(HandlerInterface::class);
 
         $this->registry->register($handler);
@@ -108,8 +112,11 @@ class HandlerRegistryTest extends TestCase
 
     public function testGetHandlersReturnsAllRegisteredHandlers(): void
     {
+        /** @var HandlerInterface&Stub $handler1 */
         $handler1 = $this->createStub(HandlerInterface::class);
+        /** @var HandlerInterface&Stub $handler2 */
         $handler2 = $this->createStub(HandlerInterface::class);
+        /** @var HandlerInterface&Stub $handler3 */
         $handler3 = $this->createStub(HandlerInterface::class);
 
         $this->registry->register($handler1);
@@ -241,7 +248,7 @@ class HandlerRegistryTest extends TestCase
             ->method('updateActivity');
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($json) {
+            ->with($this->callback(function ($json): bool {
                 $decoded = json_decode($json, true);
 
                 return $decoded['event'] === 'pong';
@@ -262,7 +269,7 @@ class HandlerRegistryTest extends TestCase
         $unknownMessage = new Message('unknown_event', ['test' => 'data']);
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($json) {
+            ->with($this->callback(function ($json): bool {
                 $decoded = json_decode($json, true);
 
                 return $decoded['event'] === 'echo';
@@ -276,6 +283,7 @@ class HandlerRegistryTest extends TestCase
     {
         $handlers = [];
         for ($i = 0; $i < 5; $i++) {
+            /** @var HandlerInterface&Stub $handler */
             $handler = $this->createStub(HandlerInterface::class);
             $handlers[] = $handler;
             $this->registry->register($handler);
@@ -299,8 +307,11 @@ class HandlerRegistryTest extends TestCase
 
     public function testRegistryMaintainsHandlerOrder(): void
     {
+        /** @var HandlerInterface&Stub $handler1 */
         $handler1 = $this->createStub(HandlerInterface::class);
+        /** @var HandlerInterface&Stub $handler2 */
         $handler2 = $this->createStub(HandlerInterface::class);
+        /** @var HandlerInterface&Stub $handler3 */
         $handler3 = $this->createStub(HandlerInterface::class);
 
         // Register in specific order
@@ -334,12 +345,10 @@ class HandlerRegistryTest extends TestCase
             ->method('handle')
             ->with(
                 $this->identicalTo($this->mockConnection),
-                $this->callback(function ($msg) use ($eventType, $data, $channel) {
-                    return $msg instanceof Message &&
-                           $msg->getEvent() === $eventType &&
-                           $msg->getData() === $data &&
-                           $msg->getChannel() === $channel;
-                }),
+                $this->callback(fn($msg): bool => $msg instanceof Message &&
+                       $msg->getEvent() === $eventType &&
+                       $msg->getData() === $data &&
+                       $msg->getChannel() === $channel),
             );
 
         $this->registry->register($handler);
@@ -348,7 +357,7 @@ class HandlerRegistryTest extends TestCase
 
     public function testRegistryWorksWithMixedHandlerTypes(): void
     {
-        /** @var HandlerInterface&MockObject $mockHandler */
+        /** @var HandlerInterface&Stub $mockHandler */
         $mockHandler = $this->createStub(HandlerInterface::class);
         $mockHandler->method('supports')->willReturn(false);
 

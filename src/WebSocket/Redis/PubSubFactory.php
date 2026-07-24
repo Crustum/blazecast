@@ -31,7 +31,7 @@ class PubSubFactory
      */
     public static function getInstance(): PubSub
     {
-        if (static::$instance === null) {
+        if (!static::$instance instanceof PubSub) {
             static::createInstance();
         }
 

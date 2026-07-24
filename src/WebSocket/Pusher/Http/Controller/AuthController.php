@@ -123,13 +123,13 @@ class AuthController extends PusherController
         $socketId = $data['socket_id'];
 
         $apps = $this->applicationManager->getApplications();
-        if (empty($apps)) {
+        if ($apps === []) {
             throw new InvalidArgumentException('No applications configured');
         }
 
         $app = reset($apps);
 
-        if (str_starts_with($channelName, 'private-')) {
+        if (str_starts_with((string)$channelName, 'private-')) {
             $authString = "{$socketId}:{$channelName}";
             $signature = hash_hmac('sha256', $authString, $app['secret']);
 
@@ -138,7 +138,7 @@ class AuthController extends PusherController
             ];
         }
 
-        if (str_starts_with($channelName, 'presence-')) {
+        if (str_starts_with((string)$channelName, 'presence-')) {
             $userData = $data['channel_data'] ?? json_encode([
                 'user_id' => $socketId,
                 'user_info' => [],
@@ -204,14 +204,14 @@ class AuthController extends PusherController
                 ]);
 
             return $response;
-        } catch (Exception $e) {
-                BlazeCastLogger::error('AuthController: Error processing channel authentication' . "\n" . $e->getMessage(), [
+        } catch (Exception $exception) {
+                BlazeCastLogger::error('AuthController: Error processing channel authentication' . "\n" . $exception->getMessage(), [
                 'scope' => ['socket.controller', 'socket.controller.auth'],
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
                 ]);
 
-            return $this->errorResponse($e->getMessage(), 500);
+            return $this->errorResponse($exception->getMessage(), 500);
         }
     }
 }
