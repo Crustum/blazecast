@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace Crustum\BlazeCast\WebSocket\Pusher\Http\Controller;
 
+use Cake\Core\Configure;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
+use Crustum\BlazeCast\WebSocket\Support\ServerPath;
 use Psr\Http\Message\RequestInterface;
 
 /**
@@ -61,7 +63,8 @@ trait AuthenticationTrait
         unset($params['auth_signature']);
         ksort($params);
         $queryString = http_build_query($params);
-        $path = $request->getUri()->getPath();
+        $serverConfig = Configure::read('BlazeCast.servers.blazecast', []);
+        $path = ServerPath::strip($request->getUri()->getPath(), is_array($serverConfig) ? $serverConfig : []);
         $signatureString = "{$request->getMethod()}\n{$path}\n{$queryString}";
         $expectedSignature = hash_hmac('sha256', $signatureString, $secret);
 

@@ -78,7 +78,7 @@ class PusherChannelFactory
         $this->channelsCreated++;
 
         if ($this->config['log_channel_creation']) {
-            $hasAppManager = $this->applicationManager !== null ? 'true' : 'false';
+            $hasAppManager = $this->applicationManager instanceof ApplicationManager ? 'true' : 'false';
             BlazeCastLogger::info(sprintf('Pusher channel created via factory. channel=%s, type=%s, has_app_manager=%s', $channelName, $channel->getType(), $hasAppManager), [
                 'scope' => ['socket.channel', 'socket.channel.factory'],
             ]);
@@ -290,7 +290,7 @@ class PusherChannelFactory
     {
         return [
             'channels_created' => $this->channelsCreated,
-            'has_application_manager' => $this->applicationManager !== null,
+            'has_application_manager' => $this->applicationManager instanceof ApplicationManager,
             'supported_types' => $this->getSupportedTypes(),
             'config' => $this->config,
         ];

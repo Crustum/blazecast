@@ -117,7 +117,7 @@ class AsyncRedisRateLimiter implements AsyncRateLimiterInterface
      */
     protected function loadLuaScript(): void
     {
-        if ($this->redis === null) {
+        if (!$this->redis instanceof Client) {
             return;
         }
 
@@ -147,11 +147,12 @@ class AsyncRedisRateLimiter implements AsyncRateLimiterInterface
 
         $url = 'redis://';
         if ($password !== null) {
-            $url .= ":$password@";
+            $url .= ":{$password}@";
         }
-        $url .= "$host:$port";
+
+        $url .= "{$host}:{$port}";
         if ($database > 0) {
-            $url .= "/$database";
+            $url .= "/{$database}";
         }
 
         return $url;
@@ -289,7 +290,7 @@ LUA;
             });
         }
 
-        if ($this->redis === null) {
+        if (!$this->redis instanceof Client) {
             return new Promise(function ($resolve) use ($maxPoints): void {
                 $resolve(new RateLimitResult(
                     canContinue: true,
@@ -308,41 +309,29 @@ LUA;
         if ($this->luaScriptSha !== null) {
             /** @phpstan-ignore-next-line */
             return $this->redis->evalsha($this->luaScriptSha, $numKeys, ...$keys, ...$args)->then(
-                function ($result) use ($maxPoints): RateLimitResult {
-                    return $this->parseResult($result, $maxPoints);
-                },
-                function (Throwable $error) use ($maxPoints, $numKeys, $keys, $args): PromiseInterface {
-                    /** @phpstan-ignore-next-line */
-                    return $this->redis->eval($this->luaScript, $numKeys, ...$keys, ...$args)->then(
-                        function ($result) use ($maxPoints): RateLimitResult {
-                            return $this->parseResult($result, $maxPoints);
-                        },
-                        function (Throwable $error) use ($maxPoints): RateLimitResult {
-                            return new RateLimitResult(
-                                canContinue: true,
-                                remainingPoints: $maxPoints,
-                                msBeforeNext: 0,
-                                totalHits: $maxPoints,
-                            );
-                        },
-                    );
-                },
+                fn($result): RateLimitResult => $this->parseResult($result, $maxPoints),
+                /** @phpstan-ignore-next-line */
+                fn(Throwable $error): PromiseInterface => $this->redis->eval($this->luaScript, $numKeys, ...$keys, ...$args)->then(
+                    fn($result): RateLimitResult => $this->parseResult($result, $maxPoints),
+                    fn(Throwable $error): RateLimitResult => new RateLimitResult(
+                        canContinue: true,
+                        remainingPoints: $maxPoints,
+                        msBeforeNext: 0,
+                        totalHits: $maxPoints,
+                    ),
+                ),
             );
         }
 
         /** @phpstan-ignore-next-line */
         return $this->redis->eval($this->luaScript, $numKeys, ...$keys, ...$args)->then(
-            function ($result) use ($maxPoints): RateLimitResult {
-                return $this->parseResult($result, $maxPoints);
-            },
-            function (Throwable $error) use ($maxPoints): RateLimitResult {
-                return new RateLimitResult(
-                    canContinue: true,
-                    remainingPoints: $maxPoints,
-                    msBeforeNext: 0,
-                    totalHits: $maxPoints,
-                );
-            },
+            fn($result): RateLimitResult => $this->parseResult($result, $maxPoints),
+            fn(Throwable $error): RateLimitResult => new RateLimitResult(
+                canContinue: true,
+                remainingPoints: $maxPoints,
+                msBeforeNext: 0,
+                totalHits: $maxPoints,
+            ),
         );
     }
 

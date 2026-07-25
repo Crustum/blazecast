@@ -6,18 +6,25 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher\Manager;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannelInterface;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Unit tests for ChannelConnectionManager
  */
+#[AllowMockObjectsWithoutExpectations]
 class ChannelConnectionManagerTest extends TestCase
 {
     private ChannelConnectionManager $manager;
+
     private Connection|MockObject $mockConnection1;
+
     private Connection|MockObject $mockConnection2;
+
     private PusherChannelInterface|MockObject $mockChannel1;
+
     private PusherChannelInterface|MockObject $mockChannel2;
 
     protected function setUp(): void
@@ -38,18 +45,14 @@ class ChannelConnectionManagerTest extends TestCase
         $this->mockChannel2->method('getName')->willReturn('channel-2');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanBeCreated(): void
     {
         $manager = new ChannelConnectionManager();
         $this->assertInstanceOf(ChannelConnectionManager::class, $manager);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerStartsEmpty(): void
     {
         $stats = $this->manager->getStats();
@@ -59,9 +62,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertEmpty($this->manager->getActiveChannelNames());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanSubscribeConnectionToChannel(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -72,9 +73,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertTrue($this->manager->isSubscribed($this->mockConnection1, $this->mockChannel1));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanUnsubscribeConnectionFromChannel(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -87,9 +86,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertEquals(0, $stats['total_subscriptions']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetChannelsForConnection(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -102,9 +99,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertArrayHasKey('channel-2', $channels);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetConnectionsForChannel(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -117,9 +112,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertArrayHasKey('conn-2', $connections);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanCheckSubscription(): void
     {
         $this->assertFalse($this->manager->isSubscribed($this->mockConnection1, $this->mockChannel1));
@@ -130,9 +123,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertFalse($this->manager->isSubscribed($this->mockConnection1, $this->mockChannel2));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanUnsubscribeFromAllChannels(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -146,9 +137,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertFalse($this->manager->isSubscribed($this->mockConnection1, $this->mockChannel1));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetChannelNames(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -161,9 +150,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertContains('channel-2', $channelNames);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetConnectionIds(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -176,9 +163,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertContains('conn-2', $connectionIds);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetConnectionCounts(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -188,9 +173,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertEquals(2, $count);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetChannelCounts(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -200,9 +183,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertEquals(2, $count);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetActiveItems(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -217,9 +198,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertContains('conn-1', $activeConnections);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetMappingInfo(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -230,9 +209,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertArrayHasKey('channel_connections', $info);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanClearAllMappings(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);
@@ -248,9 +225,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertEquals(0, $stats['total_subscriptions']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerHandlesNonExistentConnections(): void
     {
         $channels = $this->manager->getChannelsForConnection($this->mockConnection1);
@@ -263,9 +238,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertEquals(0, $count);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerHandlesNonExistentChannels(): void
     {
         $connections = $this->manager->getConnectionsForChannel($this->mockChannel1);
@@ -278,9 +251,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertEquals(0, $count);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanRemoveNonExistentMapping(): void
     {
         $this->manager->unsubscribe($this->mockConnection1, $this->mockChannel1);
@@ -288,9 +259,7 @@ class ChannelConnectionManagerTest extends TestCase
         $this->assertEquals(0, $stats['total_connections']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerPreventsDoubleSubscription(): void
     {
         $this->manager->subscribe($this->mockConnection1, $this->mockChannel1);

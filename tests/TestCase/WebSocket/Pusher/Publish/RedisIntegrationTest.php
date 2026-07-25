@@ -12,6 +12,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\Publish\RedisPubSubProvider;
 class RedisIntegrationTest extends TestCase
 {
     private string $testChannel = 'test:integration';
+
     /**
      * @var array<string, mixed>
      */

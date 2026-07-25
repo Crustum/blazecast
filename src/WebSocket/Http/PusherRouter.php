@@ -99,9 +99,7 @@ class PusherRouter
             $route = $this->matcher->match($path);
 
             $routeName = $route['_route'] ?? 'unknown';
-            $routeParams = array_filter($route, function ($key) {
-                return !str_starts_with($key, '_');
-            }, ARRAY_FILTER_USE_KEY);
+            $routeParams = array_filter($route, fn($key): bool => !str_starts_with((string)$key, '_'), ARRAY_FILTER_USE_KEY);
             $routeParamsJson = json_encode($routeParams);
             BlazeCastLogger::info(sprintf('HTTP Router: Route matched. request_id=%s, route_name=%s, route_params=%s', $requestId, $routeName, $routeParamsJson), [
                 'scope' => ['socket.router'],
@@ -120,7 +118,7 @@ class PusherRouter
             $params = $this->extractParameters($route);
 
             $routeName = $route['_route'] ?? 'unknown';
-            $controllerName = is_string($controller) ? $controller : get_class($controller);
+            $controllerName = is_string($controller) ? $controller : $controller::class;
             $paramsJson = json_encode($params);
             BlazeCastLogger::info(sprintf('HTTP Router: Controller identified. request_id=%s, route=%s, controller=%s, params=%s', $requestId, $routeName, $controllerName, $paramsJson), [
                 'scope' => ['socket.router'],
@@ -129,8 +127,8 @@ class PusherRouter
             $controller = $this->resolveController($controller, $requestId);
 
             if (is_callable($controller)) {
-                $controllerName = is_array($controller) ? get_class($controller[0]) . '::' . $controller[1] :
-                                  (is_object($controller) ? get_class($controller) : $controller);
+                $controllerName = is_array($controller) ? $controller[0]::class . '::' . $controller[1] :
+                                  (is_object($controller) ? $controller::class : $controller);
                 BlazeCastLogger::info(sprintf('HTTP Router: Invoking controller. request_id=%s, controller=%s', $requestId, $controllerName), [
                     'scope' => ['socket.router'],
                 ]);
@@ -140,7 +138,7 @@ class PusherRouter
                 $executionTime = microtime(true) - $startTime;
 
                 $responseContent = $response->getContent();
-                $responseSize = strlen($responseContent);
+                $responseSize = strlen((string)$responseContent);
                 $responseContentForLog = $responseSize <= 1024 ? $responseContent : '[Content too large to log]';
 
                 $statusCode = $response->getStatusCode();
@@ -159,7 +157,7 @@ class PusherRouter
             ]);
 
             return $this->errorResponse('Controller not callable', 500);
-        } catch (ResourceNotFoundException $e) {
+        } catch (ResourceNotFoundException) {
             BlazeCastLogger::warning("HTTP Router: Route not found {$path}", [
                 'scope' => ['socket.router'],
             ]);
@@ -195,8 +193,7 @@ class PusherRouter
                 BlazeCastLogger::info(sprintf('HTTP Router: Creating controller instance. request_id=%s, controller=%s', $requestId, $controller), [
                     'scope' => ['socket.router'],
                 ]);
-
-                if ($this->controllerFactory !== null) {
+                if ($this->controllerFactory instanceof ControllerFactory) {
                     return $this->controllerFactory->create($controller);
                 }
 
@@ -205,7 +202,9 @@ class PusherRouter
                 ]);
 
                 return new $controller();
-            } elseif (strpos($controller, '::') !== false) {
+            }
+
+            if (str_contains($controller, '::')) {
                 [$class, $method] = explode('::', $controller, 2);
                 BlazeCastLogger::info(sprintf('HTTP Router: Using static controller method. request_id=%s, class=%s, method=%s', $requestId, $class, $method), [
                     'scope' => ['socket.router'],
@@ -279,11 +278,7 @@ class PusherRouter
     {
         $headers = [];
         foreach ($request->getHeaders() as $name => $values) {
-            if (strtolower((string)$name) === 'authorization') {
-                $headers[$name] = '[REDACTED]';
-            } else {
-                $headers[$name] = implode(', ', $values);
-            }
+            $headers[$name] = strtolower((string)$name) === 'authorization' ? '[REDACTED]' : implode(', ', $values);
         }
 
         return $headers;

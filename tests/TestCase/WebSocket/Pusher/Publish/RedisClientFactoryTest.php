@@ -14,13 +14,14 @@ use React\Promise\PromiseInterface;
 class RedisClientFactoryTest extends TestCase
 {
     private RedisClientFactory $factory;
+
     private LoopInterface $mockLoop;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->mockLoop = $this->createMock(LoopInterface::class);
+        $this->mockLoop = $this->createStub(LoopInterface::class);
         $this->factory = new RedisClientFactory();
     }
 

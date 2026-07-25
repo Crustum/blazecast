@@ -3,12 +3,16 @@ declare(strict_types=1);
 
 namespace Crustum\BlazeCast\WebSocket\Pusher\Handler;
 
+use Crustum\BlazeCast\WebSocket\ChannelOperationsManager;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Handler\AbstractHandler;
 use Crustum\BlazeCast\WebSocket\Handler\HandlerInterface;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
+use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
+use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannelInterface;
 use Crustum\BlazeCast\WebSocket\Pusher\Event\EventDispatcher;
+use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Crustum\BlazeCast\WebSocket\RateLimiter\AsyncRateLimiterInterface;
 use Crustum\BlazeCast\WebSocket\RateLimiter\RateLimitResult;
 use Crustum\BlazeCast\WebSocket\WebSocketServerInterface;
@@ -58,11 +62,7 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
             return true;
         }
 
-        if (str_starts_with($eventType, 'client-') && in_array('client-*', $this->handledEvents)) {
-            return true;
-        }
-
-        return false;
+        return str_starts_with($eventType, 'client-') && in_array('client-*', $this->handledEvents);
     }
 
     /**
@@ -93,11 +93,7 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
             return true;
         }
 
-        if (str_starts_with($event, 'client-') && in_array('client-*', $this->handledEvents)) {
-            return true;
-        }
-
-        return false;
+        return str_starts_with($event, 'client-') && in_array('client-*', $this->handledEvents);
     }
 
     /**
@@ -142,6 +138,7 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
                         'scope' => ['socket.handler', 'socket.handler.pusher'],
                     ]);
                 }
+
                 break;
         }
     }
@@ -208,7 +205,7 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
 
         try {
             $channelOperationsManager = $this->getChannelOperationsManager();
-            if (!$channelOperationsManager) {
+            if (!$channelOperationsManager instanceof ChannelOperationsManager) {
                 BlazeCastLogger::warning(__('PusherEventHandler: No channel operations manager available for connection {0}', $connection->getId()), [
                     'scope' => ['socket.handler', 'socket.handler.pusher'],
                 ]);
@@ -218,7 +215,7 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
 
             $channelOperationsManager->subscribeToChannelWithAuth($connection, $channelName, $auth, $channelData);
 
-            if (!str_starts_with($channelName, 'presence-')) {
+            if (!str_starts_with((string)$channelName, 'presence-')) {
                 $successData = [
                     'event' => 'pusher_internal:subscription_succeeded',
                     'channel' => $channelName,
@@ -231,8 +228,8 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
             BlazeCastLogger::info(__('PusherEventHandler: Subscription confirmed for channel {0}', $channelName), [
                 'scope' => ['socket.handler', 'socket.handler.pusher'],
             ]);
-        } catch (Exception $e) {
-            BlazeCastLogger::error(__('PusherEventHandler: Error handling WebSocket for channel {0}. Error message: {1}', $channelName, $e->getMessage()), [
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('PusherEventHandler: Error handling WebSocket for channel {0}. Error message: {1}', $channelName, $exception->getMessage()), [
                 'scope' => ['socket.handler', 'socket.handler.pusher'],
             ]);
 
@@ -241,7 +238,7 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
                 'channel' => $channelName,
                 'data' => json_encode([
                     'type' => 'AuthError',
-                    'error' => $e->getMessage(),
+                    'error' => $exception->getMessage(),
                     'status' => 401,
                 ]),
             ];
@@ -275,7 +272,7 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
         ]);
 
         $channelOperationsManager = $this->getChannelOperationsManager();
-        if (!$channelOperationsManager) {
+        if (!$channelOperationsManager instanceof ChannelOperationsManager) {
             BlazeCastLogger::warning(__('PusherEventHandler: No channel operations manager available for connection {0}', $connection->getId()), [
                 'scope' => ['socket.handler', 'socket.handler.pusher'],
                 'connection_id' => $connection->getId(),
@@ -375,7 +372,7 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
     protected function processClientEvent(Connection $connection, string $appId, string $channelName, string $event, mixed $data): void
     {
         $applicationManager = $this->getApplicationManager();
-        if (!$applicationManager) {
+        if (!$applicationManager instanceof ApplicationManager) {
             BlazeCastLogger::error(__('PusherEventHandler: ApplicationManager not available for client event broadcasting for connection {0} on channel {1} and event {2}', $connection->getId(), $channelName, $event), [
                 'scope' => ['socket.handler', 'socket.handler.pusher'],
             ]);
@@ -383,18 +380,86 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
             return;
         }
 
+        $application = $applicationManager->getApplication($appId);
+        $acceptFrom = $this->resolveAcceptClientEventsFrom($application);
+
+        if (!in_array($acceptFrom, ['all', 'members'], true)) {
+            $this->sendClientEventError($connection, 4301, 'The app does not have client messaging enabled.');
+
+            return;
+        }
+
+        if ($acceptFrom === 'members') {
+            $channelManager = $application['channel_manager'] ?? null;
+            $channel = null;
+            if ($channelManager instanceof ChannelManager && $channelManager->hasChannel($channelName)) {
+                $channel = $channelManager->getChannel($channelName);
+            }
+
+            if (!$channel instanceof PusherChannelInterface || !$channel->hasConnection($connection)) {
+                $this->sendClientEventError($connection, 4009, 'The client is not a member of the specified channel.');
+
+                return;
+            }
+        }
+
+        $payloadData = is_string($data) ? $data : json_encode($data);
+
         EventDispatcher::dispatch(
             $applicationManager,
             $appId,
             $channelName,
             $event,
-            is_string($data) ? $data : json_encode($data),
+            (string)$payloadData,
             $connection,
+            $connection->getSocketId() ?? $connection->getId(),
         );
 
         BlazeCastLogger::info(__('PusherEventHandler: Client event {0} for application {1} dispatched via EventDispatcher to channel {2} for connection {3}', $event, $appId, $channelName, $connection->getId()), [
             'scope' => ['socket.handler', 'socket.handler.pusher'],
         ]);
+    }
+
+    /**
+     * Resolve who may send client events for an application.
+     *
+     * @param array<string, mixed>|null $application Application config
+     * @return string One of `all`, `members`, or `none`
+     */
+    protected function resolveAcceptClientEventsFrom(?array $application): string
+    {
+        if ($application === null) {
+            return 'none';
+        }
+
+        if (isset($application['accept_client_events_from'])) {
+            return (string)$application['accept_client_events_from'];
+        }
+
+        $enabled = $application['enable_client_messages'] ?? true;
+
+        return $enabled ? 'all' : 'none';
+    }
+
+    /**
+     * Send a client-event rejection error to the connection.
+     *
+     * @param \Crustum\BlazeCast\WebSocket\Connection $connection Connection
+     * @param int $code Pusher error code
+     * @param string $message Error message
+     * @return void
+     */
+    protected function sendClientEventError(Connection $connection, int $code, string $message): void
+    {
+        $errorData = [
+            'event' => 'pusher:error',
+            'data' => json_encode([
+                'code' => $code,
+                'message' => $message,
+            ]),
+        ];
+
+        $connection->send((string)json_encode($errorData));
     }
 
     /**
@@ -439,7 +504,7 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
         $appKey = $connection->getAttribute('app_key');
         if ($appKey) {
             $applicationManager = $this->getApplicationManager();
-            if ($applicationManager) {
+            if ($applicationManager instanceof ApplicationManager) {
                 $application = $applicationManager->getApplicationByKey($appKey);
                 if ($application) {
                     return $application['id'];
@@ -448,9 +513,9 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
         }
 
         $applicationManager = $this->getApplicationManager();
-        if ($applicationManager) {
+        if ($applicationManager instanceof ApplicationManager) {
             $applications = $applicationManager->getApplications();
-            if (!empty($applications)) {
+            if ($applications !== []) {
                 $firstApp = array_values($applications)[0];
                 BlazeCastLogger::warning(__('PusherEventHandler: Using first available app ID {0} for connection {1}', $firstApp['id'], $connection->getId()), [
                     'scope' => ['socket.handler', 'socket.handler.pusher'],

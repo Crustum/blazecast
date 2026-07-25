@@ -7,6 +7,8 @@ use Cake\Core\Configure;
 use Crustum\BlazeCast\Test\Support\TestServer;
 use Crustum\BlazeCast\Test\Support\WebSocketTestClient;
 use Exception;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use React\EventLoop\Loop;
 use Redis;
@@ -19,11 +21,17 @@ use Redis;
 class RateLimitingIntegrationTest extends TestCase
 {
     private TestServer $server;
+
     private WebSocketTestClient $client;
+
     private string $appId = 'test-rate-limit-app';
+
     private string $appKey = 'test-rate-limit-key';
+
     private string $appSecret = 'test-rate-limit-secret';
+
     private ?Redis $redis = null;
+
     private string $keyPrefix = 'blazecast:rate_limit:';
 
     /**
@@ -87,6 +95,7 @@ class RateLimitingIntegrationTest extends TestCase
         ], true);
 
         $this->server->start();
+
         $this->client = $this->server->createClient();
     }
 
@@ -100,6 +109,7 @@ class RateLimitingIntegrationTest extends TestCase
         if (isset($this->client)) {
             $this->client->close();
         }
+
         if (isset($this->server)) {
             $this->server->stop();
         }
@@ -132,7 +142,7 @@ class RateLimitingIntegrationTest extends TestCase
         }
 
         try {
-            if ($this->redis === null) {
+            if (!$this->redis instanceof Redis) {
                 $this->redis = new Redis();
                 $connected = $this->redis->connect($redisConfig['host'], $redisConfig['port'], 2);
                 if (!$connected) {
@@ -152,15 +162,12 @@ class RateLimitingIntegrationTest extends TestCase
             if (!empty($keys)) {
                 $this->redis->del($keys);
             }
-        } catch (Exception $e) {
+        } catch (Exception) {
         }
     }
 
-    /**
-     * @test
-     * @dataProvider rateLimiterDriverProvider
-     * @param string $driver Rate limiter driver
-     */
+    #[Test]
+    #[DataProvider('rateLimiterDriverProvider')]
     public function testFrontendEventRateLimitSuccess(string $driver): void
     {
         $this->setupServerWithDriver($driver);
@@ -170,44 +177,39 @@ class RateLimitingIntegrationTest extends TestCase
 
         $connected = false;
         $subscriptionConfirmed = false;
-        $this->client->connect($uri)->then(function () use (&$connected, &$subscriptionConfirmed, $loop) {
+        $this->client->connect($uri)->then(function () use (&$connected, &$subscriptionConfirmed, $loop): void {
             $connected = true;
 
-            $this->client->onMessage(function ($message) use (&$subscriptionConfirmed, $loop) {
+            $this->client->onMessage(function ($message) use (&$subscriptionConfirmed, $loop): void {
                 $decoded = json_decode($message, true);
-                if (isset($decoded['event']) && ($decoded['event'] === 'pusher_internal:subscription_succeeded' || $decoded['event'] === 'subscription_succeeded')) {
-                    if (!$subscriptionConfirmed) {
-                        $subscriptionConfirmed = true;
+                if (isset($decoded['event']) && ($decoded['event'] === 'pusher_internal:subscription_succeeded' || $decoded['event'] === 'subscription_succeeded') && !$subscriptionConfirmed) {
+                    $subscriptionConfirmed = true;
+                    $clientEventMessage = json_encode([
+                        'event' => 'client-test-event',
+                        'channel' => 'public-test',
+                        'data' => json_encode(['message' => 'test']),
+                    ]);
+                    $this->client->send($clientEventMessage);
+                    $loop->addTimer(0.2, function () use ($loop): void {
+                        $messages = $this->client->getReceivedMessages();
+                        $this->assertNotEmpty($messages, 'Should receive messages from server');
 
-                        $clientEventMessage = json_encode([
-                            'event' => 'client-test-event',
-                            'channel' => 'public-test',
-                            'data' => json_encode(['message' => 'test']),
-                        ]);
-
-                        $this->client->send($clientEventMessage);
-
-                        $loop->addTimer(0.2, function () use ($loop) {
-                            $messages = $this->client->getReceivedMessages();
-                            $this->assertNotEmpty($messages, 'Should receive messages from server');
-
-                            $hasError = false;
-                            $errorMessages = [];
-                            foreach ($messages as $message) {
-                                $decoded = json_decode($message, true);
-                                if (isset($decoded['event']) && $decoded['event'] === 'pusher:error') {
-                                    $errorData = json_decode($decoded['data'] ?? '{}', true);
-                                    $errorMessages[] = $errorData;
-                                    if (isset($errorData['code']) && $errorData['code'] === 4200) {
-                                        $hasError = true;
-                                    }
+                        $hasError = false;
+                        $errorMessages = [];
+                        foreach ($messages as $message) {
+                            $decoded = json_decode((string)$message, true);
+                            if (isset($decoded['event']) && $decoded['event'] === 'pusher:error') {
+                                $errorData = json_decode($decoded['data'] ?? '{}', true);
+                                $errorMessages[] = $errorData;
+                                if (isset($errorData['code']) && $errorData['code'] === 4200) {
+                                    $hasError = true;
                                 }
                             }
+                        }
 
-                            $this->assertFalse($hasError, 'Should not receive rate limit error for single event. Total messages: ' . count($messages) . ', Errors: ' . json_encode($errorMessages) . ', All messages: ' . json_encode(array_slice($messages, -5)));
-                            $loop->stop();
-                        });
-                    }
+                        $this->assertFalse($hasError, 'Should not receive rate limit error for single event. Total messages: ' . count($messages) . ', Errors: ' . json_encode($errorMessages) . ', All messages: ' . json_encode(array_slice($messages, -5)));
+                        $loop->stop();
+                    });
                 }
             });
 
@@ -226,11 +228,8 @@ class RateLimitingIntegrationTest extends TestCase
         $this->assertTrue($subscriptionConfirmed, 'Subscription should be confirmed');
     }
 
-    /**
-     * @test
-     * @dataProvider rateLimiterDriverProvider
-     * @param string $driver Rate limiter driver
-     */
+    #[Test]
+    #[DataProvider('rateLimiterDriverProvider')]
     public function testFrontendEventRateLimitExceeded(string $driver): void
     {
         $this->setupServerWithDriver($driver);
@@ -240,52 +239,48 @@ class RateLimitingIntegrationTest extends TestCase
 
         $connected = false;
         $subscriptionConfirmed = false;
-        $this->client->connect($uri)->then(function () use (&$connected, &$subscriptionConfirmed, $loop) {
+        $this->client->connect($uri)->then(function () use (&$connected, &$subscriptionConfirmed, $loop): void {
             $connected = true;
 
-            $this->client->onMessage(function ($message) use (&$subscriptionConfirmed, $loop) {
+            $this->client->onMessage(function ($message) use (&$subscriptionConfirmed, $loop): void {
                 $decoded = json_decode($message, true);
-                if (isset($decoded['event']) && ($decoded['event'] === 'pusher_internal:subscription_succeeded' || $decoded['event'] === 'subscription_succeeded')) {
-                    if (!$subscriptionConfirmed) {
-                        $subscriptionConfirmed = true;
+                if (isset($decoded['event']) && ($decoded['event'] === 'pusher_internal:subscription_succeeded' || $decoded['event'] === 'subscription_succeeded') && !$subscriptionConfirmed) {
+                    $subscriptionConfirmed = true;
+                    $clientEventMessage = json_encode([
+                        'event' => 'client-test-event',
+                        'channel' => 'public-test',
+                        'data' => json_encode(['message' => 'test']),
+                    ]);
+                    $sentCount = 0;
+                    $sendNext = function () use (&$sentCount, $clientEventMessage, $loop, &$sendNext): void {
+                        if ($sentCount < 10) {
+                            $this->client->send($clientEventMessage);
+                            $sentCount++;
+                            $loop->addTimer(0.01, $sendNext);
+                        } else {
+                            $loop->addTimer(0.5, function () use ($loop): void {
+                                $messages = $this->client->getReceivedMessages();
+                                $this->assertNotEmpty($messages, 'Should receive messages from server');
 
-                        $clientEventMessage = json_encode([
-                            'event' => 'client-test-event',
-                            'channel' => 'public-test',
-                            'data' => json_encode(['message' => 'test']),
-                        ]);
-
-                        $sentCount = 0;
-                        $sendNext = function () use (&$sentCount, $clientEventMessage, $loop, &$sendNext) {
-                            if ($sentCount < 10) {
-                                $this->client->send($clientEventMessage);
-                                $sentCount++;
-                                $loop->addTimer(0.01, $sendNext);
-                            } else {
-                                $loop->addTimer(0.5, function () use ($loop) {
-                                    $messages = $this->client->getReceivedMessages();
-                                    $this->assertNotEmpty($messages, 'Should receive messages from server');
-
-                                    $rateLimitErrors = 0;
-                                    $allErrors = [];
-                                    foreach ($messages as $message) {
-                                        $decoded = json_decode($message, true);
-                                        if (isset($decoded['event']) && $decoded['event'] === 'pusher:error') {
-                                            $errorData = json_decode($decoded['data'] ?? '{}', true);
-                                            $allErrors[] = $errorData;
-                                            if (isset($errorData['code']) && $errorData['code'] === 4200) {
-                                                $rateLimitErrors++;
-                                            }
+                                $rateLimitErrors = 0;
+                                $allErrors = [];
+                                foreach ($messages as $message) {
+                                    $decoded = json_decode($message, true);
+                                    if (isset($decoded['event']) && $decoded['event'] === 'pusher:error') {
+                                        $errorData = json_decode($decoded['data'] ?? '{}', true);
+                                        $allErrors[] = $errorData;
+                                        if (isset($errorData['code']) && $errorData['code'] === 4200) {
+                                            $rateLimitErrors++;
                                         }
                                     }
+                                }
 
-                                    $this->assertGreaterThan(0, $rateLimitErrors, 'Should receive rate limit error when limit exceeded. Total messages: ' . count($messages) . ', Errors: ' . json_encode($allErrors) . ', All messages: ' . json_encode(array_slice($messages, -10)));
-                                    $loop->stop();
-                                });
-                            }
-                        };
-                        $sendNext();
-                    }
+                                $this->assertGreaterThan(0, $rateLimitErrors, 'Should receive rate limit error when limit exceeded. Total messages: ' . count($messages) . ', Errors: ' . json_encode($allErrors) . ', All messages: ' . json_encode(array_slice($messages, -10)));
+                                $loop->stop();
+                            });
+                        }
+                    };
+                    $sendNext();
                 }
             });
 
@@ -304,11 +299,8 @@ class RateLimitingIntegrationTest extends TestCase
         $this->assertTrue($subscriptionConfirmed, 'Subscription should be confirmed');
     }
 
-    /**
-     * @test
-     * @dataProvider rateLimiterDriverProvider
-     * @param string $driver Rate limiter driver
-     */
+    #[Test]
+    #[DataProvider('rateLimiterDriverProvider')]
     public function testFrontendEventBroadcastWithRateLimiting(string $driver): void
     {
         $this->setupServerWithDriver($driver);
@@ -326,15 +318,13 @@ class RateLimitingIntegrationTest extends TestCase
         $receivedEvents = [];
         $rateLimitErrors = 0;
 
-        $senderClient->connect($uri)->then(function () use (&$senderConnected, &$senderSubscribed, $senderClient) {
+        $senderClient->connect($uri)->then(function () use (&$senderConnected, &$senderSubscribed, $senderClient): void {
             $senderConnected = true;
 
-            $senderClient->onMessage(function ($message) use (&$senderSubscribed) {
+            $senderClient->onMessage(function ($message) use (&$senderSubscribed): void {
                 $decoded = json_decode($message, true);
-                if (isset($decoded['event']) && ($decoded['event'] === 'pusher_internal:subscription_succeeded' || $decoded['event'] === 'subscription_succeeded')) {
-                    if (!$senderSubscribed) {
-                        $senderSubscribed = true;
-                    }
+                if (isset($decoded['event']) && ($decoded['event'] === 'pusher_internal:subscription_succeeded' || $decoded['event'] === 'subscription_succeeded') && !$senderSubscribed) {
+                    $senderSubscribed = true;
                 }
             });
 
@@ -348,10 +338,10 @@ class RateLimitingIntegrationTest extends TestCase
             $senderClient->send($subscribeMessage);
         });
 
-        $receiverClient->connect($uri)->then(function () use (&$receiverConnected, &$receiverSubscribed, $receiverClient, &$receivedEvents) {
+        $receiverClient->connect($uri)->then(function () use (&$receiverConnected, &$receiverSubscribed, $receiverClient, &$receivedEvents): void {
             $receiverConnected = true;
 
-            $receiverClient->onMessage(function ($message) use (&$receiverSubscribed, &$receivedEvents) {
+            $receiverClient->onMessage(function ($message) use (&$receiverSubscribed, &$receivedEvents): void {
                 $decoded = json_decode($message, true);
                 if (isset($decoded['event']) && ($decoded['event'] === 'pusher_internal:subscription_succeeded' || $decoded['event'] === 'subscription_succeeded')) {
                     if (!$receiverSubscribed) {
@@ -372,7 +362,7 @@ class RateLimitingIntegrationTest extends TestCase
             $receiverClient->send($subscribeMessage);
         });
 
-        $loop->addTimer(0.3, function () use ($loop, $senderClient, &$rateLimitErrors, &$receivedEvents) {
+        $loop->addTimer(0.3, function () use ($loop, $senderClient, &$rateLimitErrors, &$receivedEvents): void {
             if (!$senderClient->isConnected()) {
                 $loop->stop();
 
@@ -385,7 +375,7 @@ class RateLimitingIntegrationTest extends TestCase
                 'data' => json_encode(['message' => 'test']),
             ]);
 
-            $senderClient->onMessage(function ($message) use (&$rateLimitErrors) {
+            $senderClient->onMessage(function ($message) use (&$rateLimitErrors): void {
                 $decoded = json_decode($message, true);
                 if (isset($decoded['event']) && $decoded['event'] === 'pusher:error') {
                     $errorData = json_decode($decoded['data'] ?? '{}', true);
@@ -396,13 +386,13 @@ class RateLimitingIntegrationTest extends TestCase
             });
 
             $sentCount = 0;
-            $sendNext = function () use (&$sentCount, $clientEventMessage, $loop, &$sendNext, $senderClient, &$receivedEvents, &$rateLimitErrors) {
+            $sendNext = function () use (&$sentCount, $clientEventMessage, $loop, &$sendNext, $senderClient, &$receivedEvents, &$rateLimitErrors): void {
                 if ($sentCount < 10) {
                     $senderClient->send($clientEventMessage);
                     $sentCount++;
                     $loop->addTimer(0.01, $sendNext);
                 } else {
-                    $loop->addTimer(0.5, function () use ($loop, &$receivedEvents, &$rateLimitErrors) {
+                    $loop->addTimer(0.5, function () use ($loop, &$receivedEvents, &$rateLimitErrors): void {
                         $this->assertCount(5, $receivedEvents, 'Receiver should receive exactly 5 client events (within rate limit)');
                         $this->assertGreaterThan(0, $rateLimitErrors, 'Sender should receive rate limit errors for messages exceeding the limit');
                         $this->assertLessThanOrEqual(5, $rateLimitErrors, 'Sender should receive at most 5 rate limit errors (for messages 6-10)');

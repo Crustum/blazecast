@@ -12,6 +12,8 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Exception;
 use InvalidArgumentException;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Psr\Container\ContainerInterface;
 use TypeError;
 
@@ -28,29 +30,29 @@ class ControllerFactoryTest extends TestCase
     protected ControllerFactory $controllerFactory;
 
     /**
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\Stub
      */
-    protected $applicationManager;
+    protected ApplicationManager&Stub $applicationManager;
 
     /**
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\PHPUnit\Framework\MockObject\Stub
      */
-    protected $channelManager;
+    protected ChannelManager&Stub $channelManager;
 
     /**
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager&\PHPUnit\Framework\MockObject\Stub
      */
-    protected $connectionManager;
+    protected ChannelConnectionManager&Stub $connectionManager;
 
     /**
      * @var \Psr\Container\ContainerInterface&\PHPUnit\Framework\MockObject\MockObject
      */
-    protected $container;
+    protected ContainerInterface&MockObject $container;
 
     /**
-     * @var \Cake\Event\EventManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Cake\Event\EventManager&\PHPUnit\Framework\MockObject\Stub
      */
-    protected $eventManager;
+    protected EventManager&Stub $eventManager;
 
     /**
      * setUp method
@@ -61,12 +63,12 @@ class ControllerFactoryTest extends TestCase
     {
         parent::setUp();
 
-        $this->applicationManager = $this->createMock(ApplicationManager::class);
-        $this->channelManager = $this->createMock(ChannelManager::class);
-        $this->connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $this->applicationManager = $this->createStub(ApplicationManager::class);
+        $this->channelManager = $this->createStub(ChannelManager::class);
+        $this->connectionManager = $this->createStub(ChannelConnectionManager::class);
         $this->container = $this->createMock(ContainerInterface::class);
 
-        $this->eventManager = $this->createMock(EventManager::class);
+        $this->eventManager = $this->createStub(EventManager::class);
 
         $this->controllerFactory = new ControllerFactory(
             $this->applicationManager,

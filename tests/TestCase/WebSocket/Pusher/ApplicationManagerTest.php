@@ -5,6 +5,7 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher;
 
 use Cake\Core\Configure;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -80,18 +81,14 @@ class ApplicationManagerTest extends TestCase
         parent::tearDown();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanBeCreated(): void
     {
         $manager = new ApplicationManager();
         $this->assertInstanceOf(ApplicationManager::class, $manager);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetAllApplications(): void
     {
         $apps = $this->manager->getApplications();
@@ -102,9 +99,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertArrayHasKey('app3', $apps);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetApplicationById(): void
     {
         $app1 = $this->manager->getApplication('app1');
@@ -123,9 +118,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertNull($nonExistent);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetApplicationByKey(): void
     {
         $app1 = $this->manager->getApplicationByKey('test_key_1');
@@ -143,9 +136,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertNull($nonExistent);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanCheckIfApplicationExists(): void
     {
         $this->assertTrue($this->manager->hasApplication('app1'));
@@ -154,9 +145,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertFalse($this->manager->hasApplication('non-existent'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanValidateCredentials(): void
     {
         $this->assertTrue($this->manager->validateCredentials('app1', 'test_key_1', 'test_secret_1'));
@@ -167,9 +156,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertFalse($this->manager->validateCredentials('non-existent', 'test_key_1', 'test_secret_1'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanValidateSignature(): void
     {
         $body = json_encode(['event' => 'test', 'data' => 'test_data']);
@@ -209,9 +196,7 @@ class ApplicationManagerTest extends TestCase
         ));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanRegisterAndRemoveApplications(): void
     {
         $newApp = [
@@ -233,9 +218,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertFalse($this->manager->removeApplication('non-existent'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerHandlesEmptyConfiguration(): void
     {
         Configure::write('BlazeCast.apps', []);
@@ -246,9 +229,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertNull($emptyManager->getApplication('any_id'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerHandlesMissingConfiguration(): void
     {
         Configure::delete('BlazeCast.apps');
@@ -259,9 +240,7 @@ class ApplicationManagerTest extends TestCase
         $this->assertNull($missingManager->getApplication('any_id'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function managerCanGetApplicationCount(): void
     {
         $this->assertEquals(3, $this->manager->getApplicationCount());

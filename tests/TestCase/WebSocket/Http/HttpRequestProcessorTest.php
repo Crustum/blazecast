@@ -9,6 +9,7 @@ use Crustum\BlazeCast\WebSocket\Http\HttpRequestProcessor;
 use Crustum\BlazeCast\WebSocket\Http\PusherRouter;
 use Crustum\BlazeCast\WebSocket\Http\Response;
 use GuzzleHttp\Psr7\ServerRequest;
+use PHPUnit\Framework\MockObject\Stub;
 use ReflectionClass;
 
 /**
@@ -17,21 +18,22 @@ use ReflectionClass;
 class HttpRequestProcessorTest extends TestCase
 {
     protected HttpRequestProcessor $processor;
+
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&\Crustum\BlazeCast\WebSocket\Http\PusherRouter
+     * @var \PHPUnit\Framework\MockObject\Stub&\Crustum\BlazeCast\WebSocket\Http\PusherRouter
      */
-    protected $router;
+    protected PusherRouter&Stub $router;
 
     /**
      * Set up test fixtures
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
-        $this->router = $this->createMock(PusherRouter::class);
+        $this->router = $this->createStub(PusherRouter::class);
         $this->processor = new HttpRequestProcessor($this->router, 1000);
     }
 
@@ -104,10 +106,8 @@ class HttpRequestProcessorTest extends TestCase
 
         $connection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($response) {
-                return strpos($response, 'HTTP/1.1 200 OK') !== false &&
-                       strpos($response, 'Access-Control-Allow-Origin: *') !== false;
-            }));
+            ->with($this->callback(fn($response): bool => str_contains((string)$response, 'HTTP/1.1 200 OK') &&
+                   str_contains((string)$response, 'Access-Control-Allow-Origin: *')));
 
         $connection->expects($this->once())
             ->method('close');
@@ -126,19 +126,20 @@ class HttpRequestProcessorTest extends TestCase
         $connection = $this->createMock(Connection::class);
         $routerResponse = new Response('test content', 200);
 
-        $this->router
+        $router = $this->createMock(PusherRouter::class);
+        $router
             ->expects($this->once())
             ->method('dispatch')
             ->with($request, $connection)
             ->willReturn($routerResponse);
 
+        $this->processor->setRouter($router);
+
         $connection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($response) {
-                return strpos($response, 'HTTP/1.1 200 OK') !== false &&
-                       strpos($response, 'Access-Control-Allow-Origin: *') !== false &&
-                       strpos($response, 'test content') !== false;
-            }));
+            ->with($this->callback(fn($response): bool => str_contains((string)$response, 'HTTP/1.1 200 OK') &&
+                   str_contains((string)$response, 'Access-Control-Allow-Origin: *') &&
+                   str_contains((string)$response, 'test content')));
 
         $connection->expects($this->once())
             ->method('close');
@@ -154,7 +155,7 @@ class HttpRequestProcessorTest extends TestCase
     public function testProcessHttpRequestWithOptionsRequest(): void
     {
         $request = new ServerRequest('OPTIONS', '/test');
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
 
         $response = $this->processor->processHttpRequest($request, $connection);
 
@@ -173,14 +174,17 @@ class HttpRequestProcessorTest extends TestCase
     public function testProcessHttpRequestWithRegularRequest(): void
     {
         $request = new ServerRequest('GET', '/test');
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $routerResponse = new Response('test content', 200);
 
-        $this->router
+        $router = $this->createMock(PusherRouter::class);
+        $router
             ->expects($this->once())
             ->method('dispatch')
             ->with($request, $connection)
             ->willReturn($routerResponse);
+
+        $this->processor->setRouter($router);
 
         $response = $this->processor->processHttpRequest($request, $connection);
 
@@ -257,7 +261,7 @@ class HttpRequestProcessorTest extends TestCase
      */
     public function testRouterGetterAndSetter(): void
     {
-        $newRouter = $this->createMock(PusherRouter::class);
+        $newRouter = $this->createStub(PusherRouter::class);
 
         $this->assertSame($this->router, $this->processor->getRouter());
 

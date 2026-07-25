@@ -45,6 +45,7 @@ return [
                 ],
                 'ping_interval' => env('BLAZECAST_PING_INTERVAL', 30),
                 'activity_timeout' => env('BLAZECAST_ACTIVITY_TIMEOUT', 120),
+                'speculum_ingest_interval' => (int)env('BLAZECAST_SPECULUM_INGEST_INTERVAL', 15),
             ],
         ],
 
@@ -62,6 +63,7 @@ return [
                 'name' => env('BLAZECAST_APP_NAME', 'Default BlazeCast App'),
                 'max_connections' => env('BLAZECAST_APP_MAX_CONNECTIONS', 100),
                 'enable_client_messages' => env('BLAZECAST_APP_ENABLE_CLIENT_MESSAGES', true),
+                'accept_client_events_from' => env('BLAZECAST_APP_ACCEPT_CLIENT_EVENTS_FROM', 'all'),
                 'enable_statistics' => env('BLAZECAST_APP_ENABLE_STATISTICS', true),
                 'enable_debug' => env('BLAZECAST_APP_ENABLE_DEBUG', false),
                 'allowed_origins' => ['*'],
@@ -128,6 +130,11 @@ return [
                 'max_backend_events_per_second' => env('BLAZECAST_RATE_LIMITER_BACKEND_EVENTS', 100),
                 'max_frontend_events_per_second' => env('BLAZECAST_RATE_LIMITER_FRONTEND_EVENTS', 10),
                 'max_read_requests_per_second' => env('BLAZECAST_RATE_LIMITER_READ_REQUESTS', 50),
+            ],
+            'connection' => [
+                'enabled' => env('BLAZECAST_CONNECTION_RATE_LIMIT_ENABLED', false),
+                'max_messages_per_second' => env('BLAZECAST_CONNECTION_RATE_LIMIT_MAX', 60),
+                'terminate_on_limit' => env('BLAZECAST_CONNECTION_RATE_LIMIT_TERMINATE', false),
             ],
             'redis' => [
                 'host' => env('REDIS_HOST', 'localhost'),

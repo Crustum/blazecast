@@ -12,6 +12,9 @@ use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPresenceChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
+use PHPUnit\Framework\MockObject\MockBuilder;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Rule\AnyInvokedCount;
 use ReflectionClass;
 use stdClass;
 
@@ -82,11 +85,11 @@ class PusherControllerTestHelper
         $appsProperty = $reflection->getProperty('applications');
         $appsProperty->setValue($this->applicationManager, ['test-app' => $this->testApp]);
 
-        $this->channelManager = $this->testCase->getMockBuilder(ChannelManager::class)
+        $this->channelManager = (new MockBuilder($this->testCase, ChannelManager::class))
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->connectionManager = $this->testCase->getMockBuilder(ChannelConnectionManager::class)
+        $this->connectionManager = (new MockBuilder($this->testCase, ChannelConnectionManager::class))
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -109,7 +112,7 @@ class PusherControllerTestHelper
             $this->connectionManager,
         ];
 
-        if (!empty($additionalDependencies)) {
+        if ($additionalDependencies !== []) {
             $dependencies = array_merge($dependencies, $additionalDependencies);
         }
 
@@ -129,6 +132,12 @@ class PusherControllerTestHelper
     {
         $testAppWithChannelManager = array_merge($this->testApp, [
             'channel_manager' => $this->channelManager,
+        ]);
+
+        $reflectionManager = new ReflectionClass($this->applicationManager);
+        $appsProperty = $reflectionManager->getProperty('applications');
+        $appsProperty->setValue($this->applicationManager, [
+            $this->testApp['id'] => $testAppWithChannelManager,
         ]);
 
         $defaults = [
@@ -159,17 +168,21 @@ class PusherControllerTestHelper
      */
     public function createChannelMock(string $name, int $connectionCount = 5)
     {
-        $channel = $this->testCase->getMockBuilder(PusherChannel::class)
+        $channel = (new MockBuilder($this->testCase, PusherChannel::class))
             ->disableOriginalConstructor()
             ->getMock();
 
-        $channel->expects($this->testCase->any())
+        $channel->expects($this->any())
             ->method('getName')
             ->willReturn($name);
 
-        $channel->expects($this->testCase->any())
+        $channel->expects($this->any())
             ->method('getConnectionCount')
             ->willReturn($connectionCount);
+
+        $channel->expects($this->any())
+            ->method('getConnections')
+            ->willReturn(array_fill(0, $connectionCount, null));
 
         return $channel;
     }
@@ -184,19 +197,19 @@ class PusherControllerTestHelper
      */
     public function createPresenceChannelMock(string $name, array $users = [], int $connectionCount = 5)
     {
-        $channel = $this->testCase->getMockBuilder(PusherPresenceChannel::class)
+        $channel = (new MockBuilder($this->testCase, PusherPresenceChannel::class))
             ->disableOriginalConstructor()
             ->getMock();
 
-        $channel->expects($this->testCase->any())
+        $channel->expects($this->any())
             ->method('getName')
             ->willReturn($name);
 
-        $channel->expects($this->testCase->any())
+        $channel->expects($this->any())
             ->method('getConnectionCount')
             ->willReturn($connectionCount);
 
-        $channel->expects($this->testCase->any())
+        $channel->expects($this->any())
             ->method('getUsers')
             ->willReturn($users);
 
@@ -211,7 +224,7 @@ class PusherControllerTestHelper
      */
     public function setupChannels(array $channels): void
     {
-        $this->channelManager->expects($this->testCase->any())
+        $this->channelManager->expects($this->any())
             ->method('getChannels')
             ->willReturn($channels);
 
@@ -220,8 +233,8 @@ class PusherControllerTestHelper
             $map[] = [$channel->getName(), $channel];
         }
 
-        if (!empty($map)) {
-            $this->channelManager->expects($this->testCase->any())
+        if ($map !== []) {
+            $this->channelManager->expects($this->any())
                 ->method('getChannel')
                 ->willReturnMap($map);
         }
@@ -235,7 +248,7 @@ class PusherControllerTestHelper
      * @param array<mixed> $parameters Method parameters
      * @return mixed
      */
-    public function callProtectedMethod(object $controller, string $methodName, array $parameters = [])
+    public function callProtectedMethod(object $controller, string $methodName, array $parameters = []): mixed
     {
         $reflection = new ReflectionClass($controller);
         $method = $reflection->getMethod($methodName);
@@ -313,7 +326,7 @@ class PusherControllerTestHelper
         if ($expectedBody !== null) {
             $body = $response->getBody();
 
-            if (is_object($body) && $body instanceof stdClass) {
+            if ($body instanceof stdClass) {
                 $body = json_decode(json_encode($body), true);
             }
 
@@ -333,12 +346,17 @@ class PusherControllerTestHelper
      * @param string $methodName Method name
      * @return \PHPUnit\Framework\MockObject\MockObject
      */
-    public function mockStaticMethod(string $className, string $methodName)
+    public function mockStaticMethod(string $className, string $methodName): MockObject
     {
         /** @phpstan-ignore-next-line */
         return $this->testCase->getMockBuilder($className)
             ->disableOriginalConstructor()
             ->onlyMethods([$methodName])
             ->getMock();
+    }
+
+    public function any(): AnyInvokedCount
+    {
+        return new AnyInvokedCount();
     }
 }

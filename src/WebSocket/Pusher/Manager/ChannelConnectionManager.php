@@ -380,12 +380,8 @@ class ChannelConnectionManager
     public function getMappingInfo(): array
     {
         return [
-            'connection_channels' => array_map(function ($channels) {
-                return array_keys($channels);
-            }, $this->connectionChannels),
-            'channel_connections' => array_map(function ($connections) {
-                return array_keys($connections);
-            }, $this->channelConnections),
+            'connection_channels' => array_map(array_keys(...), $this->connectionChannels),
+            'channel_connections' => array_map(array_keys(...), $this->channelConnections),
             'stats' => $this->getStats(),
         ];
     }

@@ -8,6 +8,7 @@ use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\ConnectionRegistry;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
+use PHPUnit\Framework\MockObject\Stub;
 
 /**
  * ConnectionRegistryTest
@@ -15,20 +16,28 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 class ConnectionRegistryTest extends TestCase
 {
     protected ConnectionRegistry $registry;
-    protected ChannelConnectionManager $connectionManager;
-    protected EventManager $eventManager;
+
+    /**
+     * @var \PHPUnit\Framework\MockObject\Stub&ChannelConnectionManager
+     */
+    protected ChannelConnectionManager&Stub $connectionManager;
+
+    /**
+     * @var \PHPUnit\Framework\MockObject\Stub&EventManager
+     */
+    protected EventManager&Stub $eventManager;
 
     /**
      * Set up test fixtures
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
-        $this->connectionManager = $this->createMock(ChannelConnectionManager::class);
-        $this->eventManager = $this->createMock(EventManager::class);
+        $this->connectionManager = $this->createStub(ChannelConnectionManager::class);
+        $this->eventManager = $this->createStub(EventManager::class);
 
         $this->registry = new ConnectionRegistry($this->connectionManager, $this->eventManager);
     }
@@ -40,7 +49,7 @@ class ConnectionRegistryTest extends TestCase
      */
     public function testRegisterConnection(): void
     {
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $connection->method('getId')->willReturn('conn-123');
 
         $this->registry->register($connection, ['app_id' => 'data']);
@@ -60,7 +69,7 @@ class ConnectionRegistryTest extends TestCase
      */
     public function testUpdateConnectionId(): void
     {
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $connection->method('getId')->willReturn('conn-123');
 
         $this->registry->register($connection);
@@ -78,10 +87,10 @@ class ConnectionRegistryTest extends TestCase
      */
     public function testGetConnections(): void
     {
-        $connection1 = $this->createMock(Connection::class);
+        $connection1 = $this->createStub(Connection::class);
         $connection1->method('getId')->willReturn('conn-1');
 
-        $connection2 = $this->createMock(Connection::class);
+        $connection2 = $this->createStub(Connection::class);
         $connection2->method('getId')->willReturn('conn-2');
 
         $this->registry->register($connection1);
@@ -103,7 +112,7 @@ class ConnectionRegistryTest extends TestCase
     {
         $this->assertEquals(0, $this->registry->getConnectionCount());
 
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $connection->method('getId')->willReturn('conn-123');
 
         $this->registry->register($connection);
@@ -118,7 +127,7 @@ class ConnectionRegistryTest extends TestCase
      */
     public function testUnregisterConnection(): void
     {
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $connection->method('getId')->willReturn('conn-123');
 
         $this->registry->register($connection);
@@ -137,11 +146,11 @@ class ConnectionRegistryTest extends TestCase
      */
     public function testClearConnections(): void
     {
-        $connection1 = $this->createMock(Connection::class);
+        $connection1 = $this->createStub(Connection::class);
         $connection1->method('getId')->willReturn('conn-1');
         $connection1->method('isConnected')->willReturn(true);
 
-        $connection2 = $this->createMock(Connection::class);
+        $connection2 = $this->createStub(Connection::class);
         $connection2->method('getId')->willReturn('conn-2');
         $connection2->method('isConnected')->willReturn(true);
 

@@ -163,9 +163,7 @@ class ChannelManager
      */
     public function getChannelsByType(string $type): array
     {
-        return array_filter($this->channels, function (PusherChannelInterface $channel) use ($type) {
-            return $channel->getType() === $type;
-        });
+        return array_filter($this->channels, fn(PusherChannelInterface $channel): bool => $channel->getType() === $type);
     }
 
     /**
@@ -179,9 +177,7 @@ class ChannelManager
         $escaped = preg_quote($pattern, '/');
         $regex = '/^' . str_replace(['\\*', '\\?'], ['.*', '.'], $escaped) . '$/';
 
-        return array_keys(array_filter($this->channels, function ($channel, $name) use ($regex) {
-            return preg_match($regex, $name);
-        }, ARRAY_FILTER_USE_BOTH));
+        return array_keys(array_filter($this->channels, fn($channel, $name): int|false => preg_match($regex, (string)$name), ARRAY_FILTER_USE_BOTH));
     }
 
     /**

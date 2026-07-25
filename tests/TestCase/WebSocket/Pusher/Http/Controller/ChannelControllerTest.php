@@ -79,9 +79,7 @@ class ChannelControllerTest extends TestCase
             ->with(
                 $this->testApp,
                 'channel',
-                $this->callback(function ($params) {
-                    return isset($params['channel']) && $params['channel'] === 'test-channel';
-                }),
+                $this->callback(fn(array $params): bool => isset($params['channel']) && $params['channel'] === 'test-channel'),
             )
             ->willReturn($expectedChannelInfo);
 
@@ -113,7 +111,7 @@ class ChannelControllerTest extends TestCase
         ]);
 
         $this->assertEquals(200, $result->getStatusCode());
-        $responseData = json_decode($result->getContent(), true);
+        $responseData = json_decode((string)$result->getContent(), true);
         $this->assertIsArray($responseData);
         $this->assertArrayHasKey('occupied', $responseData);
         $this->assertArrayHasKey('user_count', $responseData);
@@ -165,7 +163,7 @@ class ChannelControllerTest extends TestCase
         ]);
 
         $this->assertEquals(200, $result->getStatusCode());
-        $responseData = json_decode($result->getContent(), true);
+        $responseData = json_decode((string)$result->getContent(), true);
         $this->assertIsArray($responseData);
         $this->assertEmpty($responseData);
     }
@@ -194,9 +192,7 @@ class ChannelControllerTest extends TestCase
             ->with(
                 $this->testApp,
                 'channel',
-                $this->callback(function ($params) {
-                    return isset($params['channel']) && $params['channel'] === 'presence-channel';
-                }),
+                $this->callback(fn(array $params): bool => isset($params['channel']) && $params['channel'] === 'presence-channel'),
             )
             ->willReturn($expectedChannelInfo);
 
@@ -228,7 +224,7 @@ class ChannelControllerTest extends TestCase
         ]);
 
         $this->assertEquals(200, $result->getStatusCode());
-        $responseData = json_decode($result->getContent(), true);
+        $responseData = json_decode((string)$result->getContent(), true);
         $this->assertIsArray($responseData);
         $this->assertArrayHasKey('occupied', $responseData);
         $this->assertArrayHasKey('user_count', $responseData);
@@ -256,7 +252,7 @@ class ChannelControllerTest extends TestCase
         $request = new ServerRequest($method, $uri, $headers);
 
         if ($body !== null) {
-            $request = $request->withBody($this->createStream($body));
+            return $request->withBody($this->createStream($body));
         }
 
         return $request;

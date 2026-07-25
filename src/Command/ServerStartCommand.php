@@ -5,6 +5,7 @@ namespace Crustum\BlazeCast\Command;
 
 use Cake\Command\Command;
 use Cake\Console\Arguments;
+use Cake\Console\CommandFactoryInterface;
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
 use Cake\Core\Configure;
@@ -15,6 +16,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use Crustum\BlazeCast\WebSocket\Pusher\ServerFactory;
 use Exception;
+use Override;
 use ReflectionClass;
 use RuntimeException;
 use Throwable;
@@ -47,11 +49,10 @@ class ServerStartCommand extends Command
      */
     protected function getContainer(): ?ContainerInterface
     {
-        if ($this->factory) {
+        if ($this->factory instanceof CommandFactoryInterface) {
             $reflection = new ReflectionClass($this->factory);
             if ($reflection->hasProperty('container')) {
                 $property = $reflection->getProperty('container');
-                $property->setAccessible(true);
 
                 return $property->getValue($this->factory);
             }
@@ -69,7 +70,6 @@ class ServerStartCommand extends Command
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
         $parser
-            ->setDescription('Start the unified Pusher server that handles both HTTP API and WebSocket connections')
             ->addOption('host', [
                 'short' => 'H',
                 'default' => '0.0.0.0',
@@ -103,6 +103,15 @@ class ServerStartCommand extends Command
             ]);
 
         return $parser;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public static function getDescription(): string
+    {
+        return 'Start the unified Pusher server that handles both HTTP API and WebSocket connections';
     }
 
     /**
@@ -143,13 +152,14 @@ class ServerStartCommand extends Command
             $connectionManager = null;
 
             $container = $this->getContainer();
-            if ($container) {
+            if ($container instanceof ContainerInterface) {
                 if ($container->has(ApplicationManager::class)) {
                     $applicationManager = $container->get(ApplicationManager::class);
                     $io->out('<info>Using ApplicationManager from container</info>');
                 } else {
                     $io->out('<error>ApplicationManager not found in container</error>');
                 }
+
                 if ($container->has(ChannelConnectionManager::class)) {
                     $connectionManager = $container->get(ChannelConnectionManager::class);
                     $io->out('<info>Using ChannelConnectionManager from container</info>');
@@ -303,7 +313,6 @@ class ServerStartCommand extends Command
 
             $reflection = new ReflectionClass($router);
             $factoryProperty = $reflection->getProperty('controllerFactory');
-            $factoryProperty->setAccessible(true);
             $controllerFactory = $factoryProperty->getValue($router);
 
             if ($controllerFactory) {
@@ -330,8 +339,8 @@ class ServerStartCommand extends Command
             } else {
                 $io->out('   No controller factory found!');
             }
-        } catch (Exception $e) {
-            $io->out(sprintf('   Could not retrieve applications: %s', $e->getMessage()));
+        } catch (Exception $exception) {
+            $io->out(sprintf('   Could not retrieve applications: %s', $exception->getMessage()));
         }
 
         $io->out('');
@@ -353,7 +362,6 @@ class ServerStartCommand extends Command
 
             $reflection = new ReflectionClass($router);
             $routesMethod = $reflection->getMethod('getAvailableRoutes');
-            $routesMethod->setAccessible(true);
             $routes = $routesMethod->invoke($router);
 
             if (empty($routes)) {
@@ -371,10 +379,10 @@ class ServerStartCommand extends Command
                     }
                 }
             }
-        } catch (Exception $e) {
-            print_r($e->getMessage());
-            print_r($e->getTraceAsString());
-            $io->out(sprintf('   Could not retrieve routes: %s', $e->getMessage()));
+        } catch (Exception $exception) {
+            print_r($exception->getMessage());
+            print_r($exception->getTraceAsString());
+            $io->out(sprintf('   Could not retrieve routes: %s', $exception->getMessage()));
         }
     }
 }

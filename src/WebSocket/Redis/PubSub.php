@@ -5,6 +5,7 @@ namespace Crustum\BlazeCast\WebSocket\Redis;
 
 use Cake\Log\Log;
 use Clue\React\Redis\Client;
+use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Filter\MessageFilterInterface;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
@@ -201,7 +202,7 @@ class PubSub
      */
     public function publishWithFilter(string $channel, string $message, array $filterCriteria = []): void
     {
-        if (!empty($filterCriteria) && $this->messageFilter !== null) {
+        if ($filterCriteria !== [] && $this->messageFilter instanceof MessageFilterInterface) {
             try {
                 $messageObj = Message::fromJson($message);
 
@@ -228,7 +229,7 @@ class PubSub
      */
     public function publishWithTransform(string $channel, string $message, array $transformRules = []): void
     {
-        if (!empty($transformRules) && $this->messageFilter !== null) {
+        if ($transformRules !== [] && $this->messageFilter instanceof MessageFilterInterface) {
             try {
                 $messageObj = Message::fromJson($message);
                 $transformedMessage = $this->messageFilter->transform($messageObj, $transformRules);
@@ -248,7 +249,7 @@ class PubSub
      */
     public function setupDefaultChannels(): void
     {
-        $this->subscribe('blaze:broadcast', function ($message): void {
+        $this->subscribe('blaze:broadcast', function (string $message): void {
             $channelOperationsManager = $this->server->getChannelOperationsManager();
             $channelOperationsManager->broadcast($message);
         });
@@ -258,7 +259,7 @@ class PubSub
             if (isset($data['socket_id'], $data['message'])) {
                 $connectionRegistry = $this->server->getConnectionRegistry();
                 $connection = $connectionRegistry->getConnection($data['socket_id']);
-                if ($connection) {
+                if ($connection instanceof Connection) {
                     $connection->send($data['message']);
                 }
             }
@@ -274,17 +275,17 @@ class PubSub
     {
         $this->setupDefaultChannels();
 
-        $this->subscribePattern('user:*', function ($message, $channel, $pattern): void {
+        $this->subscribePattern('user:*', function (string $message, $channel, $pattern): void {
             $userId = str_replace('user:', '', $channel);
             $this->handleUserMessage($message, $userId);
         });
 
-        $this->subscribePattern('room:*', function ($message, $channel, $pattern): void {
+        $this->subscribePattern('room:*', function (string $message, $channel, $pattern): void {
             $roomId = str_replace('room:', '', $channel);
             $this->handleRoomMessage($message, $roomId);
         });
 
-        $this->subscribePattern('notifications:*', function ($message, $channel, $pattern): void {
+        $this->subscribePattern('notifications:*', function (string $message, $channel, $pattern): void {
             $notificationType = str_replace('notifications:', '', $channel);
             $this->handleSystemNotification($message, $notificationType);
         });
@@ -335,15 +336,10 @@ class PubSub
     {
         $channelOperationsManager = $this->server->getChannelOperationsManager();
 
-        switch ($notificationType) {
-            case 'system':
-                $channelOperationsManager->broadcast($message);
-                break;
-            case 'maintenance':
-                $channelOperationsManager->broadcastToChannel('admin-notifications', $message);
-                break;
-            default:
-                Log::info("Unknown notification type: {$notificationType}");
-        }
+        match ($notificationType) {
+            'system' => $channelOperationsManager->broadcast($message),
+            'maintenance' => $channelOperationsManager->broadcastToChannel('admin-notifications', $message),
+            default => Log::info("Unknown notification type: {$notificationType}"),
+        };
     }
 }

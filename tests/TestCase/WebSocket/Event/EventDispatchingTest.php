@@ -19,6 +19,7 @@ use function React\Promise\Timer\sleep;
 class EventDispatchingTest extends TestCase
 {
     private TestServer $testServer;
+
     private WebSocketTestClient $client;
 
     protected function setUp(): void
@@ -68,7 +69,7 @@ class EventDispatchingTest extends TestCase
 
         $loop = $this->testServer->getLoop();
 
-        $promise = async(function () use ($loop) {
+        $promise = async(function () use ($loop): void {
             await($this->client->connect($this->testServer->getWebSocketUri()));
             await(sleep(0.1, $loop));
             $this->client->close();
@@ -77,7 +78,7 @@ class EventDispatchingTest extends TestCase
 
         $promise()->then(
             fn() => $loop->stop(),
-            function ($reason) use ($loop) {
+            function ($reason) use ($loop): void {
                 $loop->stop();
                 throw $reason;
             },
@@ -97,7 +98,7 @@ class EventDispatchingTest extends TestCase
 
         $loop = $this->testServer->getLoop();
 
-        $promise = async(function () use ($loop) {
+        $promise = async(function () use ($loop): void {
             await($this->client->connect($this->testServer->getWebSocketUri()));
             await(sleep(0.1, $loop));
 
@@ -122,7 +123,7 @@ class EventDispatchingTest extends TestCase
 
         $promise()->then(
             fn() => $loop->stop(),
-            function ($reason) use ($loop) {
+            function ($reason) use ($loop): void {
                 $loop->stop();
                 throw $reason;
             },
@@ -164,7 +165,7 @@ class EventDispatchingTest extends TestCase
 
         $connected = false;
 
-        $promise = async(function () use (&$connected) {
+        $promise = async(function () use (&$connected): void {
             // Connect to the server
             $uri = $this->testServer->getWebSocketUri();
             await($this->client->connect($uri));
@@ -178,7 +179,7 @@ class EventDispatchingTest extends TestCase
 
         $promise->then(
             fn() => $this->testServer->getLoop()->stop(),
-            function ($reason) {
+            function ($reason): void {
                 $this->testServer->getLoop()->stop();
                 throw $reason;
             },

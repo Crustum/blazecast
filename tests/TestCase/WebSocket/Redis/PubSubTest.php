@@ -12,6 +12,7 @@ use Crustum\BlazeCast\WebSocket\Filter\MessageFilterInterface;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use Crustum\BlazeCast\WebSocket\Redis\PubSub;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use React\EventLoop\LoopInterface;
@@ -23,10 +24,14 @@ use ReflectionClass;
  */
 class PubSubTest extends TestCase
 {
-    private LoopInterface&MockObject $mockLoop;
+    private LoopInterface $mockLoop;
+
     private Server&MockObject $mockServer;
+
     private Client&MockObject $mockClient;
+
     private PubSub $pubSub;
+
     /**
      * @var array<string, mixed>
      */
@@ -34,7 +39,7 @@ class PubSubTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mockLoop = $this->createMock(LoopInterface::class);
+        $this->mockLoop = $this->createStub(LoopInterface::class);
         $this->mockServer = $this->createMock(Server::class);
         $this->mockClient = $this->createMock(Client::class);
 
@@ -51,9 +56,7 @@ class PubSubTest extends TestCase
         $clientProperty->setValue($this->pubSub, $this->mockClient);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function canBeInstantiatedWithValidParameters(): void
     {
         $pubSub = new PubSub($this->mockLoop, $this->mockServer, $this->redisConfig);
@@ -61,21 +64,19 @@ class PubSubTest extends TestCase
         $this->assertInstanceOf(PubSub::class, $pubSub);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function subscribeCallsRedisSubscribeWithCorrectParameters(): void
     {
         $channel = 'test-channel';
-        $callback = function ($message, $channel) {
+        $callback = function ($message, $channel): void {
         };
 
         $mockPromise = $this->createMock(PromiseInterface::class);
         $mockPromise->expects($this->once())
             ->method('then')
             ->with(
-                $this->isType('callable'),
-                $this->isType('callable'),
+                $this->isCallable(),
+                $this->isCallable(),
             );
 
         $this->mockClient->expects($this->once())
@@ -85,14 +86,12 @@ class PubSubTest extends TestCase
 
         $this->mockClient->expects($this->once())
             ->method('on')
-            ->with('message', $this->isType('callable'));
+            ->with('message', $this->isCallable());
 
         $this->pubSub->subscribe($channel, $callback);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function unsubscribeCallsRedisUnsubscribeWithCorrectParameters(): void
     {
         $channel = 'test-channel';
@@ -101,8 +100,8 @@ class PubSubTest extends TestCase
         $mockPromise->expects($this->once())
             ->method('then')
             ->with(
-                $this->isType('callable'),
-                $this->isType('callable'),
+                $this->isCallable(),
+                $this->isCallable(),
             );
 
         $this->mockClient->expects($this->once())
@@ -113,9 +112,7 @@ class PubSubTest extends TestCase
         $this->pubSub->unsubscribe($channel);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function publishCallsRedisPublishWithCorrectParameters(): void
     {
         $channel = 'test-channel';
@@ -125,8 +122,8 @@ class PubSubTest extends TestCase
         $mockPromise->expects($this->once())
             ->method('then')
             ->with(
-                $this->isType('callable'),
-                $this->isType('callable'),
+                $this->isCallable(),
+                $this->isCallable(),
             );
 
         $this->mockClient->expects($this->once())
@@ -137,21 +134,19 @@ class PubSubTest extends TestCase
         $this->pubSub->publish($channel, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function subscribePatternCallsRedisPsubscribeWithCorrectParameters(): void
     {
         $pattern = 'user:*';
-        $callback = function ($message, $channel, $pattern) {
+        $callback = function ($message, $channel, $pattern): void {
         };
 
         $mockPromise = $this->createMock(PromiseInterface::class);
         $mockPromise->expects($this->once())
             ->method('then')
             ->with(
-                $this->isType('callable'),
-                $this->isType('callable'),
+                $this->isCallable(),
+                $this->isCallable(),
             );
 
         $this->mockClient->expects($this->once())
@@ -161,14 +156,12 @@ class PubSubTest extends TestCase
 
         $this->mockClient->expects($this->once())
             ->method('on')
-            ->with('pmessage', $this->isType('callable'));
+            ->with('pmessage', $this->isCallable());
 
         $this->pubSub->subscribePattern($pattern, $callback);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function unsubscribePatternCallsRedisPunsubscribeWithCorrectParameters(): void
     {
         $pattern = 'user:*';
@@ -177,8 +170,8 @@ class PubSubTest extends TestCase
         $mockPromise->expects($this->once())
             ->method('then')
             ->with(
-                $this->isType('callable'),
-                $this->isType('callable'),
+                $this->isCallable(),
+                $this->isCallable(),
             );
 
         $this->mockClient->expects($this->once())
@@ -189,9 +182,7 @@ class PubSubTest extends TestCase
         $this->pubSub->unsubscribePattern($pattern);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setMessageFilterStoresFilterInstance(): void
     {
         $filter = new DefaultMessageFilter();
@@ -204,9 +195,7 @@ class PubSubTest extends TestCase
         $this->assertSame($filter, $storedFilter);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function publishWithFilterAppliesFilterCriteria(): void
     {
         /** @var MessageFilterInterface&MockObject $filter */
@@ -237,9 +226,7 @@ class PubSubTest extends TestCase
         $this->pubSub->publishWithFilter($channel, $message, $criteria);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function publishWithFilterSkipsPublishWhenFilterReturnsFalse(): void
     {
         /** @var MessageFilterInterface&MockObject $filter */
@@ -265,9 +252,7 @@ class PubSubTest extends TestCase
         $this->pubSub->publishWithFilter($channel, $message, $criteria);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function publishWithTransformAppliesTransformationRules(): void
     {
         /** @var MessageFilterInterface&MockObject $filter */
@@ -299,9 +284,7 @@ class PubSubTest extends TestCase
         $this->pubSub->publishWithTransform($channel, $originalMessage, $rules);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setupDefaultChannelsConfiguresStandardChannels(): void
     {
         $mockChannelOperationsManager = $this->createMock(ChannelOperationsManager::class);
@@ -324,7 +307,7 @@ class PubSubTest extends TestCase
 
         $mockPromise = $this->createMock(PromiseInterface::class);
         $mockPromise->method('then')
-            ->willReturnCallback(function ($successCallback) use ($mockPromise) {
+            ->willReturnCallback(function ($successCallback) use ($mockPromise): MockObject {
                 $successCallback();
 
                 return $mockPromise;
@@ -332,7 +315,7 @@ class PubSubTest extends TestCase
 
         $this->mockClient->expects($this->exactly(2))
             ->method('__call')
-            ->with('subscribe', $this->isType('array'))
+            ->with('subscribe', $this->isArray())
             ->willReturn($mockPromise);
 
         $this->mockClient->expects($this->exactly(2))
@@ -355,14 +338,12 @@ class PubSubTest extends TestCase
         }
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setupEnhancedChannelsConfiguresPatternSubscriptions(): void
     {
         $mockPromise = $this->createMock(PromiseInterface::class);
         $mockPromise->method('then')
-            ->willReturnCallback(function ($successCallback) use ($mockPromise) {
+            ->willReturnCallback(function ($successCallback) use ($mockPromise): MockObject {
                 $successCallback();
 
                 return $mockPromise;
@@ -386,9 +367,7 @@ class PubSubTest extends TestCase
         $this->assertArrayHasKey('notifications:*', $patternSubscriptions);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleUserMessageSendsToCorrectConnections(): void
     {
         $userId = '123';
@@ -428,9 +407,7 @@ class PubSubTest extends TestCase
         $method->invoke($this->pubSub, $message, $userId);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleRoomMessageBroadcastsToChannel(): void
     {
         $roomId = 'lobby';
@@ -451,9 +428,7 @@ class PubSubTest extends TestCase
         $method->invoke($this->pubSub, $message, $roomId);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleSystemNotificationBroadcastsBasedOnType(): void
     {
         $message = 'system notification';

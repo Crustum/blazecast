@@ -20,6 +20,9 @@ use InvalidArgumentException;
  *   name?: string,
  *   max_connections?: int,
  *   enable_client_messages?: bool,
+ *   accept_client_events_from?: string,
+ *   allowed_origins?: array<string>,
+ *   max_message_size?: int,
  *   enable_statistics?: bool,
  *   enable_debug?: bool,
  *   ping_interval?: int,
@@ -31,7 +34,9 @@ use InvalidArgumentException;
  *   max_backend_events_per_second?: int,
  *   max_frontend_events_per_second?: int,
  *   max_read_requests_per_second?: int,
- *   rate_limiter_enabled?: bool
+ *   rate_limiter_enabled?: bool,
+ *   max_connection_messages_per_second?: int,
+ *   connection_rate_limit_terminate?: bool
  * }
  *
  * @phpstan-type ApplicationManagerConfig array{
@@ -78,6 +83,9 @@ class ApplicationManager
     protected array $defaultConfig = [
         'max_connections' => null,
         'enable_client_messages' => true,
+        'accept_client_events_from' => 'all',
+        'allowed_origins' => ['*'],
+        'max_message_size' => 10000,
         'enable_statistics' => true,
         'enable_debug' => false,
         'max_backend_events_per_second' => 100,
@@ -124,7 +132,7 @@ class ApplicationManager
         }
 
         $blazeCastApps = Configure::read('BlazeCast.apps');
-        $configApps = is_array($blazeCastApps) && !empty($blazeCastApps) ? $blazeCastApps : Configure::read('Pusher.applications');
+        $configApps = is_array($blazeCastApps) && $blazeCastApps !== [] ? $blazeCastApps : Configure::read('Pusher.applications');
         if (is_array($configApps)) {
             foreach ($configApps as $appConfig) {
                 if (isset($appConfig['id'], $appConfig['key'], $appConfig['secret'])) {
@@ -164,6 +172,9 @@ class ApplicationManager
             'name' => $config['name'] ?? 'App ' . $config['id'],
             'max_connections' => $appConfig['max_connections'],
             'enable_client_messages' => $appConfig['enable_client_messages'],
+            'accept_client_events_from' => $appConfig['accept_client_events_from'] ?? ($appConfig['enable_client_messages'] ?? true ? 'all' : 'none'),
+            'allowed_origins' => $appConfig['allowed_origins'] ?? ['*'],
+            'max_message_size' => $appConfig['max_message_size'] ?? 10000,
             'enable_statistics' => $appConfig['enable_statistics'],
             'enable_debug' => $appConfig['enable_debug'],
             'created_at' => $existingApp['created_at'] ?? time(),
@@ -346,7 +357,7 @@ class ApplicationManager
         $safeConfig = [];
 
         foreach ($config as $key => $value) {
-            if (!in_array($key, $protectedFields)) {
+            if (!in_array($key, $protectedFields, true)) {
                 $safeConfig[$key] = $value;
             }
         }

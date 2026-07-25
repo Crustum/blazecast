@@ -18,10 +18,10 @@ class PruneStaleConnectionsJobTest extends TestCase
     {
         $connection = $this->createMock(Connection::class);
         $server = $this->createMock(Server::class);
-        $connectionRegistry = $this->createMock(ConnectionRegistry::class);
+        $connectionRegistry = $this->createStub(ConnectionRegistry::class);
         $applicationContextResolver = $this->createMock(ApplicationContextResolver::class);
         $appManager = $this->createMock(ApplicationManager::class);
-        $loop = $this->createMock(LoopInterface::class);
+        $loop = $this->createStub(LoopInterface::class);
 
         $app = [
             'id' => 'app-id',
@@ -51,10 +51,10 @@ class PruneStaleConnectionsJobTest extends TestCase
     {
         $connection = $this->createMock(Connection::class);
         $server = $this->createMock(Server::class);
-        $connectionRegistry = $this->createMock(ConnectionRegistry::class);
+        $connectionRegistry = $this->createStub(ConnectionRegistry::class);
         $applicationContextResolver = $this->createMock(ApplicationContextResolver::class);
         $appManager = $this->createMock(ApplicationManager::class);
-        $loop = $this->createMock(LoopInterface::class);
+        $loop = $this->createStub(LoopInterface::class);
 
         $app = [
             'id' => 'app-id',

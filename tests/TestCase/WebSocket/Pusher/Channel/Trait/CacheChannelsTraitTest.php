@@ -152,7 +152,7 @@ class CacheChannelsTraitTest extends TestCase
 
         $this->connection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($message) {
+            ->with($this->callback(function ($message): bool {
                 $decoded = json_decode($message, true);
 
                 return $decoded['event'] === 'test-event' && $decoded['data'] === 'test-data';
@@ -374,7 +374,7 @@ class CacheChannelsTraitTest extends TestCase
 
         $this->connection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($message) {
+            ->with($this->callback(function ($message): bool {
                 $decoded = json_decode($message, true);
 
                 return !isset($decoded['cached_at']);

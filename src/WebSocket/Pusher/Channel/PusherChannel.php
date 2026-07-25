@@ -225,14 +225,12 @@ class PusherChannel implements PusherChannelInterface, JsonSerializable
      *
      * @param BroadcastPayload $payload Message payload
      * @param \Crustum\BlazeCast\WebSocket\Connection|null $except Connection to exclude
-     * @return void
+     * @return list<string> Connection ids that received the frame
      */
-    public function broadcast(array $payload, ?Connection $except = null): void
+    public function broadcast(array $payload, ?Connection $except = null): array
     {
-        if ($except === null) {
-            $this->broadcastToAll($payload);
-
-            return;
+        if (!$except instanceof Connection) {
+            return $this->broadcastToAll($payload);
         }
 
         $message = json_encode($payload);
@@ -241,22 +239,26 @@ class PusherChannel implements PusherChannelInterface, JsonSerializable
             'scope' => ['socket.channel', 'socket.channel.pusher'],
         ]);
 
+        $deliveredIds = [];
         foreach ($this->connections as $connection) {
             if ($except->getId() === $connection->getId()) {
                 continue;
             }
 
             $connection->send($message);
+            $deliveredIds[] = $connection->getId();
         }
+
+        return $deliveredIds;
     }
 
     /**
      * Broadcast message to all connections
      *
      * @param BroadcastPayload $payload Message payload
-     * @return void
+     * @return list<string> Connection ids that received the frame
      */
-    public function broadcastToAll(array $payload): void
+    public function broadcastToAll(array $payload): array
     {
         $message = json_encode($payload);
 
@@ -264,9 +266,13 @@ class PusherChannel implements PusherChannelInterface, JsonSerializable
             'scope' => ['socket.channel', 'socket.channel.pusher'],
         ]);
 
+        $deliveredIds = [];
         foreach ($this->connections as $connection) {
             $connection->send($message);
+            $deliveredIds[] = $connection->getId();
         }
+
+        return $deliveredIds;
     }
 
     /**
@@ -292,7 +298,7 @@ class PusherChannel implements PusherChannelInterface, JsonSerializable
             'name' => $this->name,
             'type' => $this->getType(),
             'connection_count' => count($this->connections),
-            'occupied' => !empty($this->connections),
+            'occupied' => $this->connections !== [],
         ];
     }
 
@@ -303,7 +309,7 @@ class PusherChannel implements PusherChannelInterface, JsonSerializable
      */
     public function isEmpty(): bool
     {
-        return empty($this->connections);
+        return $this->connections === [];
     }
 
     /**

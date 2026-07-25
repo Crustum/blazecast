@@ -62,7 +62,7 @@ class TestPusherController extends PusherController
      * @param array<string, mixed>|object|null $data
      * @return \Crustum\BlazeCast\WebSocket\Http\Response
      */
-    public function callSuccessResponse($data = null): Response
+    public function callSuccessResponse(array|object|null $data = null): Response
     {
         return $this->successResponse($data);
     }

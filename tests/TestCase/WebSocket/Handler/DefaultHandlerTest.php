@@ -7,7 +7,9 @@ use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Handler\DefaultHandler;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -17,45 +19,44 @@ use ReflectionClass;
 class DefaultHandlerTest extends TestCase
 {
     private DefaultHandler $handler;
-    private Server&MockObject $mockServer;
+
+    /**
+     * @var \PHPUnit\Framework\MockObject\Stub&Server
+     */
+    private Server&Stub $stubServer;
+
     private Connection&MockObject $mockConnection;
 
     protected function setUp(): void
     {
         $this->handler = new DefaultHandler();
-        $this->mockServer = $this->createMock(Server::class);
+        $this->stubServer = $this->createStub(Server::class);
         $this->mockConnection = $this->createMock(Connection::class);
 
-        $this->handler->setServer($this->mockServer);
+        $this->handler->setServer($this->stubServer);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function canBeInstantiated(): void
     {
         $handler = new DefaultHandler();
         $this->assertInstanceOf(DefaultHandler::class, $handler);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setServerStoresServerInstance(): void
     {
         $handler = new DefaultHandler();
-        $handler->setServer($this->mockServer);
+        $handler->setServer($this->stubServer);
 
         $reflection = new ReflectionClass($handler);
         $serverProperty = $reflection->getProperty('server');
         $storedServer = $serverProperty->getValue($handler);
 
-        $this->assertSame($this->mockServer, $storedServer);
+        $this->assertSame($this->stubServer, $storedServer);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function supportsAllEventTypes(): void
     {
         $this->assertTrue($this->handler->supports('any_event'));
@@ -65,9 +66,7 @@ class DefaultHandlerTest extends TestCase
         $this->assertTrue($this->handler->supports('test.event'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleEchoesMessageBackToClient(): void
     {
         $eventType = 'test_event';
@@ -76,7 +75,7 @@ class DefaultHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) use ($eventType, $data) {
+            ->with($this->callback(function ($jsonMessage) use ($eventType, $data): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -88,9 +87,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleIncludesTimestampInResponse(): void
     {
         $message = new Message('test_event', ['test' => 'data']);
@@ -98,7 +95,7 @@ class DefaultHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) use ($beforeTime) {
+            ->with($this->callback(function ($jsonMessage) use ($beforeTime): bool {
                 $decoded = json_decode($jsonMessage, true);
                 $timestamp = $decoded['data']['timestamp'] ?? 0;
 
@@ -108,16 +105,14 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleWorksWithEmptyData(): void
     {
         $message = new Message('empty_event');
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -129,9 +124,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleWorksWithComplexData(): void
     {
         $complexData = [
@@ -143,7 +136,7 @@ class DefaultHandlerTest extends TestCase
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) use ($complexData) {
+            ->with($this->callback(function ($jsonMessage) use ($complexData): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -155,16 +148,14 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleWorksWithChannelMessages(): void
     {
         $message = new Message('channel_event', ['content' => 'hello'], 'test-channel');
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -176,16 +167,14 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleWorksWithStringData(): void
     {
         $message = new Message('string_event', 'simple string data');
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -197,16 +186,14 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleWorksWithNumericData(): void
     {
         $message = new Message('numeric_event', 42);
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -218,16 +205,14 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handleWorksWithBooleanData(): void
     {
         $message = new Message('boolean_event', true);
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -239,16 +224,14 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function responseIsValidJson(): void
     {
         $message = new Message('json_test', ['test' => 'data']);
 
         $this->mockConnection->expects($this->once())
             ->method('send')
-            ->with($this->callback(function ($jsonMessage) {
+            ->with($this->callback(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return json_last_error() === JSON_ERROR_NONE && is_array($decoded);
@@ -257,9 +240,7 @@ class DefaultHandlerTest extends TestCase
         $this->handler->handle($this->mockConnection, $message);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function handlerActsAsFallbackForAllEvents(): void
     {
         $eventTypes = [
@@ -279,9 +260,7 @@ class DefaultHandlerTest extends TestCase
         }
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function multipleHandleCallsWorkCorrectly(): void
     {
         $messages = [
@@ -293,7 +272,7 @@ class DefaultHandlerTest extends TestCase
         $callCount = 0;
         $this->mockConnection->expects($this->exactly(3))
             ->method('send')
-            ->willReturnCallback(function ($json) use (&$callCount) {
+            ->willReturnCallback(function ($json) use (&$callCount): void {
                 $decoded = json_decode($json, true);
                 $callCount++;
 

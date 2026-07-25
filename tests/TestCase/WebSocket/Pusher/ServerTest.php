@@ -12,6 +12,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\Exception\ConnectionLimitExceeded;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
+use Crustum\BlazeCast\WebSocket\RateLimiter\ConnectionMessageRateLimiter;
 use React\EventLoop\LoopInterface;
 use ReflectionClass;
 
@@ -23,16 +24,20 @@ use ReflectionClass;
 class ServerTest extends TestCase
 {
     protected PusherRouter $router;
+
     protected ChannelManager $channelManager;
+
     protected ChannelConnectionManager $connectionManager;
+
     protected ApplicationManager $applicationManager;
+
     protected LoopInterface $loop;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
-        $this->router = $this->createMock(PusherRouter::class);
+        $this->router = $this->createStub(PusherRouter::class);
         $this->channelManager = new ChannelManager();
         $this->connectionManager = new ChannelConnectionManager();
         $this->applicationManager = new ApplicationManager([
@@ -46,7 +51,7 @@ class ServerTest extends TestCase
             ],
         ]);
 
-        $this->loop = $this->createMock(LoopInterface::class);
+        $this->loop = $this->createStub(LoopInterface::class);
     }
 
     /**
@@ -104,7 +109,7 @@ class ServerTest extends TestCase
             $this->loop,
         );
 
-        $newRouter = $this->createMock(PusherRouter::class);
+        $newRouter = $this->createStub(PusherRouter::class);
         $server->setHttpRouter($newRouter);
 
         $this->assertSame($newRouter, $server->getHttpRouter());
@@ -312,7 +317,7 @@ class ServerTest extends TestCase
         $this->assertNotNull($application, 'Application should exist');
 
         $maxConnections = $application['max_connections'] ?? null;
-        $this->assertNull($maxConnections, 'max_connections should be null (unlimited) by default, matching Reverb behavior');
+        $this->assertNull($maxConnections, 'max_connections should be null (unlimited) by default');
 
         $currentConnections = $this->connectionManager->getConnectionsForApp('1');
         $connectionCountBefore = count($currentConnections);
@@ -320,6 +325,230 @@ class ServerTest extends TestCase
         $method->invoke($server, '1');
 
         $this->assertCount($connectionCountBefore, $this->connectionManager->getConnectionsForApp('1'), 'Connection count should remain unchanged after ensureWithinConnectionLimit when no limit is set (null)');
+    }
+
+    /**
+     * Welcome activity_timeout prefers per-application config.
+     *
+     * @return void
+     */
+    public function testResolveActivityTimeoutPrefersApplicationConfig(): void
+    {
+        $this->applicationManager = new ApplicationManager([
+            'applications' => [
+                [
+                    'id' => '1',
+                    'key' => 'test-key',
+                    'secret' => 'test-secret',
+                    'name' => 'Test App',
+                    'activity_timeout' => 45,
+                ],
+            ],
+        ]);
+
+        $server = new Server(
+            $this->router,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->applicationManager,
+            '127.0.0.1',
+            8080,
+            [
+                'test_mode' => true,
+                'servers' => [
+                    'blazecast' => [
+                        'activity_timeout' => 120,
+                    ],
+                ],
+            ],
+            $this->loop,
+        );
+
+        $connection = $this->createStub(Connection::class);
+        $connection->method('getAttribute')->willReturnMap([
+            ['app_id', '1'],
+        ]);
+
+        $method = (new ReflectionClass($server))->getMethod('resolveActivityTimeout');
+
+        $this->assertSame(45, $method->invoke($server, $connection));
+    }
+
+    /**
+     * Welcome activity_timeout falls back to server config when app omits it.
+     *
+     * @return void
+     */
+    public function testResolveActivityTimeoutFallsBackToServerConfig(): void
+    {
+        $this->applicationManager = new ApplicationManager([
+            'applications' => [
+                [
+                    'id' => '1',
+                    'key' => 'test-key',
+                    'secret' => 'test-secret',
+                    'name' => 'Test App',
+                ],
+            ],
+        ]);
+
+        $server = new Server(
+            $this->router,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->applicationManager,
+            '127.0.0.1',
+            8080,
+            [
+                'test_mode' => true,
+                'servers' => [
+                    'blazecast' => [
+                        'activity_timeout' => 90,
+                    ],
+                ],
+            ],
+            $this->loop,
+        );
+
+        $connection = $this->createStub(Connection::class);
+        $connection->method('getAttribute')->willReturnMap([
+            ['app_id', '1'],
+        ]);
+
+        $method = (new ReflectionClass($server))->getMethod('resolveActivityTimeout');
+
+        $this->assertSame(90, $method->invoke($server, $connection));
+    }
+
+    /**
+     * Welcome activity_timeout defaults to 120 when neither app nor server sets it.
+     *
+     * @return void
+     */
+    public function testResolveActivityTimeoutDefaultsToOneHundredTwenty(): void
+    {
+        $server = new Server(
+            $this->router,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->applicationManager,
+            '127.0.0.1',
+            8080,
+            ['test_mode' => true],
+            $this->loop,
+        );
+
+        $connection = $this->createStub(Connection::class);
+        $connection->method('getAttribute')->willReturn(null);
+
+        $method = (new ReflectionClass($server))->getMethod('resolveActivityTimeout');
+
+        $this->assertSame(120, $method->invoke($server, $connection));
+    }
+
+    /**
+     * Connection message rate limit sends error and keeps connection when terminate is off.
+     *
+     * @return void
+     */
+    public function testEnsureWithinConnectionMessageRateLimitRejectsWithoutTerminate(): void
+    {
+        $limiter = new ConnectionMessageRateLimiter(1, false);
+        $server = new Server(
+            $this->router,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->applicationManager,
+            '127.0.0.1',
+            8080,
+            ['test_mode' => true],
+            $this->loop,
+            null,
+            null,
+            $limiter,
+        );
+
+        $sent = [];
+        $connection = $this->createMock(Connection::class);
+        $connection->method('getId')->willReturn('conn-rate-1');
+        $connection->method('getAttribute')->willReturn('1');
+        $connection->expects($this->once())->method('send')->willReturnCallback(function (string $payload) use (&$sent): void {
+            $sent[] = $payload;
+        });
+        $connection->expects($this->never())->method('close');
+
+        $method = (new ReflectionClass($server))->getMethod('ensureWithinConnectionMessageRateLimit');
+
+        $this->assertTrue($method->invoke($server, $connection));
+        $this->assertFalse($method->invoke($server, $connection));
+        $this->assertCount(1, $sent);
+
+        $decoded = json_decode($sent[0], true);
+        $this->assertSame('pusher:error', $decoded['event']);
+        $data = json_decode($decoded['data'], true);
+        $this->assertSame(4200, $data['code']);
+        $this->assertSame('Rate limit exceeded', $data['message']);
+    }
+
+    /**
+     * Connection message rate limit closes the connection when terminate_on_limit is enabled.
+     *
+     * @return void
+     */
+    public function testEnsureWithinConnectionMessageRateLimitTerminatesWhenConfigured(): void
+    {
+        $limiter = new ConnectionMessageRateLimiter(1, true);
+        $server = new Server(
+            $this->router,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->applicationManager,
+            '127.0.0.1',
+            8080,
+            ['test_mode' => true],
+            $this->loop,
+            null,
+            null,
+            $limiter,
+        );
+
+        $connection = $this->createMock(Connection::class);
+        $connection->method('getId')->willReturn('conn-rate-2');
+        $connection->method('getAttribute')->willReturn('1');
+        $connection->expects($this->once())->method('send');
+        $connection->expects($this->once())->method('close');
+
+        $method = (new ReflectionClass($server))->getMethod('ensureWithinConnectionMessageRateLimit');
+
+        $this->assertTrue($method->invoke($server, $connection));
+        $this->assertFalse($method->invoke($server, $connection));
+    }
+
+    /**
+     * Without a connection message rate limiter, messages are always allowed.
+     *
+     * @return void
+     */
+    public function testEnsureWithinConnectionMessageRateLimitAllowsWhenDisabled(): void
+    {
+        $server = new Server(
+            $this->router,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->applicationManager,
+            '127.0.0.1',
+            8080,
+            ['test_mode' => true],
+            $this->loop,
+        );
+
+        $connection = $this->createStub(Connection::class);
+        $connection->method('getId')->willReturn('conn-rate-3');
+
+        $method = (new ReflectionClass($server))->getMethod('ensureWithinConnectionMessageRateLimit');
+
+        $this->assertTrue($method->invoke($server, $connection));
+        $this->assertTrue($method->invoke($server, $connection));
     }
 
     /**

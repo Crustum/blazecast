@@ -12,6 +12,7 @@ use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\Utils;
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\StreamInterface;
 
 /**
  * Unit tests for ChannelsController
@@ -113,7 +114,7 @@ class ChannelsControllerTest extends TestCase
         ]);
 
         $this->assertEquals(200, $result->getStatusCode());
-        $responseData = json_decode($result->getContent(), true);
+        $responseData = json_decode((string)$result->getContent(), true);
         $this->assertIsArray($responseData);
         $this->assertArrayHasKey('channels', $responseData);
         $this->assertEquals($expectedChannels, $responseData['channels']);
@@ -173,7 +174,7 @@ class ChannelsControllerTest extends TestCase
         ]);
 
         $this->assertEquals(200, $result->getStatusCode());
-        $responseData = json_decode($result->getContent(), true);
+        $responseData = json_decode((string)$result->getContent(), true);
         $this->assertIsArray($responseData);
         $this->assertArrayHasKey('channels', $responseData);
         $this->assertEquals($expectedChannels, $responseData['channels']);
@@ -238,7 +239,7 @@ class ChannelsControllerTest extends TestCase
         ]);
 
         $this->assertEquals(200, $result->getStatusCode());
-        $responseData = json_decode($result->getContent(), true);
+        $responseData = json_decode((string)$result->getContent(), true);
         $this->assertIsArray($responseData);
         $this->assertArrayHasKey('channels', $responseData);
         $this->assertEquals($expectedChannels, $responseData['channels']);
@@ -305,7 +306,7 @@ class ChannelsControllerTest extends TestCase
         $response = $this->helper->callProtectedMethod($controller, 'handle', [$request, $connection, $params]);
 
         $this->assertEquals(200, $response->getStatusCode());
-        $responseData = json_decode($response->getContent(), true);
+        $responseData = json_decode((string)$response->getContent(), true);
         $this->assertIsArray($responseData);
         $this->assertArrayHasKey('channels', $responseData);
         $this->assertCount(3, $responseData['channels']);
@@ -361,7 +362,7 @@ class ChannelsControllerTest extends TestCase
         $connection = $this->helper->getConnection();
         $response = $this->helper->callProtectedMethod($controller, 'handle', [$request, $connection, $params]);
         $this->assertEquals(200, $response->getStatusCode());
-        $responseData = json_decode($response->getContent(), true);
+        $responseData = json_decode((string)$response->getContent(), true);
         $this->assertIsArray($responseData);
         $this->assertArrayHasKey('channels', $responseData);
         $this->assertCount(0, $responseData['channels']);
@@ -418,7 +419,7 @@ class ChannelsControllerTest extends TestCase
         $connection = $this->helper->getConnection();
         $response = $this->helper->callProtectedMethod($controller, 'handle', [$request, $connection, $params]);
         $this->assertEquals(200, $response->getStatusCode());
-        $responseData = json_decode($response->getContent(), true);
+        $responseData = json_decode((string)$response->getContent(), true);
         $this->assertIsArray($responseData);
         $this->assertArrayHasKey('channels', $responseData);
         $this->assertCount(2, $responseData['channels']);
@@ -472,7 +473,7 @@ class ChannelsControllerTest extends TestCase
         $connection = $this->helper->getConnection();
         $response = $this->helper->callProtectedMethod($controller, 'handle', [$request, $connection, $params]);
         $this->assertEquals(200, $response->getStatusCode());
-        $responseData = json_decode($response->getContent(), true);
+        $responseData = json_decode((string)$response->getContent(), true);
         $this->assertIsArray($responseData);
         $this->assertArrayHasKey('channels', $responseData);
         $this->assertCount(1, $responseData['channels']);
@@ -502,7 +503,7 @@ class ChannelsControllerTest extends TestCase
         $request = new ServerRequest($method, $uri, $headers);
 
         if ($body !== null) {
-            $request = $request->withBody($this->createStream($body));
+            return $request->withBody($this->createStream($body));
         }
 
         return $request;
@@ -514,7 +515,7 @@ class ChannelsControllerTest extends TestCase
      * @param string $content Stream content
      * @return \Psr\Http\Message\StreamInterface
      */
-    private function createStream(string $content)
+    private function createStream(string $content): StreamInterface
     {
         $stream = fopen('php://temp', 'r+');
         fwrite($stream, $content);

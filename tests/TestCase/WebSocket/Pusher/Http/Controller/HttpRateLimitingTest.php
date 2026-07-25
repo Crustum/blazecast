@@ -14,6 +14,7 @@ use Crustum\BlazeCast\WebSocket\RateLimiter\LocalRateLimiter;
 use Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
+use PHPUnit\Framework\Attributes\Test;
 
 /**
  * HTTP Rate Limiting Tests
@@ -23,9 +24,13 @@ use GuzzleHttp\Psr7\Uri;
 class HttpRateLimitingTest extends TestCase
 {
     private PusherControllerTestHelper $helper;
+
     private RateLimiterInterface $rateLimiter;
+
     private string $appId = 'test-http-rate-limit-app';
+
     private string $appKey = 'test-http-rate-limit-key';
+
     private string $appSecret = 'test-http-rate-limit-secret';
 
     protected function setUp(): void
@@ -58,9 +63,7 @@ class HttpRateLimitingTest extends TestCase
         parent::tearDown();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function testBackendEventRateLimitSuccess(): void
     {
         $controller = $this->helper->createController(EventsController::class, [null, $this->rateLimiter]);
@@ -84,9 +87,7 @@ class HttpRateLimitingTest extends TestCase
         $this->assertStringNotContainsString('Rate limit exceeded', $response->getContent());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function testBackendEventRateLimitExceeded(): void
     {
         $request = new ServerRequest('POST', new Uri('/apps/' . $this->appId . '/events'));
@@ -106,7 +107,7 @@ class HttpRateLimitingTest extends TestCase
                 ]),
             ]);
             $response = $controller->handle($request, $this->helper->getConnection(), []);
-            $this->assertEquals(200, $response->getStatusCode(), "Request $i should succeed");
+            $this->assertEquals(200, $response->getStatusCode(), "Request {$i} should succeed");
         }
 
         $controller = $this->helper->createController(EventsController::class, [null, $this->rateLimiter]);
@@ -131,9 +132,7 @@ class HttpRateLimitingTest extends TestCase
         $this->assertArrayHasKey('X-RateLimit-Remaining', $headers);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function testBackendEventBatchRateLimitExceeded(): void
     {
         $controller = $this->helper->createController(EventsController::class, [null, $this->rateLimiter]);
@@ -159,9 +158,7 @@ class HttpRateLimitingTest extends TestCase
         $this->assertStringContainsString('Rate limit exceeded', $response->getContent());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function testReadRequestRateLimitSuccess(): void
     {
         $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
@@ -202,9 +199,7 @@ class HttpRateLimitingTest extends TestCase
         $this->assertEquals(200, $response->getStatusCode());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function testReadRequestRateLimitExceeded(): void
     {
         $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
@@ -242,7 +237,7 @@ class HttpRateLimitingTest extends TestCase
                 ],
             ]);
             $response = $controller->handle($request, $this->helper->getConnection(), []);
-            $this->assertEquals(200, $response->getStatusCode(), "Request $i should succeed");
+            $this->assertEquals(200, $response->getStatusCode(), "Request {$i} should succeed");
         }
 
         $controller = $this->getMockBuilder(ChannelsController::class)
@@ -276,9 +271,7 @@ class HttpRateLimitingTest extends TestCase
         $this->assertArrayHasKey('X-RateLimit-Remaining', $headers);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function testConnectionsReadRequestRateLimitExceeded(): void
     {
         $request = new ServerRequest('GET', new Uri('/apps/' . $this->appId . '/connections'));
@@ -310,7 +303,7 @@ class HttpRateLimitingTest extends TestCase
                 ],
             ]);
             $response = $controller->handle($request, $this->helper->getConnection(), $params);
-            $this->assertEquals(200, $response->getStatusCode(), "Request $i should succeed");
+            $this->assertEquals(200, $response->getStatusCode(), "Request {$i} should succeed");
         }
 
         $controller = $this->helper->createController(ConnectionsController::class, [null, $this->rateLimiter]);

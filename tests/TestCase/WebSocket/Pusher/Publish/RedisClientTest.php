@@ -15,7 +15,9 @@ use ReflectionClass;
 class RedisClientTest extends TestCase
 {
     private RedisClient $redisClient;
+
     private string $testChannel = 'test:channel';
+
     /**
      * @var array<string, mixed>
      */
@@ -95,7 +97,7 @@ class RedisClientTest extends TestCase
      */
     public function testIsConnectedReturnsTrueWhenClientExists(): void
     {
-        $mockClient = $this->createMock(Client::class);
+        $mockClient = $this->createStub(Client::class);
 
         // Use reflection to set the protected client property
         $reflection = new ReflectionClass($this->redisClient);
@@ -110,7 +112,7 @@ class RedisClientTest extends TestCase
      */
     public function testDisconnectSetsShouldRetryToFalse(): void
     {
-        $mockClient = $this->createMock(Client::class);
+        $mockClient = $this->createStub(Client::class);
 
         // Use reflection to set the protected client property
         $reflection = new ReflectionClass($this->redisClient);
