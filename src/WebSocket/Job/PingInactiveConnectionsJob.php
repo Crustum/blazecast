@@ -101,6 +101,10 @@ class PingInactiveConnectionsJob implements JobInterface
      */
     protected function shouldPing(Connection $connection): bool
     {
+        if ($connection->getPingState()['pending_pings'] > 0) {
+            return false;
+        }
+
         $appId = $this->server->getAppIdForConnection($connection);
         if (!$appId) {
             return true;

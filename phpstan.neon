@@ -1,10 +1,13 @@
 includes:
     - phpstan-baseline.neon
+    - vendor/cakedc/cakephp-phpstan/extension.neon
 
 parameters:
     level: 6
     bootstrapFiles:
         - tests/bootstrap.php
+    cakeDC:
+        appNamespace: Crustum\Blazecast
     ignoreErrors:
         -
             identifier: missingType.generics

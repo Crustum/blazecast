@@ -76,9 +76,15 @@ class BlazeCastPlugin extends BasePlugin implements ManifestInterface
      */
     public function bootstrap(PluginApplicationInterface $app): void
     {
-        parent::bootstrap($app);
+        if (!Configure::check('BlazeCast')) {
+            if (file_exists(CONFIG . 'blazecast.php')) {
+                Configure::load('blazecast', 'default');
+            } elseif (file_exists($this->getConfigPath() . 'blazecast.php')) {
+                Configure::load('Crustum/BlazeCast.blazecast', 'default', false);
+            }
+        }
 
-        Configure::load('Crustum/BlazeCast.blazecast', 'default', false);
+        parent::bootstrap($app);
     }
 
     /**

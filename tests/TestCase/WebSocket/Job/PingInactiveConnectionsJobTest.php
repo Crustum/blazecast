@@ -29,6 +29,12 @@ class PingInactiveConnectionsJobTest extends TestCase
         $server->method('getApplicationManager')->willReturn($appManager);
         $appManager->method('getApplication')->with('app-id')->willReturn($app);
 
+        $connection->method('getPingState')->willReturn([
+            'last_ping_time' => null,
+            'last_pong_time' => null,
+            'pending_pings' => 0,
+            'ping_count' => 0,
+        ]);
         $connection->method('getLastActivity')->willReturn(microtime(true) - 40);
 
         $connection->expects($this->exactly(2))->method('ping');
@@ -54,7 +60,33 @@ class PingInactiveConnectionsJobTest extends TestCase
         $server->method('getApplicationManager')->willReturn($appManager);
         $appManager->method('getApplication')->with('app-id')->willReturn($app);
 
+        $connection->method('getPingState')->willReturn([
+            'last_ping_time' => null,
+            'last_pong_time' => null,
+            'pending_pings' => 0,
+            'ping_count' => 0,
+        ]);
         $connection->method('getLastActivity')->willReturn(microtime(true) - 10);
+
+        $connection->expects($this->never())->method('ping');
+
+        $job = new PingInactiveConnectionsJob($loop, $server);
+        $job->run();
+    }
+
+    public function testRunDoesNotPingWhileWaitingForPong(): void
+    {
+        $connection = $this->createMock(Connection::class);
+        $server = $this->createMock(Server::class);
+        $loop = $this->createStub(LoopInterface::class);
+
+        $server->method('getConnections')->willReturn([$connection]);
+        $connection->method('getPingState')->willReturn([
+            'last_ping_time' => microtime(true) - 10,
+            'last_pong_time' => null,
+            'pending_pings' => 2,
+            'ping_count' => 2,
+        ]);
 
         $connection->expects($this->never())->method('ping');
 

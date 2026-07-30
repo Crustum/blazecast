@@ -259,16 +259,9 @@ class Connection implements ConnectionInterface
     public function pong(string $type = 'websocket'): void
     {
         $this->pingState['last_pong_time'] = microtime(true);
-
-        if ($this->pingState['pending_pings'] > 0) {
-            $this->pingState['pending_pings']--;
-        }
-
-        if ($type === 'websocket') {
-            $this->pingState['websocket_ping_sent'] = false;
-        } elseif ($type === 'pusher') {
-            $this->pingState['pusher_ping_sent'] = false;
-        }
+        $this->pingState['pending_pings'] = 0;
+        $this->pingState['websocket_ping_sent'] = false;
+        $this->pingState['pusher_ping_sent'] = false;
 
         $this->updateActivity();
 

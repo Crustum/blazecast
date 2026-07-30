@@ -14,7 +14,7 @@ use React\EventLoop\LoopInterface;
 
 class PruneStaleConnectionsJobTest extends TestCase
 {
-    public function testRunPrunesStaleConnection(): void
+    public function testRunPrunesConnectionWaitingTooLongForPong(): void
     {
         $connection = $this->createMock(Connection::class);
         $server = $this->createMock(Server::class);
@@ -36,18 +36,20 @@ class PruneStaleConnectionsJobTest extends TestCase
         $applicationContextResolver->method('getAppIdForConnection')->with($connection, [])->willReturn('app-id');
         $appManager->method('getApplication')->with('app-id')->willReturn($app);
 
-        $connection->expects($this->once())
-            ->method('isStale')
-            ->with(60)
-            ->willReturn(true);
-
+        $connection->method('getPingState')->willReturn([
+            'last_ping_time' => microtime(true) - 90,
+            'last_pong_time' => microtime(true) - 200,
+            'pending_pings' => 1,
+            'ping_count' => 1,
+        ]);
+        $connection->expects($this->once())->method('send');
         $connection->expects($this->once())->method('close');
 
         $job = new PruneStaleConnectionsJob($loop, $server);
         $job->run();
     }
 
-    public function testRunDoesNotPruneActiveConnection(): void
+    public function testRunDoesNotPruneWhenPongAlreadyReceived(): void
     {
         $connection = $this->createMock(Connection::class);
         $server = $this->createMock(Server::class);
@@ -69,11 +71,12 @@ class PruneStaleConnectionsJobTest extends TestCase
         $applicationContextResolver->method('getAppIdForConnection')->with($connection, [])->willReturn('app-id');
         $appManager->method('getApplication')->with('app-id')->willReturn($app);
 
-        $connection->expects($this->once())
-            ->method('isStale')
-            ->with(60)
-            ->willReturn(false);
-
+        $connection->method('getPingState')->willReturn([
+            'last_ping_time' => microtime(true) - 90,
+            'last_pong_time' => microtime(true) - 10,
+            'pending_pings' => 0,
+            'ping_count' => 1,
+        ]);
         $connection->expects($this->never())->method('close');
 
         $job = new PruneStaleConnectionsJob($loop, $server);
