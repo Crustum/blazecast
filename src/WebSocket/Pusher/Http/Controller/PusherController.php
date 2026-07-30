@@ -70,7 +70,7 @@ abstract class PusherController implements PusherControllerInterface
      *
      * @var \Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface|null
      */
-    protected ?RateLimiterInterface $rateLimiter = null;
+    protected ?RateLimiterInterface $rateLimiter;
 
     /**
      * Current application

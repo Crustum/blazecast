@@ -53,14 +53,14 @@ class ControllerFactory
      *
      * @var \Psr\Container\ContainerInterface|null
      */
-    protected ?ContainerInterface $container = null;
+    protected ?ContainerInterface $container;
 
     /**
      * Rate limiter
      *
      * @var \Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface|null
      */
-    protected ?RateLimiterInterface $rateLimiter = null;
+    protected ?RateLimiterInterface $rateLimiter;
 
     /**
      * Controller instances cache

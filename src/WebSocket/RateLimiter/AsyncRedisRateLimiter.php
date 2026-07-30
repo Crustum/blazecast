@@ -38,7 +38,7 @@ class AsyncRedisRateLimiter implements AsyncRateLimiterInterface
      *
      * @var array<string, array<string, int>>
      */
-    protected array $appConfigs = [];
+    protected array $appConfigs;
 
     /**
      * Key prefix for Redis keys
@@ -66,7 +66,7 @@ class AsyncRedisRateLimiter implements AsyncRateLimiterInterface
      *
      * @var string|null
      */
-    protected ?string $luaScriptSha = null;
+    protected ?string $luaScriptSha;
 
     /**
      * Redis connection URL

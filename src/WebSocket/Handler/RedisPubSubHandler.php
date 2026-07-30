@@ -29,7 +29,7 @@ class RedisPubSubHandler implements HandlerInterface
      *
      * @var \Crustum\BlazeCast\WebSocket\Redis\PubSub|null
      */
-    protected ?PubSub $pubSub = null;
+    protected ?PubSub $pubSub;
 
     /**
      * Supported event types

@@ -53,7 +53,7 @@ class PusherChannel implements PusherChannelInterface, JsonSerializable
      *
      * @var ChannelMetadata
      */
-    protected array $metadata = [];
+    protected array $metadata;
 
     /**
      * Constructor

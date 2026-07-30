@@ -33,7 +33,7 @@ class RedisRateLimiter implements RateLimiterInterface
      *
      * @var array<string, array<string, int>>
      */
-    protected array $appConfigs = [];
+    protected array $appConfigs;
 
     /**
      * Key prefix for Redis keys
@@ -61,7 +61,7 @@ class RedisRateLimiter implements RateLimiterInterface
      *
      * @var string|null
      */
-    protected ?string $luaScriptSha = null;
+    protected ?string $luaScriptSha;
 
     /**
      * Constructor

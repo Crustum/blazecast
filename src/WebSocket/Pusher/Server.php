@@ -137,7 +137,7 @@ class Server implements WebSocketServerInterface
      *
      * @var int
      */
-    protected int $maxRequestSize = 10000;
+    protected int $maxRequestSize;
 
     /**
      * Active connections
@@ -229,21 +229,21 @@ class Server implements WebSocketServerInterface
      *
      * @var array<string, mixed>
      */
-    protected array $config = [];
+    protected array $config;
 
     /**
      * Rate limiter
      *
      * @var \Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface|\Crustum\BlazeCast\WebSocket\RateLimiter\AsyncRateLimiterInterface|null
      */
-    protected RateLimiterInterface|AsyncRateLimiterInterface|null $rateLimiter = null;
+    protected RateLimiterInterface|AsyncRateLimiterInterface|null $rateLimiter;
 
     /**
      * Local per-connection WebSocket text-frame rate limiter
      *
      * @var \Crustum\BlazeCast\WebSocket\RateLimiter\ConnectionMessageRateLimiter|null
      */
-    protected ?ConnectionMessageRateLimiter $connectionMessageRateLimiter = null;
+    protected ?ConnectionMessageRateLimiter $connectionMessageRateLimiter;
 
     /**
      * Constructor
@@ -665,7 +665,9 @@ class Server implements WebSocketServerInterface
                 $this->eventManager->dispatch(new SharedBeat(DateTime::now(), gethostname()));
                 $this->ingestRhythmMetrics();
             } catch (Exception $exception) {
-                debug($exception);
+                $this->log('error', __('Server: Failed to ingest Rhythm Metrics: {0}', $exception->getMessage()), [
+                    'scope' => ['socket.server', 'socket.server.rhythm'],
+                ]);
             }
         });
 

@@ -80,14 +80,7 @@ class Connection implements ConnectionInterface
      *
      * @var PingState
      */
-    protected array $pingState = [
-        'last_ping_time' => null,
-        'last_pong_time' => null,
-        'pending_pings' => 0,
-        'ping_count' => 0,
-        'websocket_ping_sent' => false,
-        'pusher_ping_sent' => false,
-    ];
+    protected array $pingState;
 
     /**
      * Event manager instance

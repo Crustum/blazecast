@@ -380,8 +380,6 @@ class ServerStartCommand extends Command
                 }
             }
         } catch (Exception $exception) {
-            print_r($exception->getMessage());
-            print_r($exception->getTraceAsString());
             $io->out(sprintf('   Could not retrieve routes: %s', $exception->getMessage()));
         }
     }

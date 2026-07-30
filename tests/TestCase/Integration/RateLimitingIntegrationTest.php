@@ -99,11 +99,6 @@ class RateLimitingIntegrationTest extends TestCase
         $this->client = $this->server->createClient();
     }
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-    }
-
     protected function tearDown(): void
     {
         if (isset($this->client)) {

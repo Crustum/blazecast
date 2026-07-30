@@ -29,7 +29,7 @@ class LocalRateLimiter implements RateLimiterInterface
      *
      * @var array<string, array<string, int>>
      */
-    protected array $appConfigs = [];
+    protected array $appConfigs;
 
     /**
      * Constructor
