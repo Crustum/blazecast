@@ -6,6 +6,7 @@ namespace Crustum\BlazeCast\WebSocket\Pusher;
 use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Core\ContainerInterface;
+use Cake\Core\Plugin;
 use Cake\Event\Event;
 use Cake\Event\EventManager;
 use Cake\I18n\FrozenTime;
@@ -136,7 +137,7 @@ class Server implements WebSocketServerInterface
      *
      * @var int
      */
-    protected int $maxRequestSize = 10000;
+    protected int $maxRequestSize;
 
     /**
      * Active connections
@@ -228,21 +229,21 @@ class Server implements WebSocketServerInterface
      *
      * @var array<string, mixed>
      */
-    protected array $config = [];
+    protected array $config;
 
     /**
      * Rate limiter
      *
      * @var \Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface|\Crustum\BlazeCast\WebSocket\RateLimiter\AsyncRateLimiterInterface|null
      */
-    protected RateLimiterInterface|AsyncRateLimiterInterface|null $rateLimiter = null;
+    protected RateLimiterInterface|AsyncRateLimiterInterface|null $rateLimiter;
 
     /**
      * Local per-connection WebSocket text-frame rate limiter
      *
      * @var \Crustum\BlazeCast\WebSocket\RateLimiter\ConnectionMessageRateLimiter|null
      */
-    protected ?ConnectionMessageRateLimiter $connectionMessageRateLimiter = null;
+    protected ?ConnectionMessageRateLimiter $connectionMessageRateLimiter;
 
     /**
      * Constructor
@@ -614,12 +615,40 @@ class Server implements WebSocketServerInterface
     }
 
     /**
+     * Soft-dependency check shared by Rhythm and Speculum flush hooks.
+     *
+     * @param string $crustumName Plugin name with vendor prefix (e.g. Crustum/Rhythm).
+     * @param string $shortName Short plugin name fallback (e.g. Rhythm).
+     * @return bool
+     */
+    protected function isSoftPluginLoaded(string $crustumName, string $shortName): bool
+    {
+        try {
+            if (Plugin::isLoaded($crustumName)) {
+                return true;
+            }
+
+            return Plugin::isLoaded($shortName);
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
      * Schedule Rhythm to ingest events if enabled.
      *
      * @return void
      */
     protected function ensureRhythmEventsAreCollected(): void
     {
+        if (!$this->isSoftPluginLoaded('Crustum/Rhythm', 'Rhythm')) {
+            $this->log('info', __('Server: Rhythm plugin not loaded, skipping ingestion scheduling'), [
+                'scope' => ['socket.server', 'socket.server.rhythm'],
+            ]);
+
+            return;
+        }
+
         $this->initializeRhythm();
         if (!$this->rhythm instanceof Rhythm) {
             $this->log('info', __('Server: Rhythm not available, skipping ingestion scheduling'), [
@@ -645,12 +674,87 @@ class Server implements WebSocketServerInterface
     }
 
     /**
+     * Schedule Speculum to store buffered entries when Speculum is loaded.
+     *
+     * Soft port of Reverb `ensureTelescopeEntriesAreCollected`, gated like Rhythm
+     * via Plugin::isLoaded (not class_exists).
+     *
+     * @return void
+     */
+    protected function ensureSpeculumEntriesAreCollected(): void
+    {
+        if (!$this->isSoftPluginLoaded('Crustum/Speculum', 'Speculum')) {
+            $this->log('info', __('Server: Speculum plugin not loaded, skipping entry store scheduling'), [
+                'scope' => ['socket.server', 'socket.server.speculum'],
+            ]);
+
+            return;
+        }
+
+        $serverConfig = $this->config['servers']['blazecast'] ?? [];
+        $interval = (int)($serverConfig['speculum_ingest_interval']
+            ?? Configure::read('BlazeCast.servers.blazecast.speculum_ingest_interval')
+            ?? 15);
+
+        if ($interval <= 0) {
+            return;
+        }
+
+        $this->loop->addPeriodicTimer($interval, function (): void {
+            try {
+                $this->storeSpeculumEntries();
+            } catch (Throwable $throwable) {
+                BlazeCastLogger::error(__('Server: Failed to store Speculum entries: {0}', $throwable->getMessage()), [
+                    'scope' => ['socket.server', 'socket.server.speculum'],
+                ]);
+            }
+        });
+
+        $this->log('info', __('Server: Speculum store scheduled (interval: {0}s)', $interval), [
+            'scope' => ['socket.server', 'socket.server.speculum'],
+        ]);
+    }
+
+    /**
+     * Flush Speculum's in-memory entry buffer when the Speculum plugin is loaded.
+     *
+     * @return void
+     */
+    protected function storeSpeculumEntries(): void
+    {
+        if (!$this->isSoftPluginLoaded('Crustum/Speculum', 'Speculum')) {
+            return;
+        }
+
+        $speculumClass = 'Crustum\\Speculum\\Speculum';
+        if (!class_exists($speculumClass)) {
+            return;
+        }
+
+        $entriesRepositoryClass = 'Crustum\\Speculum\\Contract\\EntriesRepository';
+        $storage = null;
+        if ($this->container && interface_exists($entriesRepositoryClass) && $this->container->has($entriesRepositoryClass)) {
+            $storage = $this->container->get($entriesRepositoryClass);
+        }
+
+        $speculumClass::store($storage);
+    }
+
+    /**
      * Initialize Rhythm for metrics collection
      *
      * @return void
      */
     protected function initializeRhythm(): void
     {
+        if (!$this->isSoftPluginLoaded('Crustum/Rhythm', 'Rhythm')) {
+            $this->log('info', __('Server: Rhythm plugin not loaded, skipping initialization'), [
+                'scope' => ['socket.server', 'socket.server.rhythm'],
+            ]);
+
+            return;
+        }
+
         if (!$this->container || !$this->container->has(Rhythm::class)) {
             $this->log('info', __('Server: Rhythm not available in container, skipping initialization'), [
                 'scope' => ['socket.server', 'socket.server.rhythm'],
@@ -795,6 +899,14 @@ class Server implements WebSocketServerInterface
         $this->loop->stop();
 
         $this->ingestRhythmMetrics();
+
+        try {
+            $this->storeSpeculumEntries();
+        } catch (Throwable $throwable) {
+            BlazeCastLogger::error(__('Server: Failed to store Speculum entries on stop: {0}', $throwable->getMessage()), [
+                'scope' => ['socket.server', 'socket.server.speculum'],
+            ]);
+        }
 
         BlazeCastLogger::debug(__('Server: Pusher Unified Server stopped'), [
             'scope' => ['socket.server'],
@@ -1657,12 +1769,12 @@ class Server implements WebSocketServerInterface
      */
     protected function setupPrometheusMetricsListeners(): void
     {
-        $this->eventManager->on('BlazeCast.MessageSent', function ($event): void {
+        $this->eventManager->on(MessageSentEvent::EVENT_NAME, function ($event): void {
             if ($event instanceof MessageSentEvent) {
                 $connection = $event->getConnection();
                 $appId = $connection->getAttribute('app_id');
                 if ($appId) {
-                    $bytes = strlen((string)$event->getData());
+                    $bytes = strlen($event->getMessage());
                     $this->connectionManager->recordWsMessageSent($appId, $bytes);
                 }
             }

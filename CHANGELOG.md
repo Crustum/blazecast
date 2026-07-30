@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-node `toOthers` support by carrying raw `socket_id` on Redis pub/sub payloads even when the connection is not local
 - TLS `SocketServer` wiring from `options.tls` (`local_cert` / `local_pk` → `tls://` bind)
 - Hybrid connection-level WebSocket rate limiting: local per-connection cap on all inbound text frames (`rate_limiter.connection`) with optional `terminate_on_limit`, alongside existing Soketi frontend/backend/read buckets
+- Optional Speculum support: when Speculum is installed, BlazeCast periodically persists Speculum debug entries (and flushes on server stop), similar to existing Rhythm ingestion
+- Before/after client-delivery hooks so hosts and Speculum can enrich or record broadcasts without leaking internal metadata to browsers
+- Automatic stripping of reserved `__crustum` metadata from payloads before they reach WebSocket clients
+- Delivery feedback on fan-out (how many clients received a message, with a small sample of connection ids) for monitoring and Speculum
 
 ### Changed
 
@@ -26,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CORS headers prefer application `allowed_origins` instead of always hardcoding `*`
 - Welcome `pusher:connection_established` `activity_timeout` resolves from application config, then server config, then `120` (no longer hardcoded)
 - Rate limiting remains Soketi-style for API/client-event quotas; connection flood guard is additive
+- Broadcast fan-out now cleans payloads for clients first, then notifies listeners with both the internal and client-facing views
+- Rhythm soft-loading uses the same plugin-loaded check as Speculum (no hard dependency)
+- Rhythm message recording listens on stable BlazeCast event names for sent/received WebSocket traffic
 
 ### Documentation
 

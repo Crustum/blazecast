@@ -45,21 +45,21 @@ class ServerStartCommand extends Command
      *
      * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager|null
      */
-    protected ?ApplicationManager $applicationManager = null;
+    protected ?ApplicationManager $applicationManager;
 
     /**
      * Channel connection manager (optional, injected via DI)
      *
      * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager|null
      */
-    protected ?ChannelConnectionManager $channelConnectionManager = null;
+    protected ?ChannelConnectionManager $channelConnectionManager;
 
     /**
      * Container instance (optional, injected via DI)
      *
      * @var \Cake\Core\ContainerInterface|null
      */
-    protected ?ContainerInterface $container = null;
+    protected ?ContainerInterface $container;
 
     /**
      * Constructor - dependencies are optionally injected
@@ -88,7 +88,6 @@ class ServerStartCommand extends Command
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
         $parser
-            ->setDescription('Start the unified Pusher server that handles both HTTP API and WebSocket connections')
             ->addOption('host', [
                 'short' => 'H',
                 'default' => '0.0.0.0',
@@ -125,6 +124,14 @@ class ServerStartCommand extends Command
     }
 
     /**
+     * @inheritDoc
+     */
+    public static function getDescription(): string
+    {
+        return 'Start the unified Pusher server that handles both HTTP API and WebSocket connections';
+    }
+
+    /**
      * Execute the command
      *
      * @param \Cake\Console\Arguments $args Arguments
@@ -158,10 +165,11 @@ class ServerStartCommand extends Command
         ]);
 
         try {
-            if ($this->applicationManager) {
+            if ($this->applicationManager instanceof ApplicationManager) {
                 $io->out('<info>Using ApplicationManager from DI container</info>');
             }
-            if ($this->channelConnectionManager) {
+
+            if ($this->channelConnectionManager instanceof ChannelConnectionManager) {
                 $io->out('<info>Using ChannelConnectionManager from DI container</info>');
             }
 

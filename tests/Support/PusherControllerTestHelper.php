@@ -227,7 +227,7 @@ class PusherControllerTestHelper
             ->method('getChannels')
             ->willReturn($channels);
 
-        if (!empty($channels)) {
+        if ($channels !== []) {
             $channelMap = [];
             foreach ($channels as $channel) {
                 $channelMap[$channel->getName()] = $channel;
@@ -235,9 +235,7 @@ class PusherControllerTestHelper
 
             $this->channelManager->expects($this->testCase->any())
                 ->method('getChannel')
-                ->willReturnCallback(function ($name) use ($channelMap) {
-                    return $channelMap[$name] ?? null;
-                });
+                ->willReturnCallback(fn($name) => $channelMap[$name] ?? null);
         }
     }
 

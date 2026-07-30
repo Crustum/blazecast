@@ -33,7 +33,7 @@ class Response implements Stringable
      *
      * @var ResponseHeaders
      */
-    protected array $headers = [];
+    protected array $headers;
 
     /**
      * Response content

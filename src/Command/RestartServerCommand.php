@@ -27,7 +27,6 @@ class RestartServerCommand extends Command
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
         $parser
-            ->setDescription('Restart the BlazeCast WebSocket server')
             ->addOption('force', [
                 'short' => 'f',
                 'help' => 'Force restart even if server is not running',
@@ -35,6 +34,14 @@ class RestartServerCommand extends Command
             ]);
 
         return $parser;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public static function getDescription(): string
+    {
+        return 'Restart the BlazeCast WebSocket server';
     }
 
     /**

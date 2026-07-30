@@ -41,6 +41,21 @@
         }
     },
     "scripts": {
+        "check": [
+            "@cs-check",
+            "@rector-check",
+            "@test",
+            "@analyse"
+        ],
+        "fix": [
+            "@cs-fix",
+            "@rector-fix",
+            "@cs-fix",
+            "@analyse"
+        ],
+        "analyse": [
+            "@stan"
+        ],
         "cs-check": "phpcs -p --standard=phpcs.xml src/ tests/",
         "cs-fix": "phpcbf --standard=phpcs.xml src/ tests/",
         "test": "phpunit",
@@ -59,9 +74,6 @@
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true
         },
-        "platform-check": false,
-        "platform": {
-            "php": "8.3.0"
-        }
+        "platform-check": false
     }
 }

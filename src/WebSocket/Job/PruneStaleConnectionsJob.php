@@ -105,23 +105,35 @@ class PruneStaleConnectionsJob implements JobInterface
      */
     protected function shouldPruneConnection(Connection $connection): bool
     {
+        $pingState = $connection->getPingState();
+        $lastPingTime = $pingState['last_ping_time'];
+        $lastPongTime = $pingState['last_pong_time'];
+
+        if ($pingState['pending_pings'] === 0 || $lastPingTime === null) {
+            return false;
+        }
+
+        if ($lastPongTime !== null && $lastPongTime >= $lastPingTime) {
+            return false;
+        }
+
         $applicationContextResolver = $this->server->getApplicationContextResolver();
         $appId = $applicationContextResolver->getAppIdForConnection($connection, []);
 
         if (!$appId) {
-            return $connection->isStale(120);
+            return microtime(true) - $lastPingTime > 120;
         }
 
         $applicationManager = $this->server->getApplicationManager();
         $app = $applicationManager->getApplication($appId);
 
         if (!$app) {
-            return $connection->isStale(120);
+            return microtime(true) - $lastPingTime > 120;
         }
 
         $staleThreshold = $app['activity_timeout'] ?? 120;
 
-        return $connection->isStale((int)$staleThreshold);
+        return microtime(true) - $lastPingTime > (int)$staleThreshold;
     }
 
     /**

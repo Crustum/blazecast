@@ -12,6 +12,13 @@ use Crustum\BlazeCast\WebSocket\Connection;
 class MessageReceivedEvent extends Event
 {
     /**
+     * Cake event name.
+     *
+     * @var string
+     */
+    public const EVENT_NAME = 'BlazeCast.WebSocket.messageReceived';
+
+    /**
      * Constructor
      *
      * @param \Crustum\BlazeCast\WebSocket\Connection $connection WebSocket connection
@@ -19,7 +26,7 @@ class MessageReceivedEvent extends Event
      */
     public function __construct(Connection $connection, string $data)
     {
-        parent::__construct(self::class, null, [
+        parent::__construct(self::EVENT_NAME, null, [
             'connection' => $connection,
             'data' => $data,
         ]);

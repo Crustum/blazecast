@@ -30,7 +30,7 @@ class PusherChannelFactory
      *
      * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager|null
      */
-    protected ?ApplicationManager $applicationManager = null;
+    protected ?ApplicationManager $applicationManager;
 
     /**
      * Channel configuration

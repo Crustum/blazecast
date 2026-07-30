@@ -29,6 +29,20 @@ class BlazeCastPlugin extends BasePlugin implements ManifestInterface
     use ManifestTrait;
 
     /**
+     * Reserved payload key stripped before WebSocket client delivery.
+     *
+     * @var string
+     */
+    public const RESERVED_META_KEY = '__crustum';
+
+    /**
+     * Cap for connection id samples on after-client-send events.
+     *
+     * @var int
+     */
+    public const CLIENT_SEND_CONNECTION_ID_CAP = 5;
+
+    /**
      * Register container services.
      * Following Phase 2 plan: only app layer services that developers use.
      *
@@ -51,9 +65,7 @@ class BlazeCastPlugin extends BasePlugin implements ManifestInterface
         $container->addShared(EventDispatcherService::class)
             ->addArgument(EventManager::class);
 
-        $container->addShared(EventManager::class, function () {
-            return EventManager::instance();
-        });
+        $container->addShared(EventManager::class, fn() => EventManager::instance());
 
         $container
             ->add(ServerStartCommand::class)
@@ -70,9 +82,15 @@ class BlazeCastPlugin extends BasePlugin implements ManifestInterface
      */
     public function bootstrap(PluginApplicationInterface $app): void
     {
-        parent::bootstrap($app);
+        if (!Configure::check('BlazeCast')) {
+            if (file_exists(CONFIG . 'blazecast.php')) {
+                Configure::load('blazecast', 'default');
+            } elseif (file_exists($this->getConfigPath() . 'blazecast.php')) {
+                Configure::load('Crustum/BlazeCast.blazecast', 'default', false);
+            }
+        }
 
-        Configure::load('Crustum/BlazeCast.blazecast', 'default', false);
+        parent::bootstrap($app);
     }
 
     /**

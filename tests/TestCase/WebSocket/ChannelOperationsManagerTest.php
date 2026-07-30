@@ -284,12 +284,10 @@ class ChannelOperationsManagerTest extends TestCase
 
         $channelManager
             ->method('getChannel')
-            ->willReturnCallback(function ($name) use ($channel1, $channel2) {
-                return match ($name) {
-                    'channel-1' => $channel1,
-                    'channel-2' => $channel2,
-                    default => null,
-                };
+            ->willReturnCallback(fn($name): ?MockObject => match ($name) {
+                'channel-1' => $channel1,
+                'channel-2' => $channel2,
+                default => null,
             });
 
         $channel1->method('getConnectionCount')->willReturn(3);

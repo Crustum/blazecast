@@ -56,17 +56,19 @@ trait CacheChannelsTrait
      *
      * @param BroadcastPayload $payload Message payload
      * @param \Crustum\BlazeCast\WebSocket\Connection|null $except Connection to exclude
-     * @return void
+     * @return list<string> Connection ids that received the frame
      */
-    public function broadcast(array $payload, ?Connection $except = null): void
+    public function broadcast(array $payload, ?Connection $except = null): array
     {
         $this->cacheMessage($payload);
 
-        parent::broadcast($payload, $except);
+        $deliveredIds = parent::broadcast($payload, $except);
 
         BlazeCastLogger::info(sprintf('CacheChannelsTrait: Message broadcasted and cached for channel %s', $this->getName()), [
             'scope' => ['socket.channel', 'socket.channel.cache'],
         ]);
+
+        return $deliveredIds;
     }
 
     /**

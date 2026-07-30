@@ -45,6 +45,7 @@ return [
                 ],
                 'ping_interval' => env('BLAZECAST_PING_INTERVAL', 30),
                 'activity_timeout' => env('BLAZECAST_ACTIVITY_TIMEOUT', 120),
+                'speculum_ingest_interval' => (int)env('BLAZECAST_SPECULUM_INGEST_INTERVAL', 15),
             ],
         ],
 

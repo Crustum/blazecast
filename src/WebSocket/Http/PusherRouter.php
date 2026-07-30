@@ -53,7 +53,7 @@ class PusherRouter
      *
      * @var \Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\ControllerFactory|null
      */
-    protected ?ControllerFactory $controllerFactory = null;
+    protected ?ControllerFactory $controllerFactory;
 
     /**
      * Constructor

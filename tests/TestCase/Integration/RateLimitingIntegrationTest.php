@@ -78,7 +78,7 @@ class RateLimitingIntegrationTest extends TestCase
             $rateLimiterConfig['redis'] = [
                 'host' => env('REDIS_HOST', '127.0.0.1'),
                 'port' => (int)env('REDIS_PORT', '6379'),
-                'password' => env('REDIS_PASSWORD', null),
+                'password' => env('REDIS_PASSWORD'),
                 'database' => (int)env('REDIS_DB_TEST', '1'),
             ];
             $this->cleanupRedisKeys($rateLimiterConfig['redis']);
@@ -95,11 +95,6 @@ class RateLimitingIntegrationTest extends TestCase
         $this->server->start();
 
         $this->client = $this->server->createClient();
-    }
-
-    protected function setUp(): void
-    {
-        parent::setUp();
     }
 
     protected function tearDown(): void
