@@ -664,7 +664,9 @@ class Server implements WebSocketServerInterface
                 $this->eventManager->dispatch(new SharedBeat(FrozenTime::now(), gethostname()));
                 $this->ingestRhythmMetrics();
             } catch (Exception $exception) {
-                debug($exception);
+                $this->log('error', __('Server: Failed to ingest Rhythm Metrics: {0}', $exception->getMessage()), [
+                    'scope' => ['socket.server', 'socket.server.rhythm'],
+                ]);
             }
         });
 

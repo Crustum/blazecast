@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Rector\CodingStyle\Rector\Encapsed\EncapsedStringsToSprintfRector;
 use Rector\CodeQuality\Rector\Class_\CompleteDynamicPropertiesRector;
 use Rector\CodeQuality\Rector\Isset_\IssetOnPropertyObjectToPropertyExistsRector;
 use Rector\Config\RectorConfig;
@@ -19,7 +18,6 @@ use Rector\DeadCode\Rector\Property\RemoveUselessVarTagRector;
 use Rector\Php70\Rector\StmtsAwareInterface\IfIssetToCoalescingRector;
 use Rector\Php80\Rector\Class_\ClassPropertyAssignToConstructorPromotionRector;
 use Rector\Php81\Rector\Property\ReadOnlyPropertyRector;
-use Rector\Strict\Rector\Empty_\DisallowedEmptyRuleFixerRector;
 use Rector\TypeDeclaration\Rector\Class_\TypedPropertyFromCreateMockAssignRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ObjectParamTypeByMethodCallTypeRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ReturnNeverTypeRector;
@@ -39,8 +37,6 @@ return RectorConfig::configure()
     ])
     ->withSkip([
         ReadOnlyPropertyRector::class,
-        EncapsedStringsToSprintfRector::class,
-        DisallowedEmptyRuleFixerRector::class,
         ClassPropertyAssignToConstructorPromotionRector::class,
         AddClosureParamTypeForArrayMapRector::class,
         AddClosureParamTypeForArrayReduceRector::class,
