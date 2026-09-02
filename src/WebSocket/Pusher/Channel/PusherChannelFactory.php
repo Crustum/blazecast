@@ -188,7 +188,7 @@ class PusherChannelFactory
      */
     public function isValidChannelName(string $channelName): bool
     {
-        if (empty($channelName) || strlen($channelName) > 200) {
+        if ($channelName === '' || $channelName === '0' || strlen($channelName) > 200) {
             return false;
         }
 

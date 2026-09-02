@@ -801,7 +801,7 @@ class Server implements WebSocketServerInterface
 
         $recorders = $this->rhythm->getRecorders();
         // @phpstan-ignore-next-line
-        if ($recorders === [] && !empty($recordersToInit['recorders'])) {
+        if ($recorders === [] && (isset($recordersToInit['recorders']) && $recordersToInit['recorders'] !== [])) {
             $recorders = array_filter($recordersToInit['recorders'], fn(array $recorder): bool => str_starts_with($recorder['className'], 'BlazeCast'));
             $this->rhythm->register($recorders);
         }
@@ -1225,8 +1225,8 @@ class Server implements WebSocketServerInterface
             ]);
 
             $this->getEventManager()->dispatch(new ConnectionEstablishedEvent($connection));
-        } catch (Throwable $e) {
-            BlazeCastLogger::error(__('Server: Echo upgrade failed on connection {0}: {1}', $connection->getId(), $e->getMessage()), [
+        } catch (Throwable $throwable) {
+            BlazeCastLogger::error(__('Server: Echo upgrade failed on connection {0}: {1}', $connection->getId(), $throwable->getMessage()), [
                 'scope' => ['socket.server'],
             ]);
             $this->closeConnection($connection, 400, 'WebSocket Upgrade Failed');
@@ -1488,7 +1488,7 @@ class Server implements WebSocketServerInterface
             if ($appId) {
                 $application = $this->applicationManager->getApplication($appId);
                 if ($application !== null && isset($application['max_message_size'])) {
-                    $maxMessageSize = (int)$application['max_message_size'];
+                    $maxMessageSize = $application['max_message_size'];
                 }
             }
         }

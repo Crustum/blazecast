@@ -533,6 +533,7 @@ class ServerTest extends TestCase
         for ($i = 0; $i < 2; $i++) {
             $results[] = $method->invoke($server, $connection);
         }
+
         $this->assertContains(false, $results, 'Second window consume must exceed the limit of 1 msg/s');
     }
 

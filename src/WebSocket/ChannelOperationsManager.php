@@ -346,7 +346,7 @@ class ChannelOperationsManager
         $event = new ChannelSubscribedEvent($connection, $channel);
         $this->eventManager->dispatch($event);
 
-            BlazeCastLogger::info(__('ChannelOperationsManager: Connection {0} subscribed to channel {1} via application-specific ChannelManager for app {2} with authentication: {3}', $connection->getId(), $channelName, $this->contextResolver->getAppIdForConnection($connection, []), !empty($auth)), [
+            BlazeCastLogger::info(__('ChannelOperationsManager: Connection {0} subscribed to channel {1} via application-specific ChannelManager for app {2} with authentication: {3}', $connection->getId(), $channelName, $this->contextResolver->getAppIdForConnection($connection, []), !in_array($auth, [null, '', '0'], true)), [
             'scope' => ['socket.manager', 'socket.manager.operations'],
             ]);
     }
