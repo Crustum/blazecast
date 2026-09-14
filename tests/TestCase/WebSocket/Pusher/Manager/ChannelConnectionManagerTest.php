@@ -8,7 +8,6 @@ use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannelInterface;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -19,29 +18,29 @@ class ChannelConnectionManagerTest extends TestCase
 {
     private ChannelConnectionManager $manager;
 
-    private Connection|MockObject $mockConnection1;
+    private Connection $mockConnection1;
 
-    private Connection|MockObject $mockConnection2;
+    private Connection $mockConnection2;
 
-    private PusherChannelInterface|MockObject $mockChannel1;
+    private PusherChannelInterface $mockChannel1;
 
-    private PusherChannelInterface|MockObject $mockChannel2;
+    private PusherChannelInterface $mockChannel2;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->manager = new ChannelConnectionManager();
 
-        $this->mockConnection1 = $this->createMock(Connection::class);
+        $this->mockConnection1 = $this->createStub(Connection::class);
         $this->mockConnection1->method('getId')->willReturn('conn-1');
 
-        $this->mockConnection2 = $this->createMock(Connection::class);
+        $this->mockConnection2 = $this->createStub(Connection::class);
         $this->mockConnection2->method('getId')->willReturn('conn-2');
 
-        $this->mockChannel1 = $this->createMock(PusherChannelInterface::class);
+        $this->mockChannel1 = $this->createStub(PusherChannelInterface::class);
         $this->mockChannel1->method('getName')->willReturn('channel-1');
 
-        $this->mockChannel2 = $this->createMock(PusherChannelInterface::class);
+        $this->mockChannel2 = $this->createStub(PusherChannelInterface::class);
         $this->mockChannel2->method('getName')->willReturn('channel-2');
     }
 

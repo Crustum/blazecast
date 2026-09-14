@@ -87,7 +87,8 @@ class HealthCheckControllerTest extends TestCase
             ->onlyMethods(['handle'])
             ->getMock();
 
-        $controller->method('handle')
+        $controller->expects($this->once())
+            ->method('handle')
             ->willThrowException(new Exception('Test exception'));
 
         $reflection = new ReflectionClass($controller);

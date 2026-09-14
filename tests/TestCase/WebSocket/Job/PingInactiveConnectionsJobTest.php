@@ -25,9 +25,15 @@ class PingInactiveConnectionsJobTest extends TestCase
         ];
 
         $server->method('getConnections')->willReturn([$connection]);
-        $server->method('getAppIdForConnection')->with($connection)->willReturn('app-id');
+        $server->expects($this->once())
+            ->method('getAppIdForConnection')
+            ->with($connection)
+            ->willReturn('app-id');
         $server->method('getApplicationManager')->willReturn($appManager);
-        $appManager->method('getApplication')->with('app-id')->willReturn($app);
+        $appManager->expects($this->once())
+            ->method('getApplication')
+            ->with('app-id')
+            ->willReturn($app);
 
         $connection->method('getPingState')->willReturn([
             'last_ping_time' => null,
@@ -56,9 +62,15 @@ class PingInactiveConnectionsJobTest extends TestCase
         ];
 
         $server->method('getConnections')->willReturn([$connection]);
-        $server->method('getAppIdForConnection')->with($connection)->willReturn('app-id');
+        $server->expects($this->once())
+            ->method('getAppIdForConnection')
+            ->with($connection)
+            ->willReturn('app-id');
         $server->method('getApplicationManager')->willReturn($appManager);
-        $appManager->method('getApplication')->with('app-id')->willReturn($app);
+        $appManager->expects($this->once())
+            ->method('getApplication')
+            ->with('app-id')
+            ->willReturn($app);
 
         $connection->method('getPingState')->willReturn([
             'last_ping_time' => null,
@@ -80,7 +92,9 @@ class PingInactiveConnectionsJobTest extends TestCase
         $server = $this->createMock(Server::class);
         $loop = $this->createStub(LoopInterface::class);
 
-        $server->method('getConnections')->willReturn([$connection]);
+        $server->expects($this->once())
+            ->method('getConnections')
+            ->willReturn([$connection]);
         $connection->method('getPingState')->willReturn([
             'last_ping_time' => microtime(true) - 10,
             'last_pong_time' => null,

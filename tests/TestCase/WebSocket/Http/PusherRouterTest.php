@@ -36,7 +36,7 @@ class PusherRouterTest extends TestCase
     /**
      * Connection
      *
-     * @var \Crustum\BlazeCast\WebSocket\Connection|\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Connection
      */
     protected $connection;
 
@@ -62,9 +62,7 @@ class PusherRouterTest extends TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->connection = $this->getMockBuilder(Connection::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->connection = $this->createStub(Connection::class);
 
         $this->router = new PusherRouter($this->routes);
 
@@ -150,10 +148,11 @@ class PusherRouterTest extends TestCase
             ->with('/not-found')
             ->willThrowException(new ResourceNotFoundException());
 
-        $this->connection->expects($this->never())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->never())
             ->method('close');
 
-        $result = $this->router->dispatch($request, $this->connection);
+        $result = $this->router->dispatch($request, $connection);
         $this->assertInstanceOf(Response::class, $result);
         $this->assertEquals(404, $result->getStatusCode());
         $this->assertArrayHasKey('error', $result->getBody());
@@ -175,10 +174,11 @@ class PusherRouterTest extends TestCase
             ->with('/pusher/health')
             ->willThrowException($exception);
 
-        $this->connection->expects($this->never())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->never())
             ->method('close');
 
-        $result = $this->router->dispatch($request, $this->connection);
+        $result = $this->router->dispatch($request, $connection);
         $this->assertInstanceOf(Response::class, $result);
         $this->assertEquals(405, $result->getStatusCode());
         $this->assertArrayHasKey('error', $result->getBody());
@@ -200,10 +200,11 @@ class PusherRouterTest extends TestCase
                 '_route' => 'health_check',
             ]);
 
-        $this->connection->expects($this->never())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->never())
             ->method('close');
 
-        $result = $this->router->dispatch($request, $this->connection);
+        $result = $this->router->dispatch($request, $connection);
         $this->assertInstanceOf(Response::class, $result);
         $this->assertEquals(500, $result->getStatusCode());
         $this->assertArrayHasKey('error', $result->getBody());

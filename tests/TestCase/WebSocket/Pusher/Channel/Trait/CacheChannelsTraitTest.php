@@ -6,6 +6,7 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher\Channel\Trait;
 use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\Trait\CacheChannelsTrait;
+use PHPUnit\Framework\MockObject\Stub;
 
 /**
  * Unit tests for CacheChannelsTrait
@@ -18,9 +19,9 @@ class CacheChannelsTraitTest extends TestCase
     private object $channel;
 
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&Connection
+     * @var \Crustum\BlazeCast\WebSocket\Connection&\PHPUnit\Framework\MockObject\Stub
      */
-    private Connection $connection;
+    private Connection&Stub $connection;
 
     /**
      * Setup method
@@ -56,9 +57,7 @@ class CacheChannelsTraitTest extends TestCase
             }
         };
 
-        $this->connection = $this->getMockBuilder(Connection::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->connection = $this->createStub(Connection::class);
     }
 
     /**
@@ -68,12 +67,10 @@ class CacheChannelsTraitTest extends TestCase
      */
     public function testSubscribe(): void
     {
-        $this->connection->expects($this->any())
-            ->method('getId')
+        $this->connection->method('getId')
             ->willReturn('test-connection-1');
 
-        $this->connection->expects($this->any())
-            ->method('send');
+        $this->connection->method('send');
 
         $this->channel->subscribe($this->connection);
 
@@ -150,7 +147,8 @@ class CacheChannelsTraitTest extends TestCase
 
         $this->channel->broadcast($payload);
 
-        $this->connection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->callback(function ($message): bool {
                 $decoded = json_decode($message, true);
@@ -158,11 +156,10 @@ class CacheChannelsTraitTest extends TestCase
                 return $decoded['event'] === 'test-event' && $decoded['data'] === 'test-data';
             }));
 
-        $this->connection->expects($this->any())
-            ->method('getId')
+        $connection->method('getId')
             ->willReturn('test-connection-1');
 
-        $this->channel->subscribe($this->connection);
+        $this->channel->subscribe($connection);
     }
 
     /**
@@ -372,7 +369,8 @@ class CacheChannelsTraitTest extends TestCase
 
         $this->channel->broadcast($payload);
 
-        $this->connection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->callback(function ($message): bool {
                 $decoded = json_decode($message, true);
@@ -380,11 +378,10 @@ class CacheChannelsTraitTest extends TestCase
                 return !isset($decoded['cached_at']);
             }));
 
-        $this->connection->expects($this->any())
-            ->method('getId')
+        $connection->method('getId')
             ->willReturn('test-connection-1');
 
-        $this->channel->subscribe($this->connection);
+        $this->channel->subscribe($connection);
     }
 
     /**

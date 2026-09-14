@@ -17,7 +17,7 @@ class PruneStaleConnectionsJobTest extends TestCase
     public function testRunPrunesConnectionWaitingTooLongForPong(): void
     {
         $connection = $this->createMock(Connection::class);
-        $server = $this->createMock(Server::class);
+        $server = $this->createStub(Server::class);
         $connectionRegistry = $this->createStub(ConnectionRegistry::class);
         $applicationContextResolver = $this->createMock(ApplicationContextResolver::class);
         $appManager = $this->createMock(ApplicationManager::class);
@@ -33,8 +33,14 @@ class PruneStaleConnectionsJobTest extends TestCase
         $server->method('getApplicationManager')->willReturn($appManager);
 
         $connectionRegistry->method('getConnections')->willReturn([$connection]);
-        $applicationContextResolver->method('getAppIdForConnection')->with($connection, [])->willReturn('app-id');
-        $appManager->method('getApplication')->with('app-id')->willReturn($app);
+        $applicationContextResolver->expects($this->once())
+            ->method('getAppIdForConnection')
+            ->with($connection, [])
+            ->willReturn('app-id');
+        $appManager->expects($this->once())
+            ->method('getApplication')
+            ->with('app-id')
+            ->willReturn($app);
 
         $connection->method('getPingState')->willReturn([
             'last_ping_time' => microtime(true) - 90,
@@ -52,10 +58,10 @@ class PruneStaleConnectionsJobTest extends TestCase
     public function testRunDoesNotPruneWhenPongAlreadyReceived(): void
     {
         $connection = $this->createMock(Connection::class);
-        $server = $this->createMock(Server::class);
+        $server = $this->createStub(Server::class);
         $connectionRegistry = $this->createStub(ConnectionRegistry::class);
-        $applicationContextResolver = $this->createMock(ApplicationContextResolver::class);
-        $appManager = $this->createMock(ApplicationManager::class);
+        $applicationContextResolver = $this->createStub(ApplicationContextResolver::class);
+        $appManager = $this->createStub(ApplicationManager::class);
         $loop = $this->createStub(LoopInterface::class);
 
         $app = [
@@ -68,8 +74,14 @@ class PruneStaleConnectionsJobTest extends TestCase
         $server->method('getApplicationManager')->willReturn($appManager);
 
         $connectionRegistry->method('getConnections')->willReturn([$connection]);
-        $applicationContextResolver->method('getAppIdForConnection')->with($connection, [])->willReturn('app-id');
-        $appManager->method('getApplication')->with('app-id')->willReturn($app);
+        $applicationContextResolver->method('getAppIdForConnection')
+            ->willReturnMap([
+                [$connection, [], 'app-id'],
+            ]);
+        $appManager->method('getApplication')
+            ->willReturnMap([
+                ['app-id', $app],
+            ]);
 
         $connection->method('getPingState')->willReturn([
             'last_ping_time' => microtime(true) - 90,

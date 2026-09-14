@@ -13,7 +13,6 @@ use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager as PusherChannelManager;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 
 /**
@@ -27,14 +26,14 @@ class ChannelOperationsManagerTest extends TestCase
     private ChannelOperationsManager $channelManager;
 
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&ApplicationManager
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\Stub
      */
-    private ApplicationManager&MockObject $applicationManager;
+    private ApplicationManager&Stub $applicationManager;
 
     /**
-     * @var \PHPUnit\Framework\MockObject\MockObject&ConnectionRegistry
+     * @var \Crustum\BlazeCast\WebSocket\ConnectionRegistry&\PHPUnit\Framework\MockObject\Stub
      */
-    private ConnectionRegistry&MockObject $connectionRegistry;
+    private ConnectionRegistry&Stub $connectionRegistry;
 
     /**
      * @var \PHPUnit\Framework\MockObject\Stub&ChannelConnectionManager
@@ -60,8 +59,8 @@ class ChannelOperationsManagerTest extends TestCase
     {
         parent::setUp();
 
-        $this->applicationManager = $this->createMock(ApplicationManager::class);
-        $this->connectionRegistry = $this->createMock(ConnectionRegistry::class);
+        $this->applicationManager = $this->createStub(ApplicationManager::class);
+        $this->connectionRegistry = $this->createStub(ConnectionRegistry::class);
         $this->connectionManager = $this->createStub(ChannelConnectionManager::class);
         $this->eventManager = $this->createStub(EventManager::class);
         $this->contextResolver = $this->createStub(ApplicationContextResolver::class);
@@ -124,19 +123,25 @@ class ChannelOperationsManagerTest extends TestCase
             'conn-2' => $connection2,
         ];
 
-        $this->connectionRegistry
-            ->method('getConnections')
-            ->willReturn($connections);
-
-        $this->connectionRegistry
+        $connectionRegistry = $this->createMock(ConnectionRegistry::class);
+        $connectionRegistry->method('getConnections')->willReturn($connections);
+        $connectionRegistry->expects($this->once())
             ->method('getConnection')
             ->with('conn-1')
             ->willReturn($exceptConnection);
 
+        $channelManager = new ChannelOperationsManager(
+            $this->applicationManager,
+            $connectionRegistry,
+            $this->connectionManager,
+            $this->eventManager,
+            $this->contextResolver,
+        );
+
         $connection1->expects($this->never())->method('send');
         $connection2->expects($this->once())->method('send')->with('test message');
 
-        $this->channelManager->broadcast('test message', 'conn-1');
+        $channelManager->broadcast('test message', 'conn-1');
     }
 
     /**
@@ -154,12 +159,13 @@ class ChannelOperationsManagerTest extends TestCase
             'channel_manager' => $channelManager,
         ];
 
-        $this->applicationManager
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->once())
             ->method('getApplication')
             ->with('app-123')
             ->willReturn($application);
 
-        $channelManager
+        $channelManager->expects($this->once())
             ->method('getChannel')
             ->with('test-channel')
             ->willReturn($channel);
@@ -167,7 +173,14 @@ class ChannelOperationsManagerTest extends TestCase
         $channel->method('getConnectionCount')->willReturn(5);
         $channel->expects($this->once())->method('broadcast');
 
-        $this->channelManager->broadcastToChannelForApp('app-123', 'test-channel', 'test message');
+        $channelOperationsManager = new ChannelOperationsManager(
+            $applicationManager,
+            $this->connectionRegistry,
+            $this->connectionManager,
+            $this->eventManager,
+            $this->contextResolver,
+        );
+        $channelOperationsManager->broadcastToChannelForApp('app-123', 'test-channel', 'test message');
     }
 
     /**
@@ -195,7 +208,7 @@ class ChannelOperationsManagerTest extends TestCase
             ->method('getApplications')
             ->willReturn(['app-123' => $application]);
 
-        $channelManager
+        $channelManager->expects($this->once())
             ->method('getChannel')
             ->with('test-channel')
             ->willReturn($channel);
@@ -204,7 +217,14 @@ class ChannelOperationsManagerTest extends TestCase
             ->method('getConnections')
             ->willReturn([$connection1, $connection2]);
 
-        $result = $this->channelManager->getChannelConnections('test-channel');
+        $channelOperationsManager = new ChannelOperationsManager(
+            $this->applicationManager,
+            $this->connectionRegistry,
+            $this->connectionManager,
+            $this->eventManager,
+            $this->contextResolver,
+        );
+        $result = $channelOperationsManager->getChannelConnections('test-channel');
 
         $this->assertCount(2, $result);
         $this->assertContains($connection1, $result);
@@ -277,7 +297,8 @@ class ChannelOperationsManagerTest extends TestCase
             'channel_manager' => $channelManager,
         ];
 
-        $this->applicationManager
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->exactly(2))
             ->method('getApplication')
             ->with('app-123')
             ->willReturn($application);
@@ -295,7 +316,14 @@ class ChannelOperationsManagerTest extends TestCase
         $channel1->expects($this->once())->method('broadcast');
         $channel2->expects($this->once())->method('broadcast');
 
-        $this->channelManager->broadcastToChannelsForApp('app-123', ['channel-1', 'channel-2'], 'test message');
+        $channelOperationsManager = new ChannelOperationsManager(
+            $applicationManager,
+            $this->connectionRegistry,
+            $this->connectionManager,
+            $this->eventManager,
+            $this->contextResolver,
+        );
+        $channelOperationsManager->broadcastToChannelsForApp('app-123', ['channel-1', 'channel-2'], 'test message');
     }
 
     /**

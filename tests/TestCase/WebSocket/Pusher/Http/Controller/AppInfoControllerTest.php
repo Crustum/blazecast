@@ -89,27 +89,31 @@ class AppInfoControllerTest extends TestCase
         $appId = 'test-app';
         $params = ['appId' => $appId];
 
-        // Configure controller with test application data
-        $this->helper->configureController($this->controller, [
-            'application' => $this->testApp,
-        ]);
-
-        // Mock channel count
-        $this->helper->getChannelManager()
-            ->expects($this->once())
+        $channelManager = $this->createMock(ChannelManager::class);
+        $channelManager->expects($this->once())
             ->method('getChannelCount')
             ->willReturn(5);
 
-        // Mock active channel names
-        $this->helper->getConnectionManager()
-            ->expects($this->once())
+        $connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $connectionManager->expects($this->once())
             ->method('getActiveChannelNames')
             ->willReturn(['channel1', 'channel2', 'channel3']);
+
+        $controller = new AppInfoController(
+            $this->helper->getApplicationManager(),
+            $channelManager,
+            $connectionManager,
+        );
+
+        // Configure controller with test application data
+        $this->helper->configureController($controller, [
+            'application' => $this->testApp,
+        ]);
 
         $request = $this->createRequest('GET', "/apps/{$appId}");
         $connection = $this->helper->getConnection();
 
-        $response = $this->helper->callProtectedMethod($this->controller, 'handle', [$request, $connection, $params]);
+        $response = $this->helper->callProtectedMethod($controller, 'handle', [$request, $connection, $params]);
 
         $this->assertEquals(200, $response->getStatusCode());
 
@@ -167,25 +171,31 @@ class AppInfoControllerTest extends TestCase
             'secret' => 'minimal-secret',
         ];
 
-        // Configure controller with minimal application data
-        $this->helper->configureController($this->controller, [
-            'application' => $minimalApp,
-        ]);
-
-        $this->helper->getChannelManager()
-            ->expects($this->once())
+        $channelManager = $this->createMock(ChannelManager::class);
+        $channelManager->expects($this->once())
             ->method('getChannelCount')
             ->willReturn(0);
 
-        $this->helper->getConnectionManager()
-            ->expects($this->once())
+        $connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $connectionManager->expects($this->once())
             ->method('getActiveChannelNames')
             ->willReturn([]);
+
+        $controller = new AppInfoController(
+            $this->helper->getApplicationManager(),
+            $channelManager,
+            $connectionManager,
+        );
+
+        // Configure controller with minimal application data
+        $this->helper->configureController($controller, [
+            'application' => $minimalApp,
+        ]);
 
         $request = $this->createRequest('GET', "/apps/{$appId}");
         $connection = $this->helper->getConnection();
 
-        $response = $this->helper->callProtectedMethod($this->controller, 'handle', [$request, $connection, $params]);
+        $response = $this->helper->callProtectedMethod($controller, 'handle', [$request, $connection, $params]);
 
         $this->assertEquals(200, $response->getStatusCode());
 
@@ -215,25 +225,31 @@ class AppInfoControllerTest extends TestCase
         $appId = 'empty-app';
         $params = ['appId' => $appId];
 
-        // Configure controller with test application data
-        $this->helper->configureController($this->controller, [
-            'application' => $this->testApp,
-        ]);
-
-        $this->helper->getChannelManager()
-            ->expects($this->once())
+        $channelManager = $this->createMock(ChannelManager::class);
+        $channelManager->expects($this->once())
             ->method('getChannelCount')
             ->willReturn(0);
 
-        $this->helper->getConnectionManager()
-            ->expects($this->once())
+        $connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $connectionManager->expects($this->once())
             ->method('getActiveChannelNames')
             ->willReturn([]);
+
+        $controller = new AppInfoController(
+            $this->helper->getApplicationManager(),
+            $channelManager,
+            $connectionManager,
+        );
+
+        // Configure controller with test application data
+        $this->helper->configureController($controller, [
+            'application' => $this->testApp,
+        ]);
 
         $request = $this->createRequest('GET', "/apps/{$appId}");
         $connection = $this->helper->getConnection();
 
-        $response = $this->helper->callProtectedMethod($this->controller, 'handle', [$request, $connection, $params]);
+        $response = $this->helper->callProtectedMethod($controller, 'handle', [$request, $connection, $params]);
 
         $this->assertEquals(200, $response->getStatusCode());
 

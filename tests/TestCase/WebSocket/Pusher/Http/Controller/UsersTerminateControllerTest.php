@@ -13,6 +13,7 @@ use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\UsersTerminateController;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
@@ -33,25 +34,25 @@ class UsersTerminateControllerTest extends TestCase
     private UsersTerminateController $controller;
 
     /**
-     * Mock application manager
+     * Stub application manager
      *
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\Stub
      */
-    private ApplicationManager&MockObject $applicationManager;
+    private ApplicationManager&Stub $applicationManager;
 
     /**
-     * Mock channel manager
+     * Stub channel manager
      *
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\PHPUnit\Framework\MockObject\Stub
      */
-    private ChannelManager&MockObject $channelManager;
+    private ChannelManager&Stub $channelManager;
 
     /**
-     * Mock connection manager
+     * Stub connection manager
      *
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager&\PHPUnit\Framework\MockObject\Stub
      */
-    private ChannelConnectionManager&MockObject $connectionManager;
+    private ChannelConnectionManager&Stub $connectionManager;
 
     /**
      * Test data
@@ -74,9 +75,9 @@ class UsersTerminateControllerTest extends TestCase
     {
         parent::setUp();
 
-        $this->applicationManager = $this->createMock(ApplicationManager::class);
-        $this->channelManager = $this->createMock(ChannelManager::class);
-        $this->connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $this->applicationManager = $this->createStub(ApplicationManager::class);
+        $this->channelManager = $this->createStub(ChannelManager::class);
+        $this->connectionManager = $this->createStub(ChannelConnectionManager::class);
 
         $this->controller = new UsersTerminateController(
             $this->applicationManager,
@@ -96,35 +97,52 @@ class UsersTerminateControllerTest extends TestCase
         $appId = 'test-app';
 
         $request = $this->createMockRequest('POST');
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $params = ['appId' => $appId, 'userId' => $userId];
 
         $mockConnection1 = $this->createMockConnection('conn-1', $userId);
         $mockConnection2 = $this->createMockConnection('conn-2', $userId);
         $mockConnection3 = $this->createMockConnection('conn-3', 'other-user');
 
-        $mockChannel = $this->createMock(PusherChannelInterface::class);
+        $mockChannel = $this->createStub(PusherChannelInterface::class);
         $mockChannel->method('getName')->willReturn('test-channel');
 
-        $this->setupApplicationManagerMock($appId);
-        $this->setupConnectionManagerMock([
+        $channelConnections = [
             'test-channel' => [
                 'conn-1' => $mockConnection1,
                 'conn-2' => $mockConnection2,
                 'conn-3' => $mockConnection3,
             ],
-        ]);
+        ];
+
+        $this->setupApplicationManagerMock($appId);
         $this->setupChannelManagerMock(['test-channel' => $mockChannel]);
+
+        $connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $connectionManager->method('getActiveChannelNames')
+            ->willReturn(array_keys($channelConnections));
+        $connectionManager->method('getConnectionsForChannel')
+            ->willReturnCallback(function ($channel) use ($channelConnections): array {
+                $channelName = $channel->getName();
+
+                return $channelConnections[$channelName] ?? [];
+            });
 
         $mockConnection1->expects($this->once())->method('close');
         $mockConnection2->expects($this->once())->method('close');
         $mockConnection3->expects($this->never())->method('close');
 
-        $this->connectionManager->expects($this->exactly(2))
+        $connectionManager->expects($this->exactly(2))
             ->method('unsubscribeAll')
             ->with($this->logicalOr($mockConnection1, $mockConnection2));
 
-        $response = $this->controller->__invoke($request, $connection, $params);
+        $controller = new UsersTerminateController(
+            $this->applicationManager,
+            $this->channelManager,
+            $connectionManager,
+        );
+
+        $response = $controller->__invoke($request, $connection, $params);
 
         $this->assertInstanceOf(Response::class, $response);
         $this->assertEquals(200, $response->getStatusCode());
@@ -146,7 +164,7 @@ class UsersTerminateControllerTest extends TestCase
         $appId = 'test-app';
 
         $request = $this->createMockRequest('POST');
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $params = ['appId' => $appId, 'userId' => $userId];
 
         $this->setupApplicationManagerMock($appId);
@@ -171,7 +189,7 @@ class UsersTerminateControllerTest extends TestCase
     public function testTerminateUserConnectionsMissingAppId(): void
     {
         $request = $this->createMockRequest('POST');
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $params = ['userId' => 'user-123'];
 
         $response = $this->controller->__invoke($request, $connection, $params);
@@ -191,7 +209,7 @@ class UsersTerminateControllerTest extends TestCase
     public function testTerminateUserConnectionsMissingUserId(): void
     {
         $request = $this->createMockRequest('POST');
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $params = ['appId' => 'test-app'];
 
         $this->setupApplicationManagerMock('test-app');
@@ -214,11 +232,11 @@ class UsersTerminateControllerTest extends TestCase
     {
         $userId = 'user-123';
 
-        $mockConnection1 = $this->createMockConnection('conn-1', $userId);
-        $mockConnection2 = $this->createMockConnection('conn-2', $userId);
-        $mockConnection3 = $this->createMockConnection('conn-3', 'other-user');
+        $mockConnection1 = $this->createStubConnection('conn-1', $userId);
+        $mockConnection2 = $this->createStubConnection('conn-2', $userId);
+        $mockConnection3 = $this->createStubConnection('conn-3', 'other-user');
 
-        $mockChannel = $this->createMock(PusherChannelInterface::class);
+        $mockChannel = $this->createStub(PusherChannelInterface::class);
         $mockChannel->method('getName')->willReturn('test-channel');
 
         $this->setupConnectionManagerMock([
@@ -247,19 +265,19 @@ class UsersTerminateControllerTest extends TestCase
     {
         $userId = 'user-123';
 
-        $connectionWithGetAttribute = $this->createMock(WebSocketConnection::class);
+        $connectionWithGetAttribute = $this->createStub(WebSocketConnection::class);
         $connectionWithGetAttribute->method('getAttribute')
             ->willReturnMap([
                 ['user_id', null, $userId],
                 ['userId', null, null],
             ]);
 
-        $connectionWithGetAttributes = $this->createMock(WebSocketConnection::class);
+        $connectionWithGetAttributes = $this->createStub(WebSocketConnection::class);
         $connectionWithGetAttributes->method('getAttribute')->willReturn(null);
         $connectionWithGetAttributes->method('getAttributes')
             ->willReturn(['userId' => $userId]);
 
-        $mockChannel = $this->createMock(PusherChannelInterface::class);
+        $mockChannel = $this->createStub(PusherChannelInterface::class);
         $mockChannel->method('getName')->willReturn('test-channel');
 
         $this->setupConnectionManagerMock([
@@ -291,34 +309,71 @@ class UsersTerminateControllerTest extends TestCase
         $appId = 'test-app';
 
         $request = $this->createMockRequest('POST');
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $params = ['appId' => $appId, 'userId' => $userId];
 
         $sharedConnection = $this->createMockConnection('conn-1', $userId);
 
-        $channelOne = $this->createMock(PusherChannelInterface::class);
+        $channelOne = $this->createStub(PusherChannelInterface::class);
         $channelOne->method('getName')->willReturn('channel-one');
-        $channelTwo = $this->createMock(PusherChannelInterface::class);
+        $channelTwo = $this->createStub(PusherChannelInterface::class);
         $channelTwo->method('getName')->willReturn('channel-two');
 
-        $this->setupApplicationManagerMock($appId);
-        $this->setupConnectionManagerMock([
+        $channelConnections = [
             'channel-one' => ['conn-1' => $sharedConnection],
             'channel-two' => ['conn-1' => $sharedConnection],
-        ]);
+        ];
+
+        $this->setupApplicationManagerMock($appId);
         $this->setupChannelManagerMock([
             'channel-one' => $channelOne,
             'channel-two' => $channelTwo,
         ]);
 
-        $sharedConnection->expects($this->once())->method('close');
-        $this->connectionManager->expects($this->once())->method('unsubscribeAll');
+        $connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $connectionManager->method('getActiveChannelNames')
+            ->willReturn(array_keys($channelConnections));
+        $connectionManager->method('getConnectionsForChannel')
+            ->willReturnCallback(function ($channel) use ($channelConnections): array {
+                $channelName = $channel->getName();
 
-        $response = $this->controller->__invoke($request, $connection, $params);
+                return $channelConnections[$channelName] ?? [];
+            });
+
+        $sharedConnection->expects($this->once())->method('close');
+        $connectionManager->expects($this->once())->method('unsubscribeAll');
+
+        $controller = new UsersTerminateController(
+            $this->applicationManager,
+            $this->channelManager,
+            $connectionManager,
+        );
+
+        $response = $controller->__invoke($request, $connection, $params);
 
         $responseData = json_decode($response->getContent(), true);
         $this->assertEquals('success', $responseData['status']);
         $this->assertEquals(1, $responseData['terminated_connections']);
+    }
+
+    /**
+     * Create stub connection with user ID (no verification)
+     *
+     * @param string $connectionId Connection ID
+     * @param string $userId User ID
+     * @return \Crustum\BlazeCast\WebSocket\Connection
+     */
+    private function createStubConnection(string $connectionId, string $userId): WebSocketConnection
+    {
+        $connection = $this->createStub(WebSocketConnection::class);
+        $connection->method('getId')->willReturn($connectionId);
+        $connection->method('getAttribute')
+            ->willReturnMap([
+                ['user_id', null, $userId],
+                ['userId', null, null],
+            ]);
+
+        return $connection;
     }
 
     /**
@@ -344,22 +399,22 @@ class UsersTerminateControllerTest extends TestCase
     }
 
     /**
-     * Create mock HTTP request
+     * Create stub HTTP request
      *
      * @param string $method HTTP method
-     * @return \Psr\Http\Message\RequestInterface&\PHPUnit\Framework\MockObject\MockObject
+     * @return \Psr\Http\Message\RequestInterface
      */
-    private function createMockRequest(string $method): RequestInterface&MockObject
+    private function createMockRequest(string $method): RequestInterface
     {
-        $request = $this->createMock(RequestInterface::class);
+        $request = $this->createStub(RequestInterface::class);
         $request->method('getMethod')->willReturn($method);
 
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/pusher/health');
         $uri->method('getQuery')->willReturn('');
         $request->method('getUri')->willReturn($uri);
 
-        $body = $this->createMock(StreamInterface::class);
+        $body = $this->createStub(StreamInterface::class);
         $body->method('getContents')->willReturn('{"test": "data"}');
         $request->method('getBody')->willReturn($body);
 
@@ -375,8 +430,9 @@ class UsersTerminateControllerTest extends TestCase
     private function setupApplicationManagerMock(string $appId): void
     {
         $this->applicationManager->method('getApplication')
-            ->with($appId)
-            ->willReturn($this->testApplication);
+            ->willReturnMap([
+                [$appId, $this->testApplication],
+            ]);
     }
 
     /**

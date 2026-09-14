@@ -8,7 +8,7 @@ use Crustum\BlazeCast\WebSocket\ApplicationContextResolver;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 
 /**
  * ApplicationContextResolverTest
@@ -21,14 +21,14 @@ class ApplicationContextResolverTest extends TestCase
     protected ApplicationContextResolver $resolver;
 
     /**
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\Stub
      */
-    protected ApplicationManager&MockObject $applicationManager;
+    protected ApplicationManager&Stub $applicationManager;
 
     /**
      * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\PHPUnit\Framework\MockObject\Stub
      */
-    protected ChannelManager $defaultChannelManager;
+    protected ChannelManager&Stub $defaultChannelManager;
 
     /**
      * Set up test fixtures
@@ -39,7 +39,7 @@ class ApplicationContextResolverTest extends TestCase
     {
         parent::setUp();
 
-        $this->applicationManager = $this->createMock(ApplicationManager::class);
+        $this->applicationManager = $this->createStub(ApplicationManager::class);
         $this->defaultChannelManager = $this->createStub(ChannelManager::class);
 
         $this->resolver = new ApplicationContextResolver(
@@ -82,7 +82,10 @@ class ApplicationContextResolverTest extends TestCase
     {
         $connection = $this->createMock(Connection::class);
         $connection->method('getId')->willReturn('conn-123');
-        $connection->method('getAttribute')->with('app_id')->willReturn('app-789');
+        $connection->expects($this->once())
+            ->method('getAttribute')
+            ->with('app_id')
+            ->willReturn('app-789');
 
         $activeConnections = [];
 
@@ -115,14 +118,20 @@ class ApplicationContextResolverTest extends TestCase
             });
 
         $application = ['id' => 'app-from-key'];
-        $this->applicationManager
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->once())
             ->method('getApplicationByKey')
             ->with('test-key')
             ->willReturn($application);
 
+        $resolver = new ApplicationContextResolver(
+            $applicationManager,
+            $this->defaultChannelManager,
+        );
+
         $activeConnections = [];
 
-        $result = $this->resolver->getAppIdForConnection($connection, $activeConnections);
+        $result = $resolver->getAppIdForConnection($connection, $activeConnections);
 
         $this->assertEquals('app-from-key', $result);
     }
@@ -178,12 +187,18 @@ class ApplicationContextResolverTest extends TestCase
             ],
         ];
 
-        $this->applicationManager
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->once())
             ->method('getApplication')
             ->with('app-123')
             ->willReturn($application);
 
-        $result = $this->resolver->getChannelManagerForConnection($connection, $activeConnections);
+        $resolver = new ApplicationContextResolver(
+            $applicationManager,
+            $this->defaultChannelManager,
+        );
+
+        $result = $resolver->getChannelManagerForConnection($connection, $activeConnections);
 
         $this->assertSame($appChannelManager, $result);
     }
@@ -219,12 +234,18 @@ class ApplicationContextResolverTest extends TestCase
     {
         $application = ['id' => 'app-123', 'name' => 'Test App'];
 
-        $this->applicationManager
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->once())
             ->method('getApplication')
             ->with('app-123')
             ->willReturn($application);
 
-        $result = $this->resolver->getApplication('app-123');
+        $resolver = new ApplicationContextResolver(
+            $applicationManager,
+            $this->defaultChannelManager,
+        );
+
+        $result = $resolver->getApplication('app-123');
 
         $this->assertEquals($application, $result);
     }
@@ -238,12 +259,18 @@ class ApplicationContextResolverTest extends TestCase
     {
         $application = ['id' => 'app-123', 'key' => 'test-key'];
 
-        $this->applicationManager
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->once())
             ->method('getApplicationByKey')
             ->with('test-key')
             ->willReturn($application);
 
-        $result = $this->resolver->getApplicationByKey('test-key');
+        $resolver = new ApplicationContextResolver(
+            $applicationManager,
+            $this->defaultChannelManager,
+        );
+
+        $result = $resolver->getApplicationByKey('test-key');
 
         $this->assertEquals($application, $result);
     }

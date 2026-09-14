@@ -273,7 +273,7 @@ class HttpRateLimitingRedisTest extends TestCase
             ->onlyMethods(['gather'])
             ->getMock();
 
-        $metricsHandler->expects($this->any())
+        $metricsHandler->expects($this->atLeastOnce())
             ->method('gather')
             ->willReturn([]);
 
@@ -291,7 +291,7 @@ class HttpRateLimitingRedisTest extends TestCase
                 ->onlyMethods(['getMetricsHandler'])
                 ->getMock();
 
-            $controller->expects($this->any())
+            $controller->expects($this->once())
                 ->method('getMetricsHandler')
                 ->willReturn($metricsHandler);
 
@@ -317,9 +317,8 @@ class HttpRateLimitingRedisTest extends TestCase
             ->onlyMethods(['getMetricsHandler'])
             ->getMock();
 
-        $controller->expects($this->any())
-            ->method('getMetricsHandler')
-            ->willReturn($metricsHandler);
+        $controller->expects($this->never())
+            ->method('getMetricsHandler');
 
         $this->helper->configureController($controller, [
             'application' => [
@@ -344,19 +343,19 @@ class HttpRateLimitingRedisTest extends TestCase
         $params = ['appId' => $this->appId];
 
         $this->helper->getConnectionManager()
-            ->expects($this->any())
             ->method('getConnectionsForApp')
-            ->with($this->appId)
-            ->willReturn([]);
+            ->willReturnMap([
+                [$this->appId, []],
+            ]);
 
         $this->helper->getConnectionManager()
-            ->expects($this->any())
             ->method('getAppStats')
-            ->with($this->appId)
-            ->willReturn([
-                'connections' => 0,
-                'subscriptions' => 0,
-                'http_requests' => 0,
+            ->willReturnMap([
+                [$this->appId, [
+                    'connections' => 0,
+                    'subscriptions' => 0,
+                    'http_requests' => 0,
+                ]],
             ]);
 
         for ($i = 0; $i < 10; $i++) {

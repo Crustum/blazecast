@@ -12,7 +12,6 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Exception;
 use InvalidArgumentException;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use Psr\Container\ContainerInterface;
 use TypeError;
@@ -45,9 +44,9 @@ class ControllerFactoryTest extends TestCase
     protected ChannelConnectionManager&Stub $connectionManager;
 
     /**
-     * @var \Psr\Container\ContainerInterface&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Psr\Container\ContainerInterface
      */
-    protected ContainerInterface&MockObject $container;
+    protected ContainerInterface $container;
 
     /**
      * @var \Cake\Event\EventManager&\PHPUnit\Framework\MockObject\Stub
@@ -66,7 +65,7 @@ class ControllerFactoryTest extends TestCase
         $this->applicationManager = $this->createStub(ApplicationManager::class);
         $this->channelManager = $this->createStub(ChannelManager::class);
         $this->connectionManager = $this->createStub(ChannelConnectionManager::class);
-        $this->container = $this->createMock(ContainerInterface::class);
+        $this->container = $this->createStub(ContainerInterface::class);
 
         $this->eventManager = $this->createStub(EventManager::class);
 
@@ -138,19 +137,27 @@ class ControllerFactoryTest extends TestCase
      */
     public function testCreateWithContainer(): void
     {
-        $mockController = $this->createMock(PusherControllerInterface::class);
+        $mockController = $this->createStub(PusherControllerInterface::class);
 
-        $this->container->expects($this->once())
+        $container = $this->createMock(ContainerInterface::class);
+        $container->expects($this->once())
             ->method('has')
             ->with(FactoryTestController::class)
             ->willReturn(true);
 
-        $this->container->expects($this->once())
+        $container->expects($this->once())
             ->method('get')
             ->with(FactoryTestController::class)
             ->willReturn($mockController);
 
-        $result = $this->controllerFactory->create(FactoryTestController::class);
+        $factory = new ControllerFactory(
+            $this->applicationManager,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->eventManager,
+            $container,
+        );
+        $result = $factory->create(FactoryTestController::class);
 
         $this->assertSame($mockController, $result);
     }
@@ -162,12 +169,20 @@ class ControllerFactoryTest extends TestCase
      */
     public function testCreateWithNoArgConstructor(): void
     {
-        $this->container->expects($this->once())
+        $container = $this->createMock(ContainerInterface::class);
+        $container->expects($this->once())
             ->method('has')
             ->with(FactoryTestController::class)
             ->willReturn(false);
 
-        $result = $this->controllerFactory->create(FactoryTestController::class);
+        $factory = new ControllerFactory(
+            $this->applicationManager,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->eventManager,
+            $container,
+        );
+        $result = $factory->create(FactoryTestController::class);
 
         $this->assertInstanceOf(FactoryTestController::class, $result);
     }
@@ -179,12 +194,20 @@ class ControllerFactoryTest extends TestCase
      */
     public function testCreateWithConstructorParameters(): void
     {
-        $this->container->expects($this->once())
+        $container = $this->createMock(ContainerInterface::class);
+        $container->expects($this->once())
             ->method('has')
             ->with(FactoryTestControllerWithParams::class)
             ->willReturn(false);
 
-        $result = $this->controllerFactory->create(FactoryTestControllerWithParams::class);
+        $factory = new ControllerFactory(
+            $this->applicationManager,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->eventManager,
+            $container,
+        );
+        $result = $factory->create(FactoryTestControllerWithParams::class);
 
         $this->assertInstanceOf(FactoryTestControllerWithParams::class, $result);
     }
@@ -196,24 +219,32 @@ class ControllerFactoryTest extends TestCase
      */
     public function testCreateWithCachedInstance(): void
     {
-        $mockController = $this->createMock(PusherControllerInterface::class);
+        $mockController = $this->createStub(PusherControllerInterface::class);
 
-        $this->container->expects($this->once())
+        $container = $this->createMock(ContainerInterface::class);
+        $container->expects($this->once())
             ->method('has')
             ->with(FactoryTestController::class)
             ->willReturn(true);
 
-        $this->container->expects($this->once())
+        $container->expects($this->once())
             ->method('get')
             ->with(FactoryTestController::class)
             ->willReturn($mockController);
 
+        $factory = new ControllerFactory(
+            $this->applicationManager,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->eventManager,
+            $container,
+        );
         // First call should create the instance
-        $result1 = $this->controllerFactory->create(FactoryTestController::class);
+        $result1 = $factory->create(FactoryTestController::class);
         $this->assertSame($mockController, $result1);
 
         // Second call should return cached instance
-        $result2 = $this->controllerFactory->create(FactoryTestController::class);
+        $result2 = $factory->create(FactoryTestController::class);
         $this->assertSame($mockController, $result2);
     }
 
@@ -264,19 +295,27 @@ class ControllerFactoryTest extends TestCase
      */
     public function testGet(): void
     {
-        $mockController = $this->createMock(PusherControllerInterface::class);
+        $mockController = $this->createStub(PusherControllerInterface::class);
 
-        $this->container->expects($this->once())
+        $container = $this->createMock(ContainerInterface::class);
+        $container->expects($this->once())
             ->method('has')
             ->with(FactoryTestController::class)
             ->willReturn(true);
 
-        $this->container->expects($this->once())
+        $container->expects($this->once())
             ->method('get')
             ->with(FactoryTestController::class)
             ->willReturn($mockController);
 
-        $result = $this->controllerFactory->get(FactoryTestController::class);
+        $factory = new ControllerFactory(
+            $this->applicationManager,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->eventManager,
+            $container,
+        );
+        $result = $factory->get(FactoryTestController::class);
 
         $this->assertSame($mockController, $result);
     }
@@ -288,7 +327,7 @@ class ControllerFactoryTest extends TestCase
      */
     public function testRegister(): void
     {
-        $mockController = $this->createMock(PusherControllerInterface::class);
+        $mockController = $this->createStub(PusherControllerInterface::class);
 
         $this->controllerFactory->register(FactoryTestController::class, $mockController);
 
@@ -303,7 +342,7 @@ class ControllerFactoryTest extends TestCase
      */
     public function testClear(): void
     {
-        $mockController = $this->createMock(PusherControllerInterface::class);
+        $mockController = $this->createStub(PusherControllerInterface::class);
 
         // Register a controller
         $this->controllerFactory->register(FactoryTestController::class, $mockController);
@@ -316,12 +355,20 @@ class ControllerFactoryTest extends TestCase
         $this->controllerFactory->clear();
 
         // Should create new instance
-        $this->container->expects($this->once())
+        $container = $this->createMock(ContainerInterface::class);
+        $container->expects($this->once())
             ->method('has')
             ->with(FactoryTestController::class)
             ->willReturn(false);
 
-        $result2 = $this->controllerFactory->create(FactoryTestController::class);
+        $factory = new ControllerFactory(
+            $this->applicationManager,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->eventManager,
+            $container,
+        );
+        $result2 = $factory->create(FactoryTestController::class);
         $this->assertInstanceOf(FactoryTestController::class, $result2);
     }
 
@@ -365,19 +412,28 @@ class ControllerFactoryTest extends TestCase
      */
     public function testCreateWithExceptionHandling(): void
     {
-        $this->container->expects($this->once())
+        $container = $this->createMock(ContainerInterface::class);
+        $container->expects($this->once())
             ->method('has')
             ->with(FactoryTestController::class)
             ->willReturn(true);
 
-        $this->container->expects($this->once())
+        $container->expects($this->once())
             ->method('get')
             ->with(FactoryTestController::class)
             ->willThrowException(new Exception('Container error'));
 
+        $factory = new ControllerFactory(
+            $this->applicationManager,
+            $this->channelManager,
+            $this->connectionManager,
+            $this->eventManager,
+            $container,
+        );
+
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Container error');
 
-        $this->controllerFactory->create(FactoryTestController::class);
+        $factory->create(FactoryTestController::class);
     }
 }

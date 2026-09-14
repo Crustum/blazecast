@@ -92,7 +92,7 @@ class ChannelControllerTest extends TestCase
             ->onlyMethods(['getMetricsHandler'])
             ->getMock();
 
-        $controller->expects($this->any())
+        $controller->expects($this->once())
             ->method('getMetricsHandler')
             ->willReturn($metricsHandler);
 
@@ -147,7 +147,7 @@ class ChannelControllerTest extends TestCase
             ->onlyMethods(['getMetricsHandler'])
             ->getMock();
 
-        $controller->expects($this->any())
+        $controller->expects($this->once())
             ->method('getMetricsHandler')
             ->willReturn($metricsHandler);
 
@@ -205,7 +205,7 @@ class ChannelControllerTest extends TestCase
             ->onlyMethods(['getMetricsHandler'])
             ->getMock();
 
-        $controller->expects($this->any())
+        $controller->expects($this->once())
             ->method('getMetricsHandler')
             ->willReturn($metricsHandler);
 

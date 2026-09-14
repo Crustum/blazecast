@@ -63,10 +63,10 @@ class PusherControllerTest extends TestCase
      */
     public function testParseQueryParams(): void
     {
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getQuery')->willReturn('foo=bar&test=123');
 
-        $request = $this->createMock(RequestInterface::class);
+        $request = $this->createStub(RequestInterface::class);
         $request->method('getUri')->willReturn($uri);
 
         $params = $this->controller->callParseQueryParams($request);
@@ -101,11 +101,11 @@ class PusherControllerTest extends TestCase
      */
     public function testControllerStatelessness(): void
     {
-        $uri1 = $this->createMock(UriInterface::class);
+        $uri1 = $this->createStub(UriInterface::class);
         $uri1->method('getQuery')->willReturn('param=value1');
         $uri1->method('getPath')->willReturn('/test/path');
 
-        $request1 = $this->createMock(RequestInterface::class);
+        $request1 = $this->createStub(RequestInterface::class);
         $request1->method('getUri')->willReturn($uri1);
         $request1->method('getMethod')->willReturn('GET');
         $request1->method('getBody')->willReturn('');
@@ -114,11 +114,11 @@ class PusherControllerTest extends TestCase
 
         $this->assertEquals(['param' => 'value1'], $this->controller->getLastQuery());
 
-        $uri2 = $this->createMock(UriInterface::class);
+        $uri2 = $this->createStub(UriInterface::class);
         $uri2->method('getQuery')->willReturn('param=value2');
         $uri2->method('getPath')->willReturn('/test/path');
 
-        $request2 = $this->createMock(RequestInterface::class);
+        $request2 = $this->createStub(RequestInterface::class);
         $request2->method('getUri')->willReturn($uri2);
         $request2->method('getMethod')->willReturn('GET');
         $request2->method('getBody')->willReturn('');
@@ -135,9 +135,9 @@ class PusherControllerTest extends TestCase
      */
     public function testOptionsRequestHandling(): void
     {
-        $request = $this->createMock(RequestInterface::class);
+        $request = $this->createStub(RequestInterface::class);
         $request->method('getMethod')->willReturn('OPTIONS');
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/test');
         $request->method('getUri')->willReturn($uri);
         $request->method('getBody')->willReturn('');
@@ -162,10 +162,10 @@ class PusherControllerTest extends TestCase
             'auth_signature' => 'invalid-signature',
         ];
 
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/test/path');
 
-        $request = $this->createMock(RequestInterface::class);
+        $request = $this->createStub(RequestInterface::class);
         $request->method('getUri')->willReturn($uri);
         $request->method('getMethod')->willReturn('GET');
 

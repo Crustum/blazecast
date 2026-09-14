@@ -10,6 +10,7 @@ use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Handler\PusherEventHandler;
 use Crustum\BlazeCast\WebSocket\WebSocketServerInterface;
+use PHPUnit\Framework\MockObject\Stub;
 use ReflectionClass;
 
 /**
@@ -25,32 +26,32 @@ class PusherEventHandlerTest extends TestCase
     protected PusherEventHandler $pusherEventHandler;
 
     /**
-     * Mock WebSocket server
+     * Stub WebSocket server
      *
-     * @var \Crustum\BlazeCast\WebSocket\WebSocketServerInterface&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\WebSocketServerInterface&\PHPUnit\Framework\MockObject\Stub
      */
-    protected WebSocketServerInterface $mockServer;
+    protected WebSocketServerInterface&Stub $mockServer;
 
     /**
-     * Mock connection
+     * Stub connection
      *
-     * @var \Crustum\BlazeCast\WebSocket\Connection&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Connection&\PHPUnit\Framework\MockObject\Stub
      */
-    protected Connection $mockConnection;
+    protected Connection&Stub $mockConnection;
 
     /**
-     * Mock message
+     * Stub message
      *
-     * @var \Crustum\BlazeCast\WebSocket\Protocol\Message&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Protocol\Message&\PHPUnit\Framework\MockObject\Stub
      */
-    protected Message $mockMessage;
+    protected Message&Stub $mockMessage;
 
     /**
-     * Mock application manager
+     * Stub application manager
      *
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager&\PHPUnit\Framework\MockObject\Stub
      */
-    protected ApplicationManager $mockApplicationManager;
+    protected ApplicationManager&Stub $mockApplicationManager;
 
     /**
      * setUp method
@@ -61,10 +62,10 @@ class PusherEventHandlerTest extends TestCase
     {
         parent::setUp();
 
-        $this->mockServer = $this->createMock(WebSocketServerInterface::class);
-        $this->mockConnection = $this->createMock(Connection::class);
-        $this->mockMessage = $this->createMock(Message::class);
-        $this->mockApplicationManager = $this->createMock(ApplicationManager::class);
+        $this->mockServer = $this->createStub(WebSocketServerInterface::class);
+        $this->mockConnection = $this->createStub(Connection::class);
+        $this->mockMessage = $this->createStub(Message::class);
+        $this->mockApplicationManager = $this->createStub(ApplicationManager::class);
 
         $this->pusherEventHandler = new PusherEventHandler();
     }
@@ -92,8 +93,7 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testSetServer(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
         $this->pusherEventHandler->setServer($this->mockServer);
@@ -132,8 +132,7 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testInitialize(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
         $this->pusherEventHandler->initialize($this->mockServer);
@@ -148,8 +147,7 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testCanHandleWithValidEvents(): void
     {
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('pusher:ping');
 
         $this->assertTrue($this->pusherEventHandler->canHandle($this->mockMessage));
@@ -162,8 +160,7 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testCanHandleWithClientEvents(): void
     {
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('client-typing');
 
         $this->assertTrue($this->pusherEventHandler->canHandle($this->mockMessage));
@@ -176,8 +173,7 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testCanHandleWithInvalidEvents(): void
     {
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('invalid:event');
 
         $this->assertFalse($this->pusherEventHandler->canHandle($this->mockMessage));
@@ -190,15 +186,14 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testHandleWithPingEvent(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $connection = $this->createMock(Connection::class);
+        $connection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('pusher:ping');
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->callback(function ($data): bool {
                 $decoded = json_decode($data, true);
@@ -207,7 +202,7 @@ class PusherEventHandlerTest extends TestCase
             }));
 
         $this->pusherEventHandler->setServer($this->mockServer);
-        $this->pusherEventHandler->handle($this->mockConnection, $this->mockMessage);
+        $this->pusherEventHandler->handle($connection, $this->mockMessage);
     }
 
     /**
@@ -217,16 +212,14 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testHandleWithSubscribeEvent(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $connection = $this->createMock(Connection::class);
+        $connection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('pusher:subscribe');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getData')
+        $this->mockMessage->method('getData')
             ->willReturn([
                 'channel' => 'test-channel',
                 'auth' => 'test-auth',
@@ -237,13 +230,14 @@ class PusherEventHandlerTest extends TestCase
         $mockChannelOperationsManager = $this->createMock(ChannelOperationsManager::class);
         $mockChannelOperationsManager->expects($this->once())
             ->method('subscribeToChannelWithAuth')
-            ->with($this->mockConnection, 'test-channel', 'test-auth', '{"user_id": 123}');
+            ->with($connection, 'test-channel', 'test-auth', '{"user_id": 123}');
 
-        $this->mockServer->expects($this->once())
+        $server = $this->createMock(WebSocketServerInterface::class);
+        $server->expects($this->once())
             ->method('getChannelOperationsManager')
             ->willReturn($mockChannelOperationsManager);
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->callback(function ($data): bool {
                 $decoded = json_decode($data, true);
@@ -252,8 +246,8 @@ class PusherEventHandlerTest extends TestCase
                     && $decoded['channel'] === 'test-channel';
             }));
 
-        $this->pusherEventHandler->setServer($this->mockServer);
-        $this->pusherEventHandler->handle($this->mockConnection, $this->mockMessage);
+        $this->pusherEventHandler->setServer($server);
+        $this->pusherEventHandler->handle($connection, $this->mockMessage);
     }
 
     /**
@@ -263,22 +257,20 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testHandleWithSubscribeEventMissingChannel(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('pusher:subscribe');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getData')
+        $this->mockMessage->method('getData')
             ->willReturn([]);
 
-        $this->mockServer->expects($this->never())
+        $server = $this->createMock(WebSocketServerInterface::class);
+        $server->expects($this->never())
             ->method('subscribeToChannelWithAuth');
 
-        $this->pusherEventHandler->setServer($this->mockServer);
+        $this->pusherEventHandler->setServer($server);
         $this->pusherEventHandler->handle($this->mockConnection, $this->mockMessage);
     }
 
@@ -289,22 +281,18 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testHandleWithSubscribeEventServerNotAvailable(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('pusher:subscribe');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getData')
+        $this->mockMessage->method('getData')
             ->willReturn(['channel' => 'test-channel']);
 
-        // Create a mock server that returns null for getApplicationManager
-        $mockServer = $this->createMock(WebSocketServerInterface::class);
-        $mockServer->expects($this->any())
-            ->method('getApplicationManager')
+        // Create a stub server that returns null for getApplicationManager
+        $mockServer = $this->createStub(WebSocketServerInterface::class);
+        $mockServer->method('getApplicationManager')
             ->willReturn(null);
 
         $this->pusherEventHandler->setServer($mockServer);
@@ -318,16 +306,13 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testHandleWithUnsubscribeEvent(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('pusher:unsubscribe');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getData')
+        $this->mockMessage->method('getData')
             ->willReturn(['channel' => 'test-channel']);
 
         $mockChannelOperationsManager = $this->createMock(ChannelOperationsManager::class);
@@ -335,11 +320,12 @@ class PusherEventHandlerTest extends TestCase
             ->method('unsubscribeFromChannel')
             ->with($this->mockConnection, 'test-channel');
 
-        $this->mockServer->expects($this->once())
+        $server = $this->createMock(WebSocketServerInterface::class);
+        $server->expects($this->once())
             ->method('getChannelOperationsManager')
             ->willReturn($mockChannelOperationsManager);
 
-        $this->pusherEventHandler->setServer($this->mockServer);
+        $this->pusherEventHandler->setServer($server);
         $this->pusherEventHandler->handle($this->mockConnection, $this->mockMessage);
     }
 
@@ -350,22 +336,20 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testHandleWithUnsubscribeEventMissingChannel(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('pusher:unsubscribe');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getData')
+        $this->mockMessage->method('getData')
             ->willReturn([]);
 
-        $this->mockServer->expects($this->never())
+        $server = $this->createMock(WebSocketServerInterface::class);
+        $server->expects($this->never())
             ->method('unsubscribeFromChannel');
 
-        $this->pusherEventHandler->setServer($this->mockServer);
+        $this->pusherEventHandler->setServer($server);
         $this->pusherEventHandler->handle($this->mockConnection, $this->mockMessage);
     }
 
@@ -376,31 +360,25 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testHandleWithClientEvent(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('client-typing');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getData')
+        $this->mockMessage->method('getData')
             ->willReturn(['user' => 'test-user']);
 
-        $this->mockMessage->expects($this->any())
-            ->method('getChannel')
+        $this->mockMessage->method('getChannel')
             ->willReturn('test-channel');
 
-        $this->mockConnection->expects($this->any())
-            ->method('getAttribute')
+        $this->mockConnection->method('getAttribute')
             ->willReturnMap([
                 ['app_id', null, 'test-app-id'],
                 ['app_key', null, null],
             ]);
 
-        $this->mockServer->expects($this->any())
-            ->method('getApplicationManager')
+        $this->mockServer->method('getApplicationManager')
             ->willReturn($this->mockApplicationManager);
 
         $this->pusherEventHandler->setServer($this->mockServer);
@@ -414,16 +392,13 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testHandleWithClientEventMissingChannel(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('client-typing');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getChannel')
+        $this->mockMessage->method('getChannel')
             ->willReturn(null);
 
         $this->pusherEventHandler->setServer($this->mockServer);
@@ -437,12 +412,10 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testHandleWithUnhandledEvent(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockMessage->expects($this->any())
-            ->method('getEvent')
+        $this->mockMessage->method('getEvent')
             ->willReturn('unknown:event');
 
         $this->pusherEventHandler->setServer($this->mockServer);
@@ -456,12 +429,10 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testGetAppIdFromConnectionWithAppIdAttribute(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockConnection->expects($this->any())
-            ->method('getAttribute')
+        $this->mockConnection->method('getAttribute')
             ->willReturnMap([
                 ['app_id', null, 'test-app-id'],
             ]);
@@ -482,27 +453,26 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testGetAppIdFromConnectionWithAppKeyAttribute(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockConnection->expects($this->any())
-            ->method('getAttribute')
+        $this->mockConnection->method('getAttribute')
             ->willReturnMap([
                 ['app_id', null, null],
                 ['app_key', null, 'test-app-key'],
             ]);
 
-        $this->mockServer->expects($this->any())
-            ->method('getApplicationManager')
-            ->willReturn($this->mockApplicationManager);
-
-        $this->mockApplicationManager->expects($this->any())
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->once())
             ->method('getApplicationByKey')
             ->with('test-app-key')
             ->willReturn(['id' => 'test-app-id']);
 
-        $this->pusherEventHandler->setServer($this->mockServer);
+        $server = $this->createStub(WebSocketServerInterface::class);
+        $server->method('getApplicationManager')
+            ->willReturn($applicationManager);
+
+        $this->pusherEventHandler->setServer($server);
 
         $reflection = new ReflectionClass($this->pusherEventHandler);
         $method = $reflection->getMethod('getAppIdFromConnection');
@@ -517,23 +487,19 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testGetAppIdFromConnectionWithFirstAvailableApp(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockConnection->expects($this->any())
-            ->method('getAttribute')
+        $this->mockConnection->method('getAttribute')
             ->willReturnMap([
                 ['app_id', null, null],
                 ['app_key', null, null],
             ]);
 
-        $this->mockServer->expects($this->any())
-            ->method('getApplicationManager')
+        $this->mockServer->method('getApplicationManager')
             ->willReturn($this->mockApplicationManager);
 
-        $this->mockApplicationManager->expects($this->any())
-            ->method('getApplications')
+        $this->mockApplicationManager->method('getApplications')
             ->willReturn(['app1' => ['id' => 'test-app-id']]);
 
         $this->pusherEventHandler->setServer($this->mockServer);
@@ -552,23 +518,19 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testGetAppIdFromConnectionWithNoAppFound(): void
     {
-        $this->mockConnection->expects($this->any())
-            ->method('getId')
+        $this->mockConnection->method('getId')
             ->willReturn('test-connection-id');
 
-        $this->mockConnection->expects($this->any())
-            ->method('getAttribute')
+        $this->mockConnection->method('getAttribute')
             ->willReturnMap([
                 ['app_id', null, null],
                 ['app_key', null, null],
             ]);
 
-        $this->mockServer->expects($this->any())
-            ->method('getApplicationManager')
+        $this->mockServer->method('getApplicationManager')
             ->willReturn($this->mockApplicationManager);
 
-        $this->mockApplicationManager->expects($this->any())
-            ->method('getApplications')
+        $this->mockApplicationManager->method('getApplications')
             ->willReturn([]);
 
         $this->pusherEventHandler->setServer($this->mockServer);
@@ -587,8 +549,7 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testGetApplicationManager(): void
     {
-        $this->mockServer->expects($this->any())
-            ->method('getApplicationManager')
+        $this->mockServer->method('getApplicationManager')
             ->willReturn($this->mockApplicationManager);
 
         $this->pusherEventHandler->setServer($this->mockServer);
@@ -607,10 +568,9 @@ class PusherEventHandlerTest extends TestCase
      */
     public function testGetApplicationManagerWithNoServer(): void
     {
-        // Create a mock server that returns null for getApplicationManager
-        $mockServer = $this->createMock(WebSocketServerInterface::class);
-        $mockServer->expects($this->any())
-            ->method('getApplicationManager')
+        // Create a stub server that returns null for getApplicationManager
+        $mockServer = $this->createStub(WebSocketServerInterface::class);
+        $mockServer->method('getApplicationManager')
             ->willReturn(null);
 
         $this->pusherEventHandler->setServer($mockServer);

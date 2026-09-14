@@ -44,8 +44,8 @@ class SignatureVerificationTest extends TestCase
 
         $controller = new TestSignatureController(
             new ApplicationManager(),
-            $this->createMock(ChannelManager::class),
-            $this->createMock(ChannelConnectionManager::class),
+            $this->createStub(ChannelManager::class),
+            $this->createStub(ChannelConnectionManager::class),
         );
 
         $apps = ['1' => ['key' => $appKey, 'secret' => $appSecret]];
@@ -53,11 +53,11 @@ class SignatureVerificationTest extends TestCase
         $appsProperty = $reflection->getProperty('applications');
         $appsProperty->setValue($controller->getApplicationManager(), $apps);
 
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn($path);
         $uri->method('getQuery')->willReturn($clientQueryString . '&auth_signature=' . $clientSignature);
 
-        $request = $this->createMock(RequestInterface::class);
+        $request = $this->createStub(RequestInterface::class);
         $request->method('getUri')->willReturn($uri);
         $request->method('getMethod')->willReturn($method);
         $request->method('getBody')->willReturn('');
@@ -96,15 +96,15 @@ class SignatureVerificationTest extends TestCase
 
         $controller = new TestSignatureController(
             new ApplicationManager(),
-            $this->createMock(ChannelManager::class),
-            $this->createMock(ChannelConnectionManager::class),
+            $this->createStub(ChannelManager::class),
+            $this->createStub(ChannelConnectionManager::class),
         );
 
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn($path);
         $uri->method('getQuery')->willReturn($query);
 
-        $request = $this->createMock(RequestInterface::class);
+        $request = $this->createStub(RequestInterface::class);
         $request->method('getUri')->willReturn($uri);
         $request->method('getMethod')->willReturn($method);
         $request->method('getBody')->willReturn('');

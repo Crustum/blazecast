@@ -23,9 +23,9 @@ class ConnectionTest extends TestCase
     protected Connection $connection;
 
     /**
-     * Mock React connection
+     * Stub React connection
      *
-     * @var \React\Socket\ConnectionInterface&\PHPUnit\Framework\MockObject\MockObject
+     * @var \React\Socket\ConnectionInterface
      */
     protected ReactConnectionInterface $mockReactConnection;
 
@@ -38,7 +38,7 @@ class ConnectionTest extends TestCase
     {
         parent::setUp();
 
-        $this->mockReactConnection = $this->createMock(ReactConnectionInterface::class);
+        $this->mockReactConnection = $this->createStub(ReactConnectionInterface::class);
         $this->connection = new Connection($this->mockReactConnection, 'test-connection-id');
     }
 
@@ -105,11 +105,13 @@ class ConnectionTest extends TestCase
      */
     public function testSendWithConnectedState(): void
     {
-        $this->connection->markAsConnected();
-
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('write')
             ->with($this->callback(fn($data): bool => (string)$data !== ''));
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
+        $this->connection->markAsConnected();
 
         $this->connection->send('test data');
     }
@@ -121,9 +123,12 @@ class ConnectionTest extends TestCase
      */
     public function testSendWithNonConnectedState(): void
     {
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('write')
             ->with('test data');
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
 
         $this->connection->send('test data');
     }
@@ -135,11 +140,13 @@ class ConnectionTest extends TestCase
      */
     public function testSendWithException(): void
     {
-        $this->connection->markAsConnected();
-
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('write')
             ->willThrowException(new Exception('Write failed'));
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
+        $this->connection->markAsConnected();
 
         $this->connection->send('test data');
         $this->assertTrue($this->connection->isConnected());
@@ -152,8 +159,11 @@ class ConnectionTest extends TestCase
      */
     public function testClose(): void
     {
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('end');
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
 
         $this->connection->close();
         $this->assertFalse($this->connection->isConnected());
@@ -166,9 +176,12 @@ class ConnectionTest extends TestCase
      */
     public function testCloseWithException(): void
     {
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('end')
             ->willThrowException(new Exception('Close failed'));
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
 
         $this->connection->close();
         $this->assertFalse($this->connection->isConnected());
@@ -181,11 +194,13 @@ class ConnectionTest extends TestCase
      */
     public function testIsActive(): void
     {
-        $this->connection->markAsConnected();
-
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('isWritable')
             ->willReturn(true);
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
+        $this->connection->markAsConnected();
 
         $this->assertTrue($this->connection->isActive());
     }
@@ -197,11 +212,13 @@ class ConnectionTest extends TestCase
      */
     public function testIsActiveWithNonWritableConnection(): void
     {
-        $this->connection->markAsConnected();
-
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('isWritable')
             ->willReturn(false);
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
+        $this->connection->markAsConnected();
 
         $this->assertFalse($this->connection->isActive());
     }
@@ -260,11 +277,13 @@ class ConnectionTest extends TestCase
      */
     public function testPing(): void
     {
-        $this->connection->markAsConnected();
-
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('write')
             ->with($this->callback(fn($data): bool => (string)$data !== ''));
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
+        $this->connection->markAsConnected();
 
         $this->connection->ping('websocket');
     }
@@ -276,13 +295,16 @@ class ConnectionTest extends TestCase
      */
     public function testPingWithPusherType(): void
     {
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('write')
             ->with($this->callback(function ($data): bool {
                 $decoded = json_decode($data, true);
 
                 return $decoded['event'] === 'pusher:ping';
             }));
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
 
         $this->connection->ping('pusher');
     }
@@ -431,11 +453,13 @@ class ConnectionTest extends TestCase
      */
     public function testControl(): void
     {
-        $this->connection->markAsConnected();
-
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('write')
             ->with($this->callback(fn($data): bool => (string)$data !== ''));
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
+        $this->connection->markAsConnected();
 
         $this->connection->control(0x8, 'close payload');
     }
@@ -447,11 +471,13 @@ class ConnectionTest extends TestCase
      */
     public function testControlWithException(): void
     {
-        $this->connection->markAsConnected();
-
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('write')
             ->willThrowException(new Exception('Control failed'));
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
+        $this->connection->markAsConnected();
 
         $this->connection->control(0x8);
         $this->assertTrue($this->connection->isConnected());
@@ -464,10 +490,12 @@ class ConnectionTest extends TestCase
      */
     public function testSendMessage(): void
     {
-        $this->connection->markAsConnected();
-
-        $this->mockReactConnection->expects($this->once())
+        $reactConnection = $this->createMock(ReactConnectionInterface::class);
+        $reactConnection->expects($this->once())
             ->method('write');
+
+        $this->connection = new Connection($reactConnection, 'test-connection-id');
+        $this->connection->markAsConnected();
 
         $this->connection->sendMessage('test message');
     }

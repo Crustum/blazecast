@@ -7,6 +7,7 @@ use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\Test\Support\PusherControllerTestHelper;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\ConnectionsController;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface;
+use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\Utils;
@@ -66,20 +67,13 @@ class ConnectionsControllerTest extends TestCase
         $appId = 'test-app';
         $params = ['appId' => $appId];
 
-        // Configure controller with test application data
-        $this->helper->configureController($this->controller, [
-            'application' => $this->testApp,
-        ]);
-
-        // Mock connection manager to return connection data
-        $this->helper->getConnectionManager()
-            ->expects($this->once())
+        $connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $connectionManager->expects($this->once())
             ->method('getConnectionsForApp')
             ->with($appId)
             ->willReturn(['conn1', 'conn2', 'conn3']);
 
-        $this->helper->getConnectionManager()
-            ->expects($this->once())
+        $connectionManager->expects($this->once())
             ->method('getAppStats')
             ->with($appId)
             ->willReturn([
@@ -88,10 +82,21 @@ class ConnectionsControllerTest extends TestCase
                 'http_requests' => 5,
             ]);
 
+        $controller = new ConnectionsController(
+            $this->helper->getApplicationManager(),
+            $this->helper->getChannelManager(),
+            $connectionManager,
+        );
+
+        // Configure controller with test application data
+        $this->helper->configureController($controller, [
+            'application' => $this->testApp,
+        ]);
+
         $request = $this->createRequest('GET', "/apps/{$appId}/connections");
         $connection = $this->helper->getConnection();
 
-        $response = $this->helper->callProtectedMethod($this->controller, 'handle', [$request, $connection, $params]);
+        $response = $this->helper->callProtectedMethod($controller, 'handle', [$request, $connection, $params]);
 
         $this->assertEquals(200, $response->getStatusCode());
 
@@ -113,20 +118,13 @@ class ConnectionsControllerTest extends TestCase
         $appId = 'test-app';
         $params = ['appId' => $appId];
 
-        // Configure controller with test application data
-        $this->helper->configureController($this->controller, [
-            'application' => $this->testApp,
-        ]);
-
-        // Mock connection manager to return empty data
-        $this->helper->getConnectionManager()
-            ->expects($this->once())
+        $connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $connectionManager->expects($this->once())
             ->method('getConnectionsForApp')
             ->with($appId)
             ->willReturn([]);
 
-        $this->helper->getConnectionManager()
-            ->expects($this->once())
+        $connectionManager->expects($this->once())
             ->method('getAppStats')
             ->with($appId)
             ->willReturn([
@@ -135,10 +133,21 @@ class ConnectionsControllerTest extends TestCase
                 'http_requests' => 0,
             ]);
 
+        $controller = new ConnectionsController(
+            $this->helper->getApplicationManager(),
+            $this->helper->getChannelManager(),
+            $connectionManager,
+        );
+
+        // Configure controller with test application data
+        $this->helper->configureController($controller, [
+            'application' => $this->testApp,
+        ]);
+
         $request = $this->createRequest('GET', "/apps/{$appId}/connections");
         $connection = $this->helper->getConnection();
 
-        $response = $this->helper->callProtectedMethod($this->controller, 'handle', [$request, $connection, $params]);
+        $response = $this->helper->callProtectedMethod($controller, 'handle', [$request, $connection, $params]);
 
         $this->assertEquals(200, $response->getStatusCode());
 

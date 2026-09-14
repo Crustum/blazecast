@@ -10,7 +10,6 @@ use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use Crustum\BlazeCast\WebSocket\Redis\PubSub;
 use Exception;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -22,20 +21,17 @@ class RedisPubSubHandlerTest extends TestCase
 {
     private RedisPubSubHandler $handler;
 
-    private PubSub&MockObject $mockPubSub;
+    private PubSub $mockPubSub;
 
     /**
      * @var \PHPUnit\Framework\MockObject\Stub&Server
      */
     private Server&Stub $stubServer;
 
-    private Connection&MockObject $mockConnection;
-
     protected function setUp(): void
     {
-        $this->mockPubSub = $this->createMock(PubSub::class);
+        $this->mockPubSub = $this->createStub(PubSub::class);
         $this->stubServer = $this->createStub(Server::class);
-        $this->mockConnection = $this->createMock(Connection::class);
 
         $this->handler = new RedisPubSubHandler($this->mockPubSub);
         $this->handler->setServer($this->stubServer);
@@ -106,15 +102,19 @@ class RedisPubSubHandlerTest extends TestCase
         ];
         $message = new Message('redis.publish', $data);
 
-        $this->mockPubSub->expects($this->once())
+        $pubSub = $this->createMock(PubSub::class);
+        $pubSub->expects($this->once())
             ->method('publish')
             ->with('test-channel', 'test message');
 
-        $this->mockConnection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('redis.published'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -128,15 +128,19 @@ class RedisPubSubHandlerTest extends TestCase
 
         $expectedJson = json_encode(['type' => 'notification', 'content' => 'hello']);
 
-        $this->mockPubSub->expects($this->once())
+        $pubSub = $this->createMock(PubSub::class);
+        $pubSub->expects($this->once())
             ->method('publish')
             ->with('test-channel', $expectedJson);
 
-        $this->mockConnection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('redis.published'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -145,14 +149,18 @@ class RedisPubSubHandlerTest extends TestCase
         $data = ['message' => 'test message'];
         $message = new Message('redis.publish', $data);
 
-        $this->mockPubSub->expects($this->never())
+        $pubSub = $this->createMock(PubSub::class);
+        $pubSub->expects($this->never())
             ->method('publish');
 
-        $this->mockConnection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('Missing channel or message'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -161,14 +169,18 @@ class RedisPubSubHandlerTest extends TestCase
         $data = ['channel' => 'test-channel'];
         $message = new Message('redis.publish', $data);
 
-        $this->mockPubSub->expects($this->never())
+        $pubSub = $this->createMock(PubSub::class);
+        $pubSub->expects($this->never())
             ->method('publish');
 
-        $this->mockConnection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('Missing channel or message'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -177,28 +189,33 @@ class RedisPubSubHandlerTest extends TestCase
         $data = ['channel' => 'test-channel'];
         $message = new Message('redis.subscribe', $data);
 
-        $this->mockConnection->expects($this->once())
+        $pubSub = $this->createMock(PubSub::class);
+        $connection = $this->createMock(Connection::class);
+
+        $connection->expects($this->once())
             ->method('getId')
             ->willReturn('conn-123');
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('getAttribute')
             ->with('redis_channels', [])
             ->willReturn([]);
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('setAttribute')
             ->with('redis_channels', ['test-channel']);
 
-        $this->mockPubSub->expects($this->once())
+        $pubSub->expects($this->once())
             ->method('subscribe')
             ->with('test-channel', $this->isCallable());
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('redis.subscribed'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -207,26 +224,31 @@ class RedisPubSubHandlerTest extends TestCase
         $data = ['channel' => 'test-channel'];
         $message = new Message('redis.subscribe', $data);
 
-        $this->mockConnection->expects($this->once())
+        $pubSub = $this->createMock(PubSub::class);
+        $connection = $this->createMock(Connection::class);
+
+        $connection->expects($this->once())
             ->method('getId')
             ->willReturn('conn-123');
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('getAttribute')
             ->with('redis_channels', [])
             ->willReturn(['test-channel']);
 
-        $this->mockConnection->expects($this->never())
+        $connection->expects($this->never())
             ->method('setAttribute');
 
-        $this->mockPubSub->expects($this->never())
+        $pubSub->expects($this->never())
             ->method('subscribe');
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('Already subscribed'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -235,14 +257,18 @@ class RedisPubSubHandlerTest extends TestCase
         $data = [];
         $message = new Message('redis.subscribe', $data);
 
-        $this->mockPubSub->expects($this->never())
+        $pubSub = $this->createMock(PubSub::class);
+        $pubSub->expects($this->never())
             ->method('subscribe');
 
-        $this->mockConnection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('Missing channel'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -251,28 +277,33 @@ class RedisPubSubHandlerTest extends TestCase
         $data = ['channel' => 'test-channel'];
         $message = new Message('redis.unsubscribe', $data);
 
-        $this->mockConnection->expects($this->once())
+        $pubSub = $this->createMock(PubSub::class);
+        $connection = $this->createMock(Connection::class);
+
+        $connection->expects($this->once())
             ->method('getId')
             ->willReturn('conn-123');
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('getAttribute')
             ->with('redis_channels', [])
             ->willReturn(['test-channel', 'other-channel']);
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('setAttribute')
             ->with('redis_channels', [1 => 'other-channel']);
 
-        $this->mockPubSub->expects($this->once())
+        $pubSub->expects($this->once())
             ->method('unsubscribe')
             ->with('test-channel');
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('redis.unsubscribed'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -281,14 +312,18 @@ class RedisPubSubHandlerTest extends TestCase
         $data = [];
         $message = new Message('redis.unsubscribe', $data);
 
-        $this->mockPubSub->expects($this->never())
+        $pubSub = $this->createMock(PubSub::class);
+        $pubSub->expects($this->never())
             ->method('unsubscribe');
 
-        $this->mockConnection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('Missing channel'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -297,11 +332,12 @@ class RedisPubSubHandlerTest extends TestCase
         $handler = new RedisPubSubHandler();
         $message = new Message('redis.publish', ['channel' => 'test', 'message' => 'test']);
 
-        $this->mockConnection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('Redis PubSub is not available'));
 
-        $handler->handle($this->mockConnection, $message);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -313,15 +349,19 @@ class RedisPubSubHandlerTest extends TestCase
         ];
         $message = new Message('redis.publish', $data);
 
-        $this->mockPubSub->expects($this->once())
+        $pubSub = $this->createMock(PubSub::class);
+        $pubSub->expects($this->once())
             ->method('publish')
             ->willThrowException(new Exception('Redis connection failed'));
 
-        $this->mockConnection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('Failed to publish message to Redis'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -330,24 +370,29 @@ class RedisPubSubHandlerTest extends TestCase
         $data = ['channel' => 'test-channel'];
         $message = new Message('redis.subscribe', $data);
 
-        $this->mockConnection->expects($this->once())
+        $pubSub = $this->createMock(PubSub::class);
+        $connection = $this->createMock(Connection::class);
+
+        $connection->expects($this->once())
             ->method('getId')
             ->willReturn('conn-123');
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('getAttribute')
             ->with('redis_channels', [])
             ->willReturn([]);
 
-        $this->mockPubSub->expects($this->once())
+        $pubSub->expects($this->once())
             ->method('subscribe')
             ->willThrowException(new Exception('Redis connection failed'));
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('Failed to subscribe to Redis channel'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 
     #[Test]
@@ -356,23 +401,28 @@ class RedisPubSubHandlerTest extends TestCase
         $data = ['channel' => 'test-channel'];
         $message = new Message('redis.unsubscribe', $data);
 
-        $this->mockConnection->expects($this->once())
+        $pubSub = $this->createMock(PubSub::class);
+        $connection = $this->createMock(Connection::class);
+
+        $connection->expects($this->once())
             ->method('getId')
             ->willReturn('conn-123');
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('getAttribute')
             ->with('redis_channels', [])
             ->willReturn(['test-channel']);
 
-        $this->mockPubSub->expects($this->once())
+        $pubSub->expects($this->once())
             ->method('unsubscribe')
             ->willThrowException(new Exception('Redis connection failed'));
 
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->stringContains('Failed to unsubscribe from Redis channel'));
 
-        $this->handler->handle($this->mockConnection, $message);
+        $handler = new RedisPubSubHandler($pubSub);
+        $handler->setServer($this->stubServer);
+        $handler->handle($connection, $message);
     }
 }

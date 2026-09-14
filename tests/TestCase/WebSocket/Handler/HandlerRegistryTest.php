@@ -11,7 +11,6 @@ use Crustum\BlazeCast\WebSocket\Handler\PingHandler;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -28,13 +27,13 @@ class HandlerRegistryTest extends TestCase
      */
     private Server&Stub $stubServer;
 
-    private Connection&MockObject $mockConnection;
+    private Connection $mockConnection;
 
     protected function setUp(): void
     {
         $this->registry = new HandlerRegistry();
         $this->stubServer = $this->createStub(Server::class);
-        $this->mockConnection = $this->createMock(Connection::class);
+        $this->mockConnection = $this->createStub(Connection::class);
     }
 
     #[Test]
@@ -59,9 +58,9 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function setServerUpdatesAllRegisteredHandlers(): void
     {
-        /** @var HandlerInterface&MockObject $handler1 */
+        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler1 */
         $handler1 = $this->createMock(HandlerInterface::class);
-        /** @var HandlerInterface&MockObject $handler2 */
+        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler2 */
         $handler2 = $this->createMock(HandlerInterface::class);
 
         $this->registry->register($handler1);
@@ -97,7 +96,7 @@ class HandlerRegistryTest extends TestCase
     {
         $this->registry->setServer($this->stubServer);
 
-        /** @var HandlerInterface&MockObject $handler */
+        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler */
         $handler = $this->createMock(HandlerInterface::class);
         $handler->expects($this->once())
             ->method('setServer')
@@ -109,7 +108,7 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function registerDoesNotSetServerOnHandlerIfNoServerExists(): void
     {
-        /** @var HandlerInterface&MockObject $handler */
+        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler */
         $handler = $this->createMock(HandlerInterface::class);
         $handler->expects($this->never())
             ->method('setServer');
@@ -150,7 +149,7 @@ class HandlerRegistryTest extends TestCase
     {
         $message = new Message('test_event', ['data' => 'test']);
 
-        /** @var HandlerInterface&MockObject $handler */
+        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler */
         $handler = $this->createMock(HandlerInterface::class);
         $handler->expects($this->once())
             ->method('supports')
@@ -172,7 +171,7 @@ class HandlerRegistryTest extends TestCase
     {
         $message = new Message('unsupported_event', ['data' => 'test']);
 
-        /** @var HandlerInterface&MockObject $handler */
+        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler */
         $handler = $this->createMock(HandlerInterface::class);
         $handler->expects($this->once())
             ->method('supports')
@@ -193,7 +192,7 @@ class HandlerRegistryTest extends TestCase
     {
         $message = new Message('test_event', ['data' => 'test']);
 
-        /** @var HandlerInterface&MockObject $handler1 */
+        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler1 */
         $handler1 = $this->createMock(HandlerInterface::class);
         $handler1->expects($this->once())
             ->method('supports')
@@ -203,7 +202,7 @@ class HandlerRegistryTest extends TestCase
             ->method('handle')
             ->with($this->mockConnection, $message);
 
-        /** @var HandlerInterface&MockObject $handler2 */
+        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler2 */
         $handler2 = $this->createMock(HandlerInterface::class);
         $handler2->expects($this->never())
             ->method('supports');
@@ -222,7 +221,7 @@ class HandlerRegistryTest extends TestCase
     {
         $message = new Message('test_event', ['data' => 'test']);
 
-        /** @var HandlerInterface&MockObject $handler1 */
+        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler1 */
         $handler1 = $this->createMock(HandlerInterface::class);
         $handler1->expects($this->once())
             ->method('supports')
@@ -231,7 +230,7 @@ class HandlerRegistryTest extends TestCase
         $handler1->expects($this->never())
             ->method('handle');
 
-        /** @var HandlerInterface&MockObject $handler2 */
+        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler2 */
         $handler2 = $this->createMock(HandlerInterface::class);
         $handler2->expects($this->once())
             ->method('supports')
@@ -258,9 +257,10 @@ class HandlerRegistryTest extends TestCase
         $this->registry->register($defaultHandler);
 
         $pingMessage = new Message('ping');
-        $this->mockConnection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('updateActivity');
-        $this->mockConnection->expects($this->once())
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->callback(function ($json): bool {
                 $decoded = json_decode($json, true);
@@ -268,7 +268,7 @@ class HandlerRegistryTest extends TestCase
                 return $decoded['event'] === 'pong';
             }));
 
-        $result = $this->registry->handle($this->mockConnection, $pingMessage);
+        $result = $this->registry->handle($connection, $pingMessage);
         $this->assertTrue($result);
     }
 
@@ -282,7 +282,8 @@ class HandlerRegistryTest extends TestCase
         $this->registry->register($defaultHandler);
 
         $unknownMessage = new Message('unknown_event', ['test' => 'data']);
-        $this->mockConnection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
             ->method('send')
             ->with($this->callback(function ($json): bool {
                 $decoded = json_decode($json, true);
@@ -290,7 +291,7 @@ class HandlerRegistryTest extends TestCase
                 return $decoded['event'] === 'echo';
             }));
 
-        $result = $this->registry->handle($this->mockConnection, $unknownMessage);
+        $result = $this->registry->handle($connection, $unknownMessage);
         $this->assertTrue($result);
     }
 
@@ -353,7 +354,7 @@ class HandlerRegistryTest extends TestCase
         $channel = 'test-channel';
         $message = new Message($eventType, $data, $channel);
 
-        /** @var HandlerInterface&MockObject $handler */
+        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler */
         $handler = $this->createMock(HandlerInterface::class);
         $handler->expects($this->once())
             ->method('supports')

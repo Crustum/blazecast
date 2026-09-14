@@ -223,11 +223,11 @@ class ChannelManagerTest extends TestCase
         $channel2 = $this->manager->getChannel('presence-channel');
 
         // Create simple mock connections
-        $connection1 = $this->createMock(Connection::class);
+        $connection1 = $this->createStub(Connection::class);
         $connection1->method('getId')->willReturn('conn-1');
         $connection1->method('getAttribute')->willReturnCallback(fn($key): ?string => $key === 'app_id' ? 'test-app' : null);
 
-        $connection2 = $this->createMock(Connection::class);
+        $connection2 = $this->createStub(Connection::class);
         $connection2->method('getId')->willReturn('conn-2');
         $connection2->method('getAttribute')->willReturnCallback(fn($key): ?string => $key === 'app_id' ? 'test-app' : ($key === 'user_id' ? 'user-2' : null));
 

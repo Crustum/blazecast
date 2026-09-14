@@ -172,10 +172,10 @@ class ServerTest extends TestCase
      */
     public function testChannelConnectionManagerWorks(): void
     {
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $connection->method('getId')->willReturn('test-connection-1');
 
-        $channel = $this->createMock(PusherChannelInterface::class);
+        $channel = $this->createStub(PusherChannelInterface::class);
         $channel->method('getName')->willReturn('test-channel');
 
         $this->connectionManager->subscribe($connection, $channel);
@@ -223,7 +223,7 @@ class ServerTest extends TestCase
             $this->loop,
         );
 
-        $connection1 = $this->createMock(Connection::class);
+        $connection1 = $this->createStub(Connection::class);
         $connection1->method('getId')->willReturn('connection-1');
         $connection1->method('getAttribute')->willReturn('1');
 

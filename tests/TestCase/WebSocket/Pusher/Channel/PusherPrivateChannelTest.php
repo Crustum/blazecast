@@ -9,7 +9,6 @@ use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPrivateChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Exception\ConnectionUnauthorizedException;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -23,16 +22,16 @@ class PusherPrivateChannelTest extends TestCase
     private PusherPrivateChannel $channel;
 
     /**
-     * Mock connection object
+     * Stub connection object
      */
-    private MockObject|Connection $connection;
+    private Connection $connection;
 
     /**
-     * Mock application manager
+     * Stub application manager
      *
-     * @var \PHPUnit\Framework\MockObject\MockObject&\Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager
      */
-    private ApplicationManager&MockObject $applicationManager;
+    private ApplicationManager $applicationManager;
 
     protected function setUp(): void
     {
@@ -40,10 +39,10 @@ class PusherPrivateChannelTest extends TestCase
 
         $this->channel = new PusherPrivateChannel('private-test-channel');
 
-        $this->connection = $this->createMock(Connection::class);
+        $this->connection = $this->createStub(Connection::class);
         $this->connection->method('getId')->willReturn('connection-123');
 
-        $this->applicationManager = $this->createMock(ApplicationManager::class);
+        $this->applicationManager = $this->createStub(ApplicationManager::class);
         $this->channel->setApplicationManager($this->applicationManager);
     }
 
@@ -80,9 +79,12 @@ class PusherPrivateChannelTest extends TestCase
     #[Test]
     public function privateChannelRejectsInvalidApplicationKey(): void
     {
-        $this->applicationManager->method('getApplicationByKey')
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->once())
+            ->method('getApplicationByKey')
             ->with('app-key')
             ->willReturn(null);
+        $this->channel->setApplicationManager($applicationManager);
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid application key');
@@ -93,13 +95,16 @@ class PusherPrivateChannelTest extends TestCase
     #[Test]
     public function privateChannelRejectsInvalidSignature(): void
     {
-        $this->applicationManager->method('getApplicationByKey')
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->once())
+            ->method('getApplicationByKey')
             ->with('app-key')
             ->willReturn([
                 'id' => 'app-id',
                 'key' => 'app-key',
                 'secret' => 'app-secret',
             ]);
+        $this->channel->setApplicationManager($applicationManager);
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid authentication signature');
@@ -116,13 +121,16 @@ class PusherPrivateChannelTest extends TestCase
         $secret = 'app-secret';
         $validSignature = hash_hmac('sha256', $signatureString, $secret);
 
-        $this->applicationManager->method('getApplicationByKey')
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->once())
+            ->method('getApplicationByKey')
             ->with('app-key')
             ->willReturn([
                 'id' => 'app-id',
                 'key' => 'app-key',
                 'secret' => $secret,
             ]);
+        $this->channel->setApplicationManager($applicationManager);
 
         $this->channel->subscribe($this->connection, "app-key:{$validSignature}");
 
@@ -139,31 +147,36 @@ class PusherPrivateChannelTest extends TestCase
         $secret = 'app-secret';
         $validSignature = hash_hmac('sha256', $signatureString, $secret);
 
-        $this->applicationManager->method('getApplicationByKey')
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->once())
+            ->method('getApplicationByKey')
             ->with('app-key')
             ->willReturn([
                 'id' => 'app-id',
                 'key' => 'app-key',
                 'secret' => $secret,
             ]);
+        $this->channel->setApplicationManager($applicationManager);
 
         $attributes = [];
-        $this->connection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->method('getId')->willReturn('connection-123');
+        $connection->expects($this->once())
             ->method('setAttribute')
             ->with("channel_data_{$channelName}", $this->anything())
             ->willReturnCallback(function ($key, $value) use (&$attributes): void {
                 $attributes[$key] = $value;
             });
 
-        $this->channel->subscribe($this->connection, "app-key:{$validSignature}", $channelData);
+        $this->channel->subscribe($connection, "app-key:{$validSignature}", $channelData);
 
-        $this->assertTrue($this->channel->hasConnection($this->connection));
+        $this->assertTrue($this->channel->hasConnection($connection));
     }
 
     #[Test]
     public function privateChannelCanGetAndSetApplicationManager(): void
     {
-        $newManager = $this->createMock(ApplicationManager::class);
+        $newManager = $this->createStub(ApplicationManager::class);
         $this->channel->setApplicationManager($newManager);
 
         $this->assertSame($newManager, $this->channel->getApplicationManager());
@@ -196,22 +209,27 @@ class PusherPrivateChannelTest extends TestCase
         $secret = 'app-secret';
         $validSignature = hash_hmac('sha256', $signatureString, $secret);
 
-        $this->applicationManager->method('getApplicationByKey')
+        $applicationManager = $this->createMock(ApplicationManager::class);
+        $applicationManager->expects($this->once())
+            ->method('getApplicationByKey')
             ->with('app-key')
             ->willReturn([
                 'id' => 'app-id',
                 'key' => 'app-key',
                 'secret' => $secret,
             ]);
+        $this->channel->setApplicationManager($applicationManager);
 
-        $this->connection->expects($this->once())
+        $connection = $this->createMock(Connection::class);
+        $connection->method('getId')->willReturn('connection-123');
+        $connection->expects($this->once())
             ->method('removeAttribute')
             ->with("channel_data_{$channelName}");
 
-        $this->channel->subscribe($this->connection, "app-key:{$validSignature}");
+        $this->channel->subscribe($connection, "app-key:{$validSignature}");
 
-        $this->channel->unsubscribe($this->connection);
+        $this->channel->unsubscribe($connection);
 
-        $this->assertFalse($this->channel->hasConnection($this->connection));
+        $this->assertFalse($this->channel->hasConnection($connection));
     }
 }

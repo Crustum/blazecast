@@ -12,9 +12,8 @@ use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPresenceChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
-use PHPUnit\Framework\MockObject\MockBuilder;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\MockObject\Rule\AnyInvokedCount;
+use PHPUnit\Framework\MockObject\TestStubBuilder;
 use ReflectionClass;
 use stdClass;
 
@@ -43,12 +42,12 @@ class PusherControllerTestHelper
     private ApplicationManager $applicationManager;
 
     /**
-     * @var ChannelManager|\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager|\PHPUnit\Framework\MockObject\Stub
      */
     private $channelManager;
 
     /**
-     * @var ChannelConnectionManager|\PHPUnit\Framework\MockObject\MockObject
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager|\PHPUnit\Framework\MockObject\Stub
      */
     private $connectionManager;
 
@@ -85,13 +84,13 @@ class PusherControllerTestHelper
         $appsProperty = $reflection->getProperty('applications');
         $appsProperty->setValue($this->applicationManager, ['test-app' => $this->testApp]);
 
-        $this->channelManager = (new MockBuilder($this->testCase, ChannelManager::class))
+        $this->channelManager = (new TestStubBuilder(ChannelManager::class))
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getStub();
 
-        $this->connectionManager = (new MockBuilder($this->testCase, ChannelConnectionManager::class))
+        $this->connectionManager = (new TestStubBuilder(ChannelConnectionManager::class))
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getStub();
 
         $reactConnection = new TestConnection();
         $this->connection = new Connection($reactConnection);
@@ -160,57 +159,51 @@ class PusherControllerTestHelper
     }
 
     /**
-     * Create a mock PusherChannel
+     * Create a stub PusherChannel
      *
      * @param string $name Channel name
      * @param int $connectionCount Connection count
-     * @return PusherChannel|\PHPUnit\Framework\MockObject\MockObject
+     * @return \Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel|\PHPUnit\Framework\MockObject\Stub
      */
     public function createChannelMock(string $name, int $connectionCount = 5)
     {
-        $channel = (new MockBuilder($this->testCase, PusherChannel::class))
+        $channel = (new TestStubBuilder(PusherChannel::class))
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getStub();
 
-        $channel->expects($this->any())
-            ->method('getName')
+        $channel->method('getName')
             ->willReturn($name);
 
-        $channel->expects($this->any())
-            ->method('getConnectionCount')
+        $channel->method('getConnectionCount')
             ->willReturn($connectionCount);
 
-        $channel->expects($this->any())
-            ->method('getConnections')
+        $channel->method('getConnections')
             ->willReturn(array_fill(0, $connectionCount, null));
 
         return $channel;
     }
 
     /**
-     * Create a mock PusherPresenceChannel
+     * Create a stub PusherPresenceChannel
      *
      * @param string $name Channel name
      * @param array<string, mixed> $users Channel users
      * @param int $connectionCount Connection count
-     * @return PusherPresenceChannel|\PHPUnit\Framework\MockObject\MockObject
+     * @return \Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPresenceChannel|\PHPUnit\Framework\MockObject\Stub
      */
     public function createPresenceChannelMock(string $name, array $users = [], int $connectionCount = 5)
     {
-        $channel = (new MockBuilder($this->testCase, PusherPresenceChannel::class))
+        $channel = (new TestStubBuilder(PusherPresenceChannel::class))
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getStub();
 
-        $channel->expects($this->any())
-            ->method('getName')
+        $channel->method('getName')
             ->willReturn($name);
 
-        $channel->expects($this->any())
-            ->method('getConnectionCount')
+        $channel->method('getConnectionCount')
             ->willReturn($connectionCount);
 
-        $channel->expects($this->any())
-            ->method('getUsers')
+        $channel->method('getUsers')
             ->willReturn($users);
 
         return $channel;
@@ -224,8 +217,7 @@ class PusherControllerTestHelper
      */
     public function setupChannels(array $channels): void
     {
-        $this->channelManager->expects($this->any())
-            ->method('getChannels')
+        $this->channelManager->method('getChannels')
             ->willReturn($channels);
 
         $map = [];
@@ -234,8 +226,7 @@ class PusherControllerTestHelper
         }
 
         if ($map !== []) {
-            $this->channelManager->expects($this->any())
-                ->method('getChannel')
+            $this->channelManager->method('getChannel')
                 ->willReturnMap($map);
         }
     }
@@ -269,7 +260,7 @@ class PusherControllerTestHelper
     /**
      * Get channel manager
      *
-     * @return ChannelManager|\PHPUnit\Framework\MockObject\MockObject
+     * @return \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager|\PHPUnit\Framework\MockObject\Stub
      */
     public function getChannelManager()
     {
@@ -279,7 +270,7 @@ class PusherControllerTestHelper
     /**
      * Get connection manager
      *
-     * @return ChannelConnectionManager|\PHPUnit\Framework\MockObject\MockObject
+     * @return \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager|\PHPUnit\Framework\MockObject\Stub
      */
     public function getConnectionManager()
     {
@@ -353,10 +344,5 @@ class PusherControllerTestHelper
             ->disableOriginalConstructor()
             ->onlyMethods([$methodName])
             ->getMock();
-    }
-
-    public function any(): AnyInvokedCount
-    {
-        return new AnyInvokedCount();
     }
 }

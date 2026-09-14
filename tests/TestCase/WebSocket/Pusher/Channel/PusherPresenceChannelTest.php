@@ -9,7 +9,6 @@ use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPresenceChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Exception\ConnectionUnauthorizedException;
 use JsonException;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -26,12 +25,12 @@ class PusherPresenceChannelTest extends TestCase
     /**
      * Mock connection object
      */
-    private MockObject|Connection $connection;
+    private Connection $connection;
 
     /**
      * Mock application manager
      */
-    private MockObject&ApplicationManager $applicationManager;
+    private ApplicationManager $applicationManager;
 
     /**
      * Connection attributes storage
@@ -48,7 +47,7 @@ class PusherPresenceChannelTest extends TestCase
 
         $this->connectionAttributes = [];
 
-        $this->connection = $this->createMock(Connection::class);
+        $this->connection = $this->createStub(Connection::class);
         $this->connection->method('getId')->willReturn('connection-123');
 
         $this->connection->method('setAttribute')
@@ -74,9 +73,8 @@ class PusherPresenceChannelTest extends TestCase
             ->willReturnCallback(function (string $data): void {
             });
 
-        $this->applicationManager = $this->createMock(ApplicationManager::class);
+        $this->applicationManager = $this->createStub(ApplicationManager::class);
         $this->applicationManager->method('getApplicationByKey')
-            ->with('app-key')
             ->willReturn([
                 'id' => 'app-id',
                 'key' => 'app-key',
@@ -176,7 +174,7 @@ class PusherPresenceChannelTest extends TestCase
     {
         $this->subscribeTestMember($this->connection, 'user-123', ['name' => 'User 1']);
 
-        $connection2 = $this->createMock(Connection::class);
+        $connection2 = $this->createStub(Connection::class);
         $connection2->method('getId')->willReturn('connection-456');
 
         $connection2Attributes = [];
@@ -227,7 +225,7 @@ class PusherPresenceChannelTest extends TestCase
     {
         $this->subscribeTestMember($this->connection, 'user-123', ['name' => 'User 1']);
 
-        $connection2 = $this->createMock(Connection::class);
+        $connection2 = $this->createStub(Connection::class);
         $connection2->method('getId')->willReturn('connection-456');
         $connection2Attributes = [];
         $connection2->method('setAttribute')
@@ -257,11 +255,11 @@ class PusherPresenceChannelTest extends TestCase
         $channel->setApplicationManager($this->applicationManager);
 
         $userData = ['user_id' => 'user-123', 'user_info' => ['name' => 'Test User']];
-        $connection1 = $this->createMock(Connection::class);
+        $connection1 = $this->createStub(Connection::class);
         $connection1->method('getId')->willReturn('connection-1');
 
         $receivedMessages = [];
-        $connection2 = $this->createMock(Connection::class);
+        $connection2 = $this->createStub(Connection::class);
         $connection2->method('getId')->willReturn('connection-2');
         $connection2->method('send')->willReturnCallback(function (string $data) use (&$receivedMessages): void {
             $receivedMessages[] = $data;
@@ -290,7 +288,7 @@ class PusherPresenceChannelTest extends TestCase
 
         $userId = 'user-123';
         $receivedMessages = [];
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $connection->method('getId')->willReturn('connection-1');
         $connection->method('send')->willReturnCallback(function (string $data) use (&$receivedMessages): void {
             $receivedMessages[] = $data;
@@ -314,12 +312,12 @@ class PusherPresenceChannelTest extends TestCase
     /**
      * Helper method to subscribe a test member
      *
-     * @param \PHPUnit\Framework\MockObject\MockObject|\Crustum\BlazeCast\WebSocket\Connection $connection Connection mock
+     * @param \Crustum\BlazeCast\WebSocket\Connection $connection Connection mock
      * @param string $userId User ID
      * @param array<string, mixed> $userInfo User info
      * @return void
      */
-    private function subscribeTestMember(MockObject|Connection $connection, string $userId, array $userInfo): void
+    private function subscribeTestMember(Connection $connection, string $userId, array $userInfo): void
     {
         $connectionId = $connection->getId();
         $channelName = 'presence-test-channel';

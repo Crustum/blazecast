@@ -41,15 +41,15 @@ class SignaturePathPrefixTest extends TestCase
 
         $controller = new TestSignatureController(
             new ApplicationManager(),
-            $this->createMock(ChannelManager::class),
-            $this->createMock(ChannelConnectionManager::class),
+            $this->createStub(ChannelManager::class),
+            $this->createStub(ChannelConnectionManager::class),
         );
 
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn($requestPath);
         $uri->method('getQuery')->willReturn($queryString . '&auth_signature=' . $clientSignature);
 
-        $request = $this->createMock(RequestInterface::class);
+        $request = $this->createStub(RequestInterface::class);
         $request->method('getUri')->willReturn($uri);
         $request->method('getMethod')->willReturn($method);
         $request->method('getBody')->willReturn('');

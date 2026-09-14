@@ -7,6 +7,7 @@ use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\Test\Support\PusherControllerTestHelper;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
+use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Event\EventDispatcher;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\EventsController;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface;
@@ -231,7 +232,9 @@ class EventsControllerTest extends TestCase
             'data' => $expectedData,
         ];
 
-        $testChannel = $this->helper->createChannelMock('test-channel', 5);
+        $testChannel = $this->createMock(PusherChannel::class);
+        $testChannel->method('getName')->willReturn('test-channel');
+        $testChannel->method('getConnectionCount')->willReturn(5);
 
         $testChannel->expects($this->once())
             ->method('broadcast')
@@ -239,8 +242,9 @@ class EventsControllerTest extends TestCase
 
         $this->helper->getChannelManager()
             ->method('getChannel')
-            ->with($this->equalTo('test-channel'))
-            ->willReturn($testChannel);
+            ->willReturnMap([
+                ['test-channel', $testChannel],
+            ]);
 
         $eventData = [
             'name' => $expectedEventName,
@@ -278,8 +282,12 @@ class EventsControllerTest extends TestCase
             'data' => $expectedData2,
         ];
 
-        $testChannel1 = $this->helper->createChannelMock('test-channel-1', 5);
-        $testChannel2 = $this->helper->createChannelMock('test-channel-2', 10);
+        $testChannel1 = $this->createMock(PusherChannel::class);
+        $testChannel1->method('getName')->willReturn('test-channel-1');
+        $testChannel1->method('getConnectionCount')->willReturn(5);
+        $testChannel2 = $this->createMock(PusherChannel::class);
+        $testChannel2->method('getName')->willReturn('test-channel-2');
+        $testChannel2->method('getConnectionCount')->willReturn(10);
 
         $testChannel1->expects($this->once())
             ->method('broadcast')
@@ -291,17 +299,10 @@ class EventsControllerTest extends TestCase
 
         $channelManager = $this->helper->getChannelManager();
         $channelManager->method('getChannel')
-            ->willReturnCallback(function ($name) use ($testChannel1, $testChannel2) {
-                if ($name === 'test-channel-1') {
-                    return $testChannel1;
-                }
-
-                if ($name === 'test-channel-2') {
-                    return $testChannel2;
-                }
-
-                return null;
-            });
+            ->willReturnMap([
+                ['test-channel-1', $testChannel1],
+                ['test-channel-2', $testChannel2],
+            ]);
 
         $batchData = [
             'batch' => [
@@ -334,8 +335,9 @@ class EventsControllerTest extends TestCase
 
         $channelManager = $this->helper->getChannelManager();
         $channelManager->method('getChannel')
-            ->with('test-channel')
-            ->willReturn($testChannel);
+            ->willReturnMap([
+                ['test-channel', $testChannel],
+            ]);
 
         $result = $this->helper->callProtectedMethod(
             $this->controller,

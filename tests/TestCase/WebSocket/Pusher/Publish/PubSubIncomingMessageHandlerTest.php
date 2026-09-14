@@ -33,11 +33,11 @@ class PubSubIncomingMessageHandlerTest extends TestCase
             ]],
         ]);
 
-        $reactExcluded = $this->createMock(ReactConnection::class);
+        $reactExcluded = $this->createStub(ReactConnection::class);
         $excluded = new Connection($reactExcluded);
         $excluded->setSocketId('1.excluded');
 
-        $reactOther = $this->createMock(ReactConnection::class);
+        $reactOther = $this->createStub(ReactConnection::class);
         $other = new Connection($reactOther);
         $other->setSocketId('2.other');
 
@@ -52,7 +52,7 @@ class PubSubIncomingMessageHandlerTest extends TestCase
         $channel->subscribe($excluded);
         $channel->subscribe($other);
 
-        $connectionManager = $this->createMock(ChannelConnectionManager::class);
+        $connectionManager = $this->createStub(ChannelConnectionManager::class);
         $connectionManager->method('getConnection')->willReturnCallback(fn(string $id): ?Connection => $id === '1.excluded' ? $excluded : null);
 
         $handler = new PubSubIncomingMessageHandler($applicationManager, $connectionManager);

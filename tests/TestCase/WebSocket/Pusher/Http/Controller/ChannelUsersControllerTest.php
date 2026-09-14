@@ -81,16 +81,16 @@ class ChannelUsersControllerTest extends TestCase
      */
     public function testIndexReturnsErrorForNonPresenceChannel(): void
     {
-        $regularChannel = $this->getMockBuilder(PusherChannelInterface::class)
-            ->getMock();
+        $regularChannel = $this->createStub(PusherChannelInterface::class);
 
         $regularChannel->method('getName')
             ->willReturn('public-channel');
 
         $this->helper->getChannelManager()
             ->method('getChannel')
-            ->with('public-channel')
-            ->willReturn($regularChannel);
+            ->willReturnMap([
+                ['public-channel', $regularChannel],
+            ]);
 
         $this->helper->configureController($this->controller, [
             'requestData' => [
@@ -153,9 +153,7 @@ class ChannelUsersControllerTest extends TestCase
             ['user_id' => 'user2', 'user_info' => ['name' => 'User 2']],
         ];
 
-        $presenceChannel = $this->getMockBuilder(PusherPresenceChannel::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $presenceChannel = $this->createStub(PusherPresenceChannel::class);
 
         $presenceChannel->method('getName')
             ->willReturn('presence-channel');
@@ -165,13 +163,15 @@ class ChannelUsersControllerTest extends TestCase
 
         $this->helper->getChannelManager()
             ->method('getChannel')
-            ->with('presence-channel')
-            ->willReturn($presenceChannel);
+            ->willReturnMap([
+                ['presence-channel', $presenceChannel],
+            ]);
 
         $this->helper->getChannelManager()
             ->method('hasChannel')
-            ->with('presence-channel')
-            ->willReturn(true);
+            ->willReturnMap([
+                ['presence-channel', true],
+            ]);
 
         $this->helper->configureController($this->controller, [
             'requestData' => [
@@ -202,9 +202,7 @@ class ChannelUsersControllerTest extends TestCase
      */
     public function testIndexReturnsEmptyUserList(): void
     {
-        $presenceChannel = $this->getMockBuilder(PusherPresenceChannel::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $presenceChannel = $this->createStub(PusherPresenceChannel::class);
 
         $presenceChannel->method('getName')
             ->willReturn('presence-empty');
@@ -214,13 +212,15 @@ class ChannelUsersControllerTest extends TestCase
 
         $this->helper->getChannelManager()
             ->method('getChannel')
-            ->with('presence-empty')
-            ->willReturn($presenceChannel);
+            ->willReturnMap([
+                ['presence-empty', $presenceChannel],
+            ]);
 
         $this->helper->getChannelManager()
             ->method('hasChannel')
-            ->with('presence-empty')
-            ->willReturn(true);
+            ->willReturnMap([
+                ['presence-empty', true],
+            ]);
 
         $this->helper->configureController($this->controller, [
             'requestData' => [

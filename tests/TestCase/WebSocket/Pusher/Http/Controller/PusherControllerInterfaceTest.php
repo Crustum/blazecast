@@ -18,10 +18,8 @@ class PusherControllerInterfaceTest extends TestCase
     public function testControllerCanBeInvoked(): void
     {
         $controller = new TestController();
-        $request = $this->getMockBuilder(RequestInterface::class)->getMock();
-        $connection = $this->getMockBuilder(Connection::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $request = $this->createStub(RequestInterface::class);
+        $connection = $this->createStub(Connection::class);
 
         $response = $controller($request, $connection, ['param1' => 'value1']);
 
@@ -37,10 +35,8 @@ class PusherControllerInterfaceTest extends TestCase
     public function testControllerIsStateless(): void
     {
         $controller = new TestController();
-        $request = $this->getMockBuilder(RequestInterface::class)->getMock();
-        $connection = $this->getMockBuilder(Connection::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $request = $this->createStub(RequestInterface::class);
+        $connection = $this->createStub(Connection::class);
 
         $response1 = $controller($request, $connection, ['param1' => 'value1']);
         $this->assertEquals('Test response with value1', $response1->getBody());
