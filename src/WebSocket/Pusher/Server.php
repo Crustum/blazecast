@@ -54,6 +54,10 @@ use InvalidArgumentException;
 use Psr\Http\Message\RequestInterface;
 use Ratchet\RFC6455\Handshake\RequestVerifier;
 use Ratchet\RFC6455\Handshake\ServerNegotiator;
+use Ratchet\RFC6455\Messaging\CloseFrameChecker;
+use Ratchet\RFC6455\Messaging\Frame;
+use Ratchet\RFC6455\Messaging\MessageBuffer;
+use Ratchet\RFC6455\Messaging\MessageInterface as RfcMessageInterface;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Socket\ConnectionInterface;
@@ -1049,6 +1053,12 @@ class Server implements WebSocketServerInterface
         try {
             $appContext = $this->extractAppContextFromPath($path);
             if (!$appContext) {
+                if ($this->isEchoPath($path)) {
+                    $this->handleEchoUpgrade($request, $connection);
+
+                    return;
+                }
+
                 throw new InvalidArgumentException('Invalid WebSocket path format, expected /app/{appKey}');
             }
 
@@ -1065,6 +1075,15 @@ class Server implements WebSocketServerInterface
                 ->withHeader('X-Powered-By', 'CakePHP BlazeCast');
 
             $connection->send(Message::toString($response));
+
+            if ($response->getStatusCode() !== 101) {
+                BlazeCastLogger::warning(__('Server: WebSocket handshake failed on connection {0} with status {1}', $connection->getId(), $response->getStatusCode()), [
+                    'scope' => ['socket.server'],
+                ]);
+                $connection->close();
+
+                return;
+            }
 
             $connection->markAsConnected();
 
@@ -1129,6 +1148,85 @@ class Server implements WebSocketServerInterface
             $this->closeConnection($connection, 4003, 'Origin not allowed');
         } catch (Throwable $e) {
             BlazeCastLogger::error(__('Server: WebSocket upgrade failed on connection {0}: {1}', $connection->getId(), $e->getMessage()), [
+                'scope' => ['socket.server'],
+            ]);
+            $this->closeConnection($connection, 400, 'WebSocket Upgrade Failed');
+        }
+    }
+
+    /**
+     * Check whether a path is served in raw echo mode.
+     *
+     * Echo mode exists for RFC6455 conformance runs (Autobahn fuzzingclient
+     * expects byte-exact echo, which the Pusher handshake cannot provide).
+     * Disabled unless 'echo_mode' is explicitly enabled in server config.
+     *
+     * @param string $path Stripped request path
+     * @return bool
+     */
+    protected function isEchoPath(string $path): bool
+    {
+        if (!($this->config['echo_mode'] ?? false)) {
+            return false;
+        }
+
+        return $path === ($this->config['echo_path'] ?? '/');
+    }
+
+    /**
+     * Handle WebSocket upgrade for the echo path.
+     *
+     * Same handshake stack as the Pusher path, but no application context,
+     * no origin/limit checks, and no welcome message. Data frames are echoed
+     * back through the per-connection MessageBuffer (see createMessageBuffer).
+     *
+     * @param \Psr\Http\Message\RequestInterface $request PSR-7 request
+     * @param \Crustum\BlazeCast\WebSocket\Connection $connection Unified connection
+     * @return void
+     */
+    protected function handleEchoUpgrade(RequestInterface $request, Connection $connection): void
+    {
+        try {
+            $response = $this->negotiator->handshake($request)
+                ->withHeader('X-Powered-By', 'CakePHP BlazeCast');
+
+            $connection->send(Message::toString($response));
+
+            if ($response->getStatusCode() !== 101) {
+                BlazeCastLogger::warning(__('Server: Echo handshake failed on connection {0} with status {1}', $connection->getId(), $response->getStatusCode()), [
+                    'scope' => ['socket.server'],
+                ]);
+                $connection->close();
+
+                return;
+            }
+
+            $connection->markAsConnected();
+            $connection->setAttribute('echo_mode', true);
+
+            $this->connectionRegistry->register($connection, [
+                'request' => $request,
+                'app_context' => null,
+                'upgraded_at' => time(),
+            ]);
+
+            $this->activeConnections[$connection->getId()] = [
+                'connection' => $connection,
+                'request' => $request,
+                'app_context' => null,
+                'upgraded_at' => time(),
+            ];
+
+            $this->createWebSocketConnection($connection);
+            $this->createMessageBuffer($connection, true);
+
+            BlazeCastLogger::debug(__('Server: Echo connection established for {0}', $connection->getId()), [
+                'scope' => ['socket.server'],
+            ]);
+
+            $this->getEventManager()->dispatch(new ConnectionEstablishedEvent($connection));
+        } catch (Throwable $e) {
+            BlazeCastLogger::error(__('Server: Echo upgrade failed on connection {0}: {1}', $connection->getId(), $e->getMessage()), [
                 'scope' => ['socket.server'],
             ]);
             $this->closeConnection($connection, 400, 'WebSocket Upgrade Failed');
@@ -1336,7 +1434,12 @@ class Server implements WebSocketServerInterface
     }
 
     /**
-     * Handle WebSocket frame data
+     * Handle WebSocket frame data.
+     *
+     * Frame parsing (masking, fragmentation, control frames, UTF-8, size
+     * limits) is delegated to ratchet/rfc6455 MessageBuffer, one instance
+     * per connection. Coalesced data messages land in handleDataMessage(),
+     * control frames in handleControlFrame().
      *
      * @param string $data WebSocket frame data
      * @param \Crustum\BlazeCast\WebSocket\Connection $connection Unified connection
@@ -1348,58 +1451,103 @@ class Server implements WebSocketServerInterface
             'scope' => ['socket.server'],
         ]);
 
-        $decodedData = $this->decodeWebSocketFrame($data);
-        $payload = $decodedData ?? $data;
-        $payloadSize = strlen($payload);
-
-        $maxMessageSize = (int)($connection->getAttribute('max_message_size') ?? 10000);
-        $appId = $connection->getAttribute('app_id');
-        if ($appId) {
-            $application = $this->applicationManager->getApplication($appId);
-            if ($application !== null && isset($application['max_message_size'])) {
-                $maxMessageSize = $application['max_message_size'];
-            }
+        $buffer = $connection->getAttribute('ws_buffer');
+        if (!$buffer instanceof MessageBuffer) {
+            $buffer = $this->createMessageBuffer($connection, (bool)$connection->getAttribute('echo_mode'));
         }
 
-        if ($payloadSize > $maxMessageSize) {
-            BlazeCastLogger::warning(__('Server: Message exceeds max_message_size for connection {0}: {1} > {2}', $connection->getId(), $payloadSize, $maxMessageSize), [
+        try {
+            $buffer->onData($data);
+        } catch (Throwable $throwable) {
+            BlazeCastLogger::error(__('Server: Frame error on connection {0}: {1}', $connection->getId(), $throwable->getMessage()), [
                 'scope' => ['socket.server'],
             ]);
-            $errorMessage = json_encode([
-                'event' => 'pusher:error',
-                'data' => json_encode([
-                    'code' => 1009,
-                    'message' => 'Message too large',
-                ]),
-            ]);
-            $connection->send((string)$errorMessage);
-            $this->closeConnection($connection, 1009, 'Message too large');
+            $connection->sendCloseFrame(pack('n', Frame::CLOSE_PROTOCOL));
+            $this->handleConnectionDisconnect($connection);
+        }
+    }
 
-            return;
+    /**
+     * Create the per-connection RFC6455 MessageBuffer.
+     *
+     * In echo mode there are no size caps (Autobahn sends multi-MB probes);
+     * on the Pusher path the application max_message_size is enforced and
+     * oversize messages terminate with a 1009 close frame.
+     *
+     * @param \Crustum\BlazeCast\WebSocket\Connection $connection Unified connection
+     * @param bool $echo Whether this connection is in echo mode
+     * @return \Ratchet\RFC6455\Messaging\MessageBuffer
+     */
+    protected function createMessageBuffer(Connection $connection, bool $echo): MessageBuffer
+    {
+        if ($echo) {
+            $maxMessageSize = 0;
+        } else {
+            $maxMessageSize = (int)($connection->getAttribute('max_message_size') ?? 10000);
+            $appId = $connection->getAttribute('app_id');
+            if ($appId) {
+                $application = $this->applicationManager->getApplication($appId);
+                if ($application !== null && isset($application['max_message_size'])) {
+                    $maxMessageSize = (int)$application['max_message_size'];
+                }
+            }
         }
 
-        if ($decodedData !== null && !$this->ensureWithinConnectionMessageRateLimit($connection)) {
-            return;
-        }
+        $buffer = new MessageBuffer(
+            new CloseFrameChecker(),
+            function (RfcMessageInterface $message) use ($connection, $echo): void {
+                $this->handleDataMessage($connection, $message->getPayload(), $message->isBinary(), $echo);
+            },
+            function (Frame $frame) use ($connection): void {
+                $this->handleControlFrame($connection, $frame);
+            },
+            true,
+            null,
+            $maxMessageSize,
+            null,
+            static function (string $data) use ($connection): void {
+                $connection->getReactConnection()->write($data);
+            },
+        );
 
-        $this->getEventManager()->dispatch(new MessageReceivedEvent($connection, $decodedData ?? $data));
+        $connection->setAttribute('ws_buffer', $buffer);
 
-        if ($appId) {
-            $this->connectionManager->recordWsMessageReceived($appId, $payloadSize);
-        }
+        return $buffer;
+    }
 
-        if ($decodedData === null) {
-            if (strlen($data) >= 2 && (ord($data[0]) & 0x0F) === 0x9) {
-                $connection->control(0xA);
-                BlazeCastLogger::debug(__('Server: Sent pong response to ping for connection {0}', $connection->getId()), [
-                    'scope' => ['socket.server'],
-                ]);
+    /**
+     * Handle a coalesced data message.
+     *
+     * @param \Crustum\BlazeCast\WebSocket\Connection $connection Unified connection
+     * @param string $payload Message payload
+     * @param bool $isBinary Whether the message uses the binary opcode
+     * @param bool $echo Whether this connection is in echo mode
+     * @return void
+     */
+    protected function handleDataMessage(Connection $connection, string $payload, bool $isBinary, bool $echo): void
+    {
+        if ($echo) {
+            if ($isBinary) {
+                $connection->sendBinary($payload);
+            } else {
+                $connection->send($payload);
             }
 
             return;
         }
 
-        if (trim($decodedData) === '') {
+        if (!$this->ensureWithinConnectionMessageRateLimit($connection)) {
+            return;
+        }
+
+        $this->getEventManager()->dispatch(new MessageReceivedEvent($connection, $payload));
+
+        $appId = $connection->getAttribute('app_id');
+        if ($appId) {
+            $this->connectionManager->recordWsMessageReceived($appId, strlen($payload));
+        }
+
+        if (trim($payload) === '') {
             BlazeCastLogger::warning(__('Server: Empty WebSocket message received for connection {0}', $connection->getId()), [
                 'scope' => ['socket.server'],
             ]);
@@ -1408,7 +1556,7 @@ class Server implements WebSocketServerInterface
         }
 
         try {
-            $message = WebSocketMessage::fromJson($decodedData);
+            $message = WebSocketMessage::fromJson($payload);
 
             $handled = $this->handlerRegistry->handle($connection, $message);
             if (!$handled) {
@@ -1428,6 +1576,41 @@ class Server implements WebSocketServerInterface
             ]);
 
             $connection->send($errorMessage->toJson());
+        }
+    }
+
+    /**
+     * Handle a WebSocket control frame.
+     *
+     * Ping is answered with a pong carrying the identical payload (RFC6455
+     * section 5.5.2); close is echoed and the TCP connection terminated.
+     *
+     * @param \Crustum\BlazeCast\WebSocket\Connection $connection Unified connection
+     * @param \Ratchet\RFC6455\Messaging\Frame $frame Control frame
+     * @return void
+     */
+    protected function handleControlFrame(Connection $connection, Frame $frame): void
+    {
+        $opcode = $frame->getOpcode();
+
+        if ($opcode === Frame::OP_PING) {
+            $connection->control(0xA, $frame->getPayload());
+            BlazeCastLogger::debug(__('Server: Sent pong response to ping for connection {0}', $connection->getId()), [
+                'scope' => ['socket.server'],
+            ]);
+
+            return;
+        }
+
+        if ($opcode === Frame::OP_PONG) {
+            $connection->pong();
+
+            return;
+        }
+
+        if ($opcode === Frame::OP_CLOSE) {
+            $connection->sendCloseFrame($frame->getPayload());
+            $this->handleConnectionDisconnect($connection);
         }
     }
 
@@ -1457,78 +1640,6 @@ class Server implements WebSocketServerInterface
         ]);
 
         return $connection;
-    }
-
-    /**
-     * Decode WebSocket frame (copied from base Server class)
-     *
-     * @param string $data Raw WebSocket frame data
-     * @return string|null Decoded payload or null for control frames
-     */
-    protected function decodeWebSocketFrame(string $data): ?string
-    {
-        if (strlen($data) < 2) {
-            return null;
-        }
-
-        $firstByte = ord($data[0]);
-        $secondByte = ord($data[1]);
-
-        $opcode = $firstByte & 0x0F;
-        $isMasked = (bool)($secondByte & 0x80);
-        $payloadLength = $secondByte & 0x7F;
-
-        if (in_array($opcode, [0x8, 0x9, 0xA], true)) {
-            return null;
-        }
-
-        if ($opcode !== 0x1 && $opcode !== 0x0) {
-            return null;
-        }
-
-        $offset = 2;
-        if ($payloadLength === 126) {
-            if (strlen($data) < 4) {
-                return null;
-            }
-
-            $payloadLength = unpack('n', substr($data, 2, 2))[1];
-            $offset = 4;
-        } elseif ($payloadLength === 127) {
-            if (strlen($data) < 10) {
-                return null;
-            }
-
-            $payloadLength = unpack('J', substr($data, 2, 8))[1];
-            $offset = 10;
-        }
-
-        $maskingKey = '';
-        if ($isMasked) {
-            if (strlen($data) < $offset + 4) {
-                return null;
-            }
-
-            $maskingKey = substr($data, $offset, 4);
-            $offset += 4;
-        }
-
-        if (strlen($data) < $offset + $payloadLength) {
-            return null;
-        }
-
-        $payload = substr($data, $offset, $payloadLength);
-
-        if ($isMasked) {
-            $unmaskedPayload = '';
-            for ($i = 0; $i < $payloadLength; $i++) {
-                $unmaskedPayload .= $payload[$i] ^ $maskingKey[$i % 4];
-            }
-
-            $payload = $unmaskedPayload;
-        }
-
-        return $payload;
     }
 
     /**

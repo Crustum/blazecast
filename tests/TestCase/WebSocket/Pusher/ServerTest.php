@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher;
 
+use Cake\Core\Configure;
 use Cake\TestSuite\TestCase;
+use Crustum\BlazeCast\Test\Support\TestServer;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Http\PusherRouter;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
@@ -14,7 +16,10 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use Crustum\BlazeCast\WebSocket\RateLimiter\ConnectionMessageRateLimiter;
 use React\EventLoop\LoopInterface;
+use React\Http\Browser;
+use React\Http\Message\ResponseException;
 use ReflectionClass;
+use Throwable;
 
 /**
  * ServerTest
@@ -521,7 +526,14 @@ class ServerTest extends TestCase
         $method = (new ReflectionClass($server))->getMethod('ensureWithinConnectionMessageRateLimit');
 
         $this->assertTrue($method->invoke($server, $connection));
-        $this->assertFalse($method->invoke($server, $connection));
+        // The limiter buckets by whole seconds: if the wall clock ticks over
+        // between invokes, the window resets and one extra consume is needed.
+        // Collect up to two more invokes so the test is deterministic.
+        $results = [];
+        for ($i = 0; $i < 2; $i++) {
+            $results[] = $method->invoke($server, $connection);
+        }
+        $this->assertContains(false, $results, 'Second window consume must exceed the limit of 1 msg/s');
     }
 
     /**
@@ -549,6 +561,82 @@ class ServerTest extends TestCase
 
         $this->assertTrue($method->invoke($server, $connection));
         $this->assertTrue($method->invoke($server, $connection));
+    }
+
+    /**
+     * Failed handshake closes the connection without registering it.
+     *
+     * Port of upstream dbcb96d: an invalid Sec-WebSocket-Key negotiates a
+     * 400 response instead of 101, which must be sent out and the TCP
+     * connection dropped instead of proceeding to the welcome message.
+     */
+    public function testFailedHandshakeClosesConnectionWithoutRegistering(): void
+    {
+        $this->assertHandshakeRejected([
+            'Connection' => 'Upgrade',
+            'Upgrade' => 'websocket',
+            'Sec-WebSocket-Key' => 'invalid-key',
+            'Sec-WebSocket-Version' => '13',
+        ], 400);
+    }
+
+    /**
+     * Handshake with an unsupported version is rejected with 426.
+     *
+     * Port of upstream dbcb96d.
+     */
+    public function testHandshakeWithUnsupportedVersionIsRejected(): void
+    {
+        $this->assertHandshakeRejected([
+            'Connection' => 'Upgrade',
+            'Upgrade' => 'websocket',
+            'Sec-WebSocket-Key' => 'dGhlIHNhbXBsZSBub25jZQ==',
+            'Sec-WebSocket-Version' => '8',
+        ], 426);
+    }
+
+    /**
+     * Boot a live server, send a raw handshake and assert the rejection code.
+     *
+     * @param array<string, string> $headers Handshake headers
+     * @param int $expectedCode Expected HTTP status code
+     * @return void
+     */
+    protected function assertHandshakeRejected(array $headers, int $expectedCode): void
+    {
+        $server = new TestServer([
+            'app_id' => 'hs-test-app',
+            'app_key' => 'hs-test-key',
+            'app_secret' => 'hs-test-secret',
+        ], true);
+        $server->start();
+
+        try {
+            $loop = $server->getLoop();
+            $browser = (new Browser($loop))->withTimeout(5);
+            $url = sprintf('http://%s:%d/app/hs-test-key', $server->getHost(), $server->getPort());
+
+            $codes = [];
+            $browser->request('GET', $url, $headers)->then(
+                function () use ($loop): void {
+                    $loop->stop();
+                },
+                function (Throwable $e) use (&$codes, $loop): void {
+                    $codes[] = $e instanceof ResponseException ? $e->getCode() : -1;
+                    $loop->stop();
+                },
+            );
+            $loop->addTimer(10.0, static function () use ($loop): void {
+                $loop->stop();
+            });
+            $loop->run();
+
+            $this->assertSame([$expectedCode], $codes);
+            $this->assertSame([], $server->getServer()->getConnections());
+        } finally {
+            $server->stop();
+            Configure::delete('BlazeCast.apps');
+        }
     }
 
     /**

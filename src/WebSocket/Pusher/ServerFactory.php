@@ -72,6 +72,8 @@ use Symfony\Component\Routing\RouteCollection;
  *   enable_debug?: bool,
  *   max_request_size?: int,
  *   test_mode?: bool,
+ *   echo_mode?: bool,
+ *   echo_path?: string,
  *   debug?: bool,
  *   log_level?: string,
  *   servers?: array{
