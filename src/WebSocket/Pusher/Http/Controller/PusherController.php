@@ -250,7 +250,7 @@ abstract class PusherController implements PusherControllerInterface
                 throw new InvalidArgumentException('Missing authentication signature');
             }
 
-            $params = array_filter($this->query, fn($key): bool => !in_array($key, ['body_md5', 'appId', 'appKey', 'channelName']), ARRAY_FILTER_USE_KEY);
+            $params = array_filter($this->query, fn($key): bool => !in_array($key, ['body_md5', 'appId', 'appKey', 'channelName'], true), ARRAY_FILTER_USE_KEY);
 
             if ($this->body !== null && $this->body !== '') {
                 $params['body_md5'] = md5($this->body);

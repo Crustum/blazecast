@@ -176,58 +176,71 @@ class EventsController extends PusherController
         $appId = $this->application['id'] ?? 'unknown';
         $results = [];
 
+        $eventsByChannel = [];
         foreach ($payload['batch'] as $item) {
             if (!isset($item['name'], $item['data'], $item['channel'])) {
                 continue;
             }
 
-            $appChannelManager = $this->getChannelManagerForCurrentApp();
-
-            $exceptConnection = null;
-            $itemSocketId = $item['socket_id'] ?? null;
-            if (isset($item['socket_id'])) {
-                $exceptConnection = $this->connectionManager->getConnection($item['socket_id']);
+            $channelName = $item['channel'];
+            if (!isset($eventsByChannel[$channelName])) {
+                $eventsByChannel[$channelName] = [];
             }
 
-            $encodedData = is_string($item['data']) ? $item['data'] : (string)json_encode($item['data']);
+            $eventsByChannel[$channelName][] = $item;
+        }
 
-            EventDispatcher::dispatch(
-                $this->applicationManager,
-                $appId,
-                $item['channel'],
-                $item['name'],
-                $encodedData,
-                $exceptConnection,
-                is_string($itemSocketId) ? $itemSocketId : null,
-            );
+        $appChannelManager = $this->getChannelManagerForCurrentApp();
 
-            $channel = $appChannelManager->getChannel($item['channel']);
-            $message = [
-                'event' => $item['name'],
-                'channel' => $item['channel'],
-                'data' => $item['data'],
-            ];
+        foreach ($eventsByChannel as $channelName => $events) {
+            $channel = $appChannelManager->getChannel($channelName);
 
-            $messageBytes = strlen(json_encode($message));
-            $this->connectionManager->recordWsMessageReceived($appId, $messageBytes);
+            foreach ($events as $item) {
+                $exceptConnection = null;
+                $itemSocketId = $item['socket_id'] ?? null;
+                if (isset($item['socket_id'])) {
+                    $exceptConnection = $this->connectionManager->getConnection($item['socket_id']);
+                }
 
-            $this->eventManager->dispatch(new HttpApiEvent(
-                $appId,
-                'batch_event',
-                json_encode($message),
-                $messageBytes,
-            ));
+                $encodedData = is_string($item['data']) ? $item['data'] : (string)json_encode($item['data']);
 
-            BlazeCastLogger::info(sprintf('WebSocket message received recorded via HTTP API (batch event): app_id=%s, message_bytes=%d', $appId, $messageBytes), [
-                'scope' => ['socket.controller', 'socket.controller.events'],
-            ]);
+                EventDispatcher::dispatch(
+                    $this->applicationManager,
+                    $appId,
+                    $item['channel'],
+                    $item['name'],
+                    $encodedData,
+                    $exceptConnection,
+                    is_string($itemSocketId) ? $itemSocketId : null,
+                );
 
-            BlazeCastLogger::info(sprintf('Batch event broadcasted to channel via application-specific ChannelManager: app_id=%s, channel=%s, event=%s, connections=%d', $appId, $item['channel'], $item['name'], $channel->getConnectionCount()), [
-                'scope' => ['socket.controller', 'socket.controller.events'],
-            ]);
+                $message = [
+                    'event' => $item['name'],
+                    'channel' => $item['channel'],
+                    'data' => $item['data'],
+                ];
 
-            if (isset($item['info'])) {
-                $results[] = $this->getChannelInfo($item['channel'], $item['info']);
+                $messageBytes = strlen(json_encode($message));
+                $this->connectionManager->recordWsMessageReceived($appId, $messageBytes);
+
+                $this->eventManager->dispatch(new HttpApiEvent(
+                    $appId,
+                    'batch_event',
+                    json_encode($message),
+                    $messageBytes,
+                ));
+
+                BlazeCastLogger::info(sprintf('WebSocket message received recorded via HTTP API (batch event): app_id=%s, message_bytes=%d', $appId, $messageBytes), [
+                    'scope' => ['socket.controller', 'socket.controller.events'],
+                ]);
+
+                BlazeCastLogger::info(sprintf('Batch event broadcasted to channel via application-specific ChannelManager: app_id=%s, channel=%s, event=%s, connections=%d', $appId, $item['channel'], $item['name'], $channel->getConnectionCount()), [
+                    'scope' => ['socket.controller', 'socket.controller.events'],
+                ]);
+
+                if (isset($item['info'])) {
+                    $results[] = $this->getChannelInfo($item['channel'], $item['info']);
+                }
             }
         }
 
