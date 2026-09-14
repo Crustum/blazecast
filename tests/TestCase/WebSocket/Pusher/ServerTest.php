@@ -609,7 +609,7 @@ class ServerTest extends TestCase
             'app_id' => 'hs-test-app',
             'app_key' => 'hs-test-key',
             'app_secret' => 'hs-test-secret',
-        ], true);
+        ]); // Dedicated loop for isolation, see EventDispatchingTest
         $server->start();
 
         try {

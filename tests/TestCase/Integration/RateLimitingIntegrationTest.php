@@ -10,7 +10,6 @@ use Exception;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use React\EventLoop\Loop;
 use Redis;
 
 /**
@@ -92,7 +91,7 @@ class RateLimitingIntegrationTest extends TestCase
             'app_id' => $this->appId,
             'app_key' => $this->appKey,
             'app_secret' => $this->appSecret,
-        ], true);
+        ]); // Dedicated loop for isolation, see EventDispatchingTest
 
         $this->server->start();
 
@@ -167,7 +166,7 @@ class RateLimitingIntegrationTest extends TestCase
     {
         $this->setupServerWithDriver($driver);
 
-        $loop = Loop::get();
+        $loop = $this->server->getLoop();
         $uri = $this->server->getWebSocketUri();
 
         $connected = false;
@@ -229,7 +228,7 @@ class RateLimitingIntegrationTest extends TestCase
     {
         $this->setupServerWithDriver($driver);
 
-        $loop = Loop::get();
+        $loop = $this->server->getLoop();
         $uri = $this->server->getWebSocketUri();
 
         $connected = false;
@@ -300,7 +299,7 @@ class RateLimitingIntegrationTest extends TestCase
     {
         $this->setupServerWithDriver($driver);
 
-        $loop = Loop::get();
+        $loop = $this->server->getLoop();
         $uri = $this->server->getWebSocketUri();
 
         $senderClient = $this->server->createClient();
@@ -380,22 +379,20 @@ class RateLimitingIntegrationTest extends TestCase
                 }
             });
 
-            $sentCount = 0;
-            $sendNext = function () use (&$sentCount, $clientEventMessage, $loop, &$sendNext, $senderClient, &$receivedEvents, &$rateLimitErrors): void {
-                if ($sentCount < 10) {
-                    $senderClient->send($clientEventMessage);
-                    $sentCount++;
-                    $loop->addTimer(0.01, $sendNext);
-                } else {
-                    $loop->addTimer(0.5, function () use ($loop, &$receivedEvents, &$rateLimitErrors): void {
-                        $this->assertCount(5, $receivedEvents, 'Receiver should receive exactly 5 client events (within rate limit)');
-                        $this->assertGreaterThan(0, $rateLimitErrors, 'Sender should receive rate limit errors for messages exceeding the limit');
-                        $this->assertLessThanOrEqual(5, $rateLimitErrors, 'Sender should receive at most 5 rate limit errors (for messages 6-10)');
-                        $loop->stop();
-                    });
-                }
-            };
-            $sendNext();
+            // Send the full burst within a single tick so all consumes land in the
+            // same 1-second fixed window of LocalRateLimiter. Spacing sends with
+            // 0.01s timers could straddle a second boundary and let extra messages
+            // through, making the count non-deterministic.
+            for ($i = 0; $i < 10; $i++) {
+                $senderClient->send($clientEventMessage);
+            }
+
+            $loop->addTimer(0.5, function () use ($loop, &$receivedEvents, &$rateLimitErrors): void {
+                $this->assertCount(5, $receivedEvents, 'Receiver should receive exactly 5 client events (within rate limit)');
+                $this->assertGreaterThan(0, $rateLimitErrors, 'Sender should receive rate limit errors for messages exceeding the limit');
+                $this->assertLessThanOrEqual(5, $rateLimitErrors, 'Sender should receive at most 5 rate limit errors (for messages 6-10)');
+                $loop->stop();
+            });
         });
 
         $loop->run();

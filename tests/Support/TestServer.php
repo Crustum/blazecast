@@ -275,7 +275,7 @@ class TestServer
     /**
      * Get the event loop
      */
-    public function getLoop(): ?LoopInterface
+    public function getLoop(): LoopInterface
     {
         return $this->loop;
     }
