@@ -1,0 +1,23 @@
+# Crustum BlazeCast
+
+Prefer package docs and the `blazecast-development` skill for orientation.
+
+@scoped(['config/blazecast.php', 'config/bootstrap.php'])
+## BlazeCast server config
+- Keep app `id` / `key` / `secret` aligned with Broadcasting and Echo/Pusher client env.
+- When server `path` is set (e.g. `/ws`), use the same prefix on Broadcasting `options.path` and Echo `wsPath`.
+- Restrict `allowed_origins` carefully — non-matching `Origin` is rejected.
+- Load `config/blazecast.php` from bootstrap after manifest install.
+@endscoped
+
+@scoped(['config/broadcasting.php'])
+## Broadcasting ↔ BlazeCast
+- Use Pusher driver credentials matching BlazeCast applications.
+- Align `options.host` / `port` / `scheme` / `path` / TLS with the running `blazecast server`.
+@endscoped
+
+@scoped(['webroot/js/**', 'resources/**/*.js', 'assets/**/*.js'])
+## Echo client (BlazeCast)
+- Match key / wsHost / port / wsPath / TLS to BlazeCast and Broadcasting options.
+- Auth endpoint remains Broadcasting `/broadcasting/auth` for private/presence.
+@endscoped

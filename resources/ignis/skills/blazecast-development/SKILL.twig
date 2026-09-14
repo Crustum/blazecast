@@ -1,0 +1,140 @@
+---
+name: blazecast-development
+description: "Develops real-time WebSocket features with Crustum BlazeCast for CakePHP. Activates when installing or configuring BlazeCast; running the WebSocket server; setting up public, private, or presence channels; wiring Broadcasting/Pusher credentials; integrating Laravel Echo or Pusher JS; Redis PubSub scaling; rate limiting; HTTP API events; health/metrics; or when the user mentions BlazeCast, Pusher protocol, WebSockets, Echo, or CakePHP real-time broadcasting. Use this skill whenever the user works with WebSockets or Pusher-compatible broadcasting in CakePHP, even if they don't explicitly mention BlazeCast."
+license: MIT
+metadata:
+  author: crustum
+---
+# BlazeCast WebSocket Server
+
+## Documentation First
+
+Prefer BlazeCast package docs (`plugins/BlazeCast/docs/index.md` or the package docs in the installed plugin) and Ignis project guidelines before inventing WebSocket wiring. This skill orients you — the package docs hold server, scaling, and API details.
+
+## Installation
+
+```bash
+composer require crustum/blazecast
+```
+
+Register the plugin, then publish config via **crustum/plugin-manifest**:
+
+```bash
+{{ assist.cakeCommand('plugin load Crustum/BlazeCast') }}
+{{ assist.cakeCommand('manifest install --plugin Crustum/BlazeCast') }}
+```
+
+That creates `config/blazecast.php` and appends loading it from bootstrap.
+
+## Minimal Configuration
+
+@ignissnippet("BlazeCast config sketch", "php")
+return [
+    'BlazeCast' => [
+        'default' => env('BLAZECAST_SERVER', 'blazecast'),
+        'servers' => [
+            'blazecast' => [
+                'host' => env('BLAZECAST_SERVER_HOST', '0.0.0.0'),
+                'port' => env('BLAZECAST_SERVER_PORT', 8080),
+                'path' => env('BLAZECAST_SERVER_PATH', ''),
+            ],
+        ],
+        'applications' => [
+            [
+                'id' => env('BLAZECAST_APP_ID', 'app-id'),
+                'key' => env('BLAZECAST_APP_KEY', 'app-key'),
+                'secret' => env('BLAZECAST_APP_SECRET', 'app-secret'),
+                'name' => env('BLAZECAST_APP_NAME', 'Default BlazeCast App'),
+                'allowed_origins' => ['*'],
+            ],
+        ],
+    ],
+];
+@endignissnippet
+
+Keep `id` / `key` / `secret` aligned with Broadcasting and client env vars. When `path` is set (e.g. `/ws`), pass the same prefix to Broadcasting `options.path` and Echo `wsPath`.
+
+## Running the Server
+
+```bash
+{{ assist.cakeCommand('blazecast server') }}
+{{ assist.cakeCommand('blazecast server --host 127.0.0.1 --port 8080') }}
+{{ assist.cakeCommand('blazecast restart_server') }}
+```
+
+Health: `GET /up` or `GET /pusher/health`. Metrics: `GET /metrics`.
+
+## Channels
+
+| Type | Subscribe pattern | Auth |
+|------|-------------------|------|
+| Public | `channel-name` | None |
+| Private | `private-…` | Broadcasting `/broadcasting/auth` |
+| Presence | `presence-…` | Auth + member list events |
+
+Private/presence authorization is handled by the **Broadcasting** plugin (`config/channels.php`), not BlazeCast alone.
+
+## Broadcasting Plugin Driver
+
+@ignissnippet("Broadcasting uses BlazeCast", "php")
+return [
+    'Broadcasting' => [
+        'default' => [
+            'className' => 'Crustum/Broadcasting.Pusher',
+            'key' => env('BLAZECAST_APP_KEY'),
+            'secret' => env('BLAZECAST_APP_SECRET'),
+            'app_id' => env('BLAZECAST_APP_ID'),
+            'options' => [
+                'host' => env('BLAZECAST_SERVER_HOST', '127.0.0.1'),
+                'port' => env('BLAZECAST_SERVER_PORT', 8080),
+                'scheme' => env('BLAZECAST_SCHEME', 'http'),
+                'useTLS' => false,
+                'path' => env('BLAZECAST_SERVER_PATH', ''),
+            ],
+        ],
+    ],
+];
+@endignissnippet
+
+## Client (Laravel Echo)
+
+@ignissnippet("Echo to BlazeCast", "javascript")
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
+
+window.Pusher = Pusher;
+
+window.Echo = new Echo({
+    broadcaster: 'pusher',
+    key: process.env.MIX_PUSHER_APP_KEY,
+    wsHost: process.env.MIX_PUSHER_HOST || '127.0.0.1',
+    wsPort: process.env.MIX_PUSHER_PORT || 8080,
+    wssPort: process.env.MIX_PUSHER_PORT || 8080,
+    wsPath: process.env.MIX_PUSHER_PATH || '',
+    forceTLS: false,
+    enabledTransports: ['ws', 'wss'],
+    disableStats: true,
+    authEndpoint: '/broadcasting/auth',
+});
+@endignissnippet
+
+## HTTP API (Pusher-compatible)
+
+Trigger events with app secret auth against `/apps/{appId}/events`. Query channels, presence users, and terminate user connections via the same API surface. Prefer the Broadcasting plugin for app-level broadcasts when possible.
+
+## Scaling and Rate Limits
+
+- Enable Redis PubSub under `scaling` so multiple `blazecast server` nodes share events.
+- Rate limiter drivers: `local` (single process) or `redis` (multi-node). Connection-level limits are separate from frontend/backend/read buckets.
+
+## Events
+
+Listen via Cake `EventManager`, e.g. `BlazeCast.WebSocket.connectionEstablished`, `connectionClosed`, `channelCreated`, `channelRemoved`, `messageReceived`, `messageSent`, `BlazeCast.WebSocket.HttpApiEvent`.
+
+## Common Pitfalls
+
+- **Credentials mismatch** — BlazeCast app id/key/secret must match Broadcasting and Echo.
+- **Path prefix** — set the same value on server `path`, Broadcasting `options.path`, and Echo `wsPath`.
+- **Private/presence without Broadcasting** — auth endpoint and `channels.php` rules are required.
+- **Scaling** — all nodes need the same Redis scaling channel and app config.
+- **Origins** — non-matching `Origin` is rejected when `allowed_origins` is restricted.
