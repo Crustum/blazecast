@@ -126,9 +126,58 @@ class Connection implements ConnectionInterface
      */
     public function send(string $data): void
     {
+        $this->writeDataFrame($data, 0x1);
+    }
+
+    /**
+     * Send binary data to the connection
+     *
+     * @param string $data Data to send
+     * @return void
+     */
+    public function sendBinary(string $data): void
+    {
+        $this->writeDataFrame($data, 0x2);
+    }
+
+    /**
+     * Send a close frame and terminate the underlying TCP connection.
+     *
+     * write() is async, so end($frame) flushes the close frame before closing.
+     *
+     * @param string $payload Close payload (2-byte code + UTF-8 reason)
+     * @return void
+     */
+    public function sendCloseFrame(string $payload = ''): void
+    {
+        try {
+            $frame = $this->encodeWebSocketFrame($payload, 0x8);
+            $this->reactConnection->end($frame);
+            $this->connected = false;
+            $this->updateActivity();
+
+            BlazeCastLogger::debug(__('Close frame sent to connection {0}, payload length: {1}', $this->getId(), strlen($payload)), [
+                'scope' => ['socket.connection'],
+            ]);
+        } catch (Exception $exception) {
+            BlazeCastLogger::error(__('Error sending close frame to connection {0}: {1}', $this->getId(), $exception->getMessage()), [
+                'scope' => ['socket.connection'],
+            ]);
+        }
+    }
+
+    /**
+     * Write a data frame with the given opcode
+     *
+     * @param string $data Data to send
+     * @param int $opcode Frame opcode (0x1 for text, 0x2 for binary)
+     * @return void
+     */
+    protected function writeDataFrame(string $data, int $opcode): void
+    {
         try {
             if ($this->connected) {
-                $frame = $this->encodeWebSocketFrame($data);
+                $frame = $this->encodeWebSocketFrame($data, $opcode);
                 $this->reactConnection->write($frame);
             } else {
                 $this->reactConnection->write($data);

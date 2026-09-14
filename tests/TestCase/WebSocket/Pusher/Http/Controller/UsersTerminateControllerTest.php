@@ -278,6 +278,50 @@ class UsersTerminateControllerTest extends TestCase
     }
 
     /**
+     * Test that a socket subscribed to several channels is terminated once.
+     *
+     * Port of upstream 52ce5fd: per-channel maps hold the same connection,
+     * so terminate/count must be deduplicated by connection ID.
+     *
+     * @return void
+     */
+    public function testTerminateUserConnectionsDedupesMultiChannelSocket(): void
+    {
+        $userId = 'user-123';
+        $appId = 'test-app';
+
+        $request = $this->createMockRequest('POST');
+        $connection = $this->createMock(Connection::class);
+        $params = ['appId' => $appId, 'userId' => $userId];
+
+        $sharedConnection = $this->createMockConnection('conn-1', $userId);
+
+        $channelOne = $this->createMock(PusherChannelInterface::class);
+        $channelOne->method('getName')->willReturn('channel-one');
+        $channelTwo = $this->createMock(PusherChannelInterface::class);
+        $channelTwo->method('getName')->willReturn('channel-two');
+
+        $this->setupApplicationManagerMock($appId);
+        $this->setupConnectionManagerMock([
+            'channel-one' => ['conn-1' => $sharedConnection],
+            'channel-two' => ['conn-1' => $sharedConnection],
+        ]);
+        $this->setupChannelManagerMock([
+            'channel-one' => $channelOne,
+            'channel-two' => $channelTwo,
+        ]);
+
+        $sharedConnection->expects($this->once())->method('close');
+        $this->connectionManager->expects($this->once())->method('unsubscribeAll');
+
+        $response = $this->controller->__invoke($request, $connection, $params);
+
+        $responseData = json_decode($response->getContent(), true);
+        $this->assertEquals('success', $responseData['status']);
+        $this->assertEquals(1, $responseData['terminated_connections']);
+    }
+
+    /**
      * Create mock connection with user ID
      *
      * @param string $connectionId Connection ID

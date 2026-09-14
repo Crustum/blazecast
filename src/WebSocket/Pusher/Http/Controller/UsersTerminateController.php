@@ -75,6 +75,7 @@ class UsersTerminateController extends PusherController
     protected function terminateUserConnections(string $userId): int
     {
         $terminatedCount = 0;
+        $terminatedIds = [];
         $activeChannelNames = $this->connectionManager->getActiveChannelNames();
         $channelManager = $this->getCurrentChannelManager();
 
@@ -87,9 +88,16 @@ class UsersTerminateController extends PusherController
             $connections = $this->connectionManager->getConnectionsForChannel($channel);
 
             foreach ($connections as $connectionId => $connection) {
+                // A socket subscribed to several channels appears once per
+                // channel: terminate it only once and count it once.
+                if (isset($terminatedIds[$connectionId])) {
+                    continue;
+                }
+
                 if ($this->isUserConnection($connection, $userId)) {
                     try {
                         $this->disconnectConnection($connectionId, $connection);
+                        $terminatedIds[$connectionId] = true;
                         $terminatedCount++;
 
                         BlazeCastLogger::debug(sprintf('UsersTerminateController: Connection terminated. user_id=%s, connection_id=%s, channel=%s', $userId, $connectionId, $channelName), [
