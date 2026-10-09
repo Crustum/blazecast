@@ -8,9 +8,13 @@ use Cake\Core\PluginApplicationInterface;
 use Cake\Log\Log;
 use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\BlazeCastPlugin;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 
 class BlazeCastPluginTest extends TestCase
 {
+    use VerifiesDoubles;
+
     protected mixed $previousConfig;
 
     protected function setUp(): void
@@ -45,7 +49,7 @@ class BlazeCastPluginTest extends TestCase
         ]);
 
         $plugin = new BlazeCastPlugin();
-        $plugin->bootstrap($this->createStub(PluginApplicationInterface::class));
+        $plugin->bootstrap(Double::for(PluginApplicationInterface::class));
 
         $this->assertSame(120, Configure::read('BlazeCast.applications.0.activity_timeout'));
     }
@@ -55,7 +59,7 @@ class BlazeCastPluginTest extends TestCase
         Configure::delete('BlazeCast');
 
         $plugin = new BlazeCastPlugin();
-        $plugin->bootstrap($this->createStub(PluginApplicationInterface::class));
+        $plugin->bootstrap(Double::for(PluginApplicationInterface::class));
 
         $this->assertTrue(Configure::check('BlazeCast'));
     }

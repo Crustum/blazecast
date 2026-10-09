@@ -12,6 +12,10 @@ use Crustum\BlazeCast\WebSocket\Filter\MessageFilterInterface;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use Crustum\BlazeCast\WebSocket\Redis\PubSub;
+use Evenement\EventEmitterTrait;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
+use JMac\Testing\Matching\Argument;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use React\EventLoop\LoopInterface;
@@ -23,10 +27,21 @@ use ReflectionClass;
  */
 class PubSubTest extends TestCase
 {
+    use VerifiesDoubles;
+
+    /**
+     * @var \React\EventLoop\LoopInterface&\JMac\Testing\DoubleInterface
+     */
     private LoopInterface $mockLoop;
 
+    /**
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Server&\JMac\Testing\DoubleInterface
+     */
     private Server $mockServer;
 
+    /**
+     * @var Client&object{commandCalls: list<array{0: string, 1: array<mixed>}>}
+     */
     private Client $mockClient;
 
     private PubSub $pubSub;
@@ -38,9 +53,9 @@ class PubSubTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mockLoop = $this->createStub(LoopInterface::class);
-        $this->mockServer = $this->createStub(Server::class);
-        $this->mockClient = $this->createStub(Client::class);
+        $this->mockLoop = Double::for(LoopInterface::class);
+        $this->mockServer = Double::for(Server::class);
+        $this->mockClient = $this->createFakeClient(Double::for(PromiseInterface::class));
 
         $this->redisConfig = [
             'host' => '127.0.0.1',
@@ -56,9 +71,84 @@ class PubSubTest extends TestCase
     }
 
     /**
+     * Create a fake Redis client recording command invocations.
+     *
+     * Double::for() cannot double Clue\React\Redis\Client (it declares the
+     * magic __call method), so this hand-rolled fake is used instead. Every
+     * command returns the given promise; invocations are recorded in the
+     * public $commandCalls list as [command, args] pairs.
+     *
+     * @param \React\Promise\PromiseInterface $promise Promise returned from every command
+     * @return \Clue\React\Redis\Client&object{commandCalls: list<array{0: string, 1: array<mixed>}>}
+     */
+    private function createFakeClient(PromiseInterface $promise): Client
+    {
+        return new class ($promise) implements Client {
+            use EventEmitterTrait;
+
+            /**
+             * @var list<array{0: string, 1: array<mixed>}>
+             */
+            public array $commandCalls = [];
+
+            private PromiseInterface $promise;
+
+            public function __construct(PromiseInterface $promise)
+            {
+                $this->promise = $promise;
+            }
+
+            /**
+             * @param array<mixed> $args
+             * @return \React\Promise\PromiseInterface
+             */
+            public function __call($name, $args)
+            {
+                $this->commandCalls[] = [$name, $args];
+
+                return $this->promise;
+            }
+
+            public function end(): void
+            {
+            }
+
+            public function close(): void
+            {
+            }
+        };
+    }
+
+    /**
+     * Assert a fake client recorded exactly the given commands.
+     *
+     * @param \Clue\React\Redis\Client&object{commandCalls: list<array{0: string, 1: array<mixed>}>} $client Fake client created via createFakeClient()
+     * @param list<array{0: string, 1: array<mixed>}> $expected Expected [command, args] pairs
+     * @return void
+     */
+    private function assertClientCommands(Client $client, array $expected): void
+    {
+        $this->assertSame($expected, $client->commandCalls);
+    }
+
+    /**
+     * Assert a fake client registered exactly one callable listener for the event.
+     *
+     * @param \Clue\React\Redis\Client&object{commandCalls: list<array{0: string, 1: array<mixed>}>} $client Fake client created via createFakeClient()
+     * @param string $event Event name
+     * @return void
+     */
+    private function assertClientListenerRegistered(Client $client, string $event): void
+    {
+        $listeners = $client->listeners($event);
+        $this->assertCount(1, $listeners);
+        $this->assertTrue(is_callable($listeners[0]));
+    }
+
+    /**
      * Inject a client into the PubSub instance
      *
-     * @param \Clue\React\Redis\Client $client Client to inject
+     * @param \Clue\React\Redis\Client&object{commandCalls: list<array{0: string, 1: array<mixed>}>} $client Client to inject
      * @return void
      */
     private function injectClient(Client $client): void
@@ -72,7 +162,7 @@ class PubSubTest extends TestCase
      * Create a PubSub instance with the given server and client
      *
      * @param \Crustum\BlazeCast\WebSocket\Pusher\Server $server Server instance
-     * @param \Clue\React\Redis\Client $client Client instance
+     * @param \Clue\React\Redis\Client&object{commandCalls: list<array{0: string, 1: array<mixed>}>} $client Client instance
      * @return \Crustum\BlazeCast\WebSocket\Redis\PubSub
      */
     private function createPubSub(Server $server, Client $client): PubSub
@@ -101,27 +191,21 @@ class PubSubTest extends TestCase
         $callback = function ($message, $channel): void {
         };
 
-        $mockPromise = $this->createMock(PromiseInterface::class);
-        $mockPromise->expects($this->once())
-            ->method('then')
+        $mockPromise = Double::for(PromiseInterface::class);
+        $mockPromise->expects('then')
             ->with(
-                $this->isCallable(),
-                $this->isCallable(),
+                Argument::satisfies('is_callable'),
+                Argument::satisfies('is_callable'),
             );
 
-        $client = $this->createMock(Client::class);
-        $client->expects($this->once())
-            ->method('__call')
-            ->with('subscribe', [$channel])
-            ->willReturn($mockPromise);
-
-        $client->expects($this->once())
-            ->method('on')
-            ->with('message', $this->isCallable());
+        $client = $this->createFakeClient($mockPromise);
 
         $this->injectClient($client);
 
         $this->pubSub->subscribe($channel, $callback);
+
+        $this->assertClientCommands($client, [['subscribe', [$channel]]]);
+        $this->assertClientListenerRegistered($client, 'message');
     }
 
     #[Test]
@@ -129,23 +213,20 @@ class PubSubTest extends TestCase
     {
         $channel = 'test-channel';
 
-        $mockPromise = $this->createMock(PromiseInterface::class);
-        $mockPromise->expects($this->once())
-            ->method('then')
+        $mockPromise = Double::for(PromiseInterface::class);
+        $mockPromise->expects('then')
             ->with(
-                $this->isCallable(),
-                $this->isCallable(),
+                Argument::satisfies('is_callable'),
+                Argument::satisfies('is_callable'),
             );
 
-        $client = $this->createMock(Client::class);
-        $client->expects($this->once())
-            ->method('__call')
-            ->with('unsubscribe', [$channel])
-            ->willReturn($mockPromise);
+        $client = $this->createFakeClient($mockPromise);
 
         $this->injectClient($client);
 
         $this->pubSub->unsubscribe($channel);
+
+        $this->assertClientCommands($client, [['unsubscribe', [$channel]]]);
     }
 
     #[Test]
@@ -154,23 +235,20 @@ class PubSubTest extends TestCase
         $channel = 'test-channel';
         $message = 'test message';
 
-        $mockPromise = $this->createMock(PromiseInterface::class);
-        $mockPromise->expects($this->once())
-            ->method('then')
+        $mockPromise = Double::for(PromiseInterface::class);
+        $mockPromise->expects('then')
             ->with(
-                $this->isCallable(),
-                $this->isCallable(),
+                Argument::satisfies('is_callable'),
+                Argument::satisfies('is_callable'),
             );
 
-        $client = $this->createMock(Client::class);
-        $client->expects($this->once())
-            ->method('__call')
-            ->with('publish', [$channel, $message])
-            ->willReturn($mockPromise);
+        $client = $this->createFakeClient($mockPromise);
 
         $this->injectClient($client);
 
         $this->pubSub->publish($channel, $message);
+
+        $this->assertClientCommands($client, [['publish', [$channel, $message]]]);
     }
 
     #[Test]
@@ -180,27 +258,21 @@ class PubSubTest extends TestCase
         $callback = function ($message, $channel, $pattern): void {
         };
 
-        $mockPromise = $this->createMock(PromiseInterface::class);
-        $mockPromise->expects($this->once())
-            ->method('then')
+        $mockPromise = Double::for(PromiseInterface::class);
+        $mockPromise->expects('then')
             ->with(
-                $this->isCallable(),
-                $this->isCallable(),
+                Argument::satisfies('is_callable'),
+                Argument::satisfies('is_callable'),
             );
 
-        $client = $this->createMock(Client::class);
-        $client->expects($this->once())
-            ->method('__call')
-            ->with('psubscribe', [$pattern])
-            ->willReturn($mockPromise);
-
-        $client->expects($this->once())
-            ->method('on')
-            ->with('pmessage', $this->isCallable());
+        $client = $this->createFakeClient($mockPromise);
 
         $this->injectClient($client);
 
         $this->pubSub->subscribePattern($pattern, $callback);
+
+        $this->assertClientCommands($client, [['psubscribe', [$pattern]]]);
+        $this->assertClientListenerRegistered($client, 'pmessage');
     }
 
     #[Test]
@@ -208,23 +280,20 @@ class PubSubTest extends TestCase
     {
         $pattern = 'user:*';
 
-        $mockPromise = $this->createMock(PromiseInterface::class);
-        $mockPromise->expects($this->once())
-            ->method('then')
+        $mockPromise = Double::for(PromiseInterface::class);
+        $mockPromise->expects('then')
             ->with(
-                $this->isCallable(),
-                $this->isCallable(),
+                Argument::satisfies('is_callable'),
+                Argument::satisfies('is_callable'),
             );
 
-        $client = $this->createMock(Client::class);
-        $client->expects($this->once())
-            ->method('__call')
-            ->with('punsubscribe', [$pattern])
-            ->willReturn($mockPromise);
+        $client = $this->createFakeClient($mockPromise);
 
         $this->injectClient($client);
 
         $this->pubSub->unsubscribePattern($pattern);
+
+        $this->assertClientCommands($client, [['punsubscribe', [$pattern]]]);
     }
 
     #[Test]
@@ -243,8 +312,8 @@ class PubSubTest extends TestCase
     #[Test]
     public function publishWithFilterAppliesFilterCriteria(): void
     {
-        /** @var MessageFilterInterface&\PHPUnit\Framework\MockObject\MockObject $filter */
-        $filter = $this->createMock(MessageFilterInterface::class);
+        /** @var \Crustum\BlazeCast\WebSocket\Filter\MessageFilterInterface&\JMac\Testing\DoubleInterface $filter */
+        $filter = Double::for(MessageFilterInterface::class);
         $this->pubSub->setMessageFilter($filter);
 
         $channel = 'test-channel';
@@ -253,32 +322,28 @@ class PubSubTest extends TestCase
 
         $messageObj = Message::fromJson($message);
 
-        $filter->expects($this->once())
-            ->method('filter')
+        $filter->expects('filter')
             ->with($messageObj, $criteria)
-            ->willReturn(true);
+            ->returns(true);
 
         // Should call publish since filter returns true
-        $mockPromise = $this->createMock(PromiseInterface::class);
-        $mockPromise->expects($this->once())
-            ->method('then');
+        $mockPromise = Double::for(PromiseInterface::class);
+        $mockPromise->expects('then');
 
-        $client = $this->createMock(Client::class);
-        $client->expects($this->once())
-            ->method('__call')
-            ->with('publish', [$channel, $message])
-            ->willReturn($mockPromise);
+        $client = $this->createFakeClient($mockPromise);
 
         $this->injectClient($client);
 
         $this->pubSub->publishWithFilter($channel, $message, $criteria);
+
+        $this->assertClientCommands($client, [['publish', [$channel, $message]]]);
     }
 
     #[Test]
     public function publishWithFilterSkipsPublishWhenFilterReturnsFalse(): void
     {
-        /** @var MessageFilterInterface&\PHPUnit\Framework\MockObject\MockObject $filter */
-        $filter = $this->createMock(MessageFilterInterface::class);
+        /** @var \Crustum\BlazeCast\WebSocket\Filter\MessageFilterInterface&\JMac\Testing\DoubleInterface $filter */
+        $filter = Double::for(MessageFilterInterface::class);
         $this->pubSub->setMessageFilter($filter);
 
         $channel = 'test-channel';
@@ -287,27 +352,25 @@ class PubSubTest extends TestCase
 
         $messageObj = Message::fromJson($message);
 
-        $filter->expects($this->once())
-            ->method('filter')
+        $filter->expects('filter')
             ->with($messageObj, $criteria)
-            ->willReturn(false);
+            ->returns(false);
 
         // Should NOT call publish since filter returns false
-        $client = $this->createMock(Client::class);
-        $client->expects($this->never())
-            ->method('__call')
-            ->with('publish');
+        $client = $this->createFakeClient(Double::for(PromiseInterface::class));
 
         $this->injectClient($client);
 
         $this->pubSub->publishWithFilter($channel, $message, $criteria);
+
+        $this->assertClientCommands($client, []);
     }
 
     #[Test]
     public function publishWithTransformAppliesTransformationRules(): void
     {
-        /** @var MessageFilterInterface&\PHPUnit\Framework\MockObject\MockObject $filter */
-        $filter = $this->createMock(MessageFilterInterface::class);
+        /** @var \Crustum\BlazeCast\WebSocket\Filter\MessageFilterInterface&\JMac\Testing\DoubleInterface $filter */
+        $filter = Double::for(MessageFilterInterface::class);
         $this->pubSub->setMessageFilter($filter);
 
         $channel = 'test-channel';
@@ -318,67 +381,62 @@ class PubSubTest extends TestCase
         $originalMessageObj = Message::fromJson($originalMessage);
         $transformedMessageObj = Message::fromJson($transformedMessage);
 
-        $filter->expects($this->once())
-            ->method('transform')
+        $filter->expects('transform')
             ->with($originalMessageObj, $rules)
-            ->willReturn($transformedMessageObj);
+            ->returns($transformedMessageObj);
 
-        $mockPromise = $this->createMock(PromiseInterface::class);
-        $mockPromise->expects($this->once())
-            ->method('then');
+        $mockPromise = Double::for(PromiseInterface::class);
+        $mockPromise->expects('then');
 
-        $client = $this->createMock(Client::class);
-        $client->expects($this->once())
-            ->method('__call')
-            ->with('publish', [$channel, $transformedMessage])
-            ->willReturn($mockPromise);
+        $client = $this->createFakeClient($mockPromise);
 
         $this->injectClient($client);
 
         $this->pubSub->publishWithTransform($channel, $originalMessage, $rules);
+
+        $this->assertClientCommands($client, [['publish', [$channel, $transformedMessage]]]);
     }
 
     #[Test]
     public function setupDefaultChannelsConfiguresStandardChannels(): void
     {
-        $mockChannelOperationsManager = $this->createMock(ChannelOperationsManager::class);
-        $mockConnectionRegistry = $this->createMock(ConnectionRegistry::class);
+        $mockChannelOperationsManager = Double::for(ChannelOperationsManager::class);
+        $mockConnectionRegistry = Double::for(ConnectionRegistry::class);
 
-        $server = $this->createMock(Server::class);
-        $server->expects($this->once())
-            ->method('getChannelOperationsManager')
-            ->willReturn($mockChannelOperationsManager);
+        $server = Double::for(Server::class);
+        $server->expects('getChannelOperationsManager')
+            ->returns($mockChannelOperationsManager);
 
-        $server->expects($this->once())
-            ->method('getConnectionRegistry')
-            ->willReturn($mockConnectionRegistry);
+        $server->expects('getConnectionRegistry')
+            ->returns($mockConnectionRegistry);
 
-        $mockChannelOperationsManager->expects($this->once())
-            ->method('broadcast');
+        $mockChannelOperationsManager->expects('broadcast');
 
-        $mockConnectionRegistry->expects($this->once())
-            ->method('getConnection')
-            ->willReturn(null);
+        $mockConnectionRegistry->expects('getConnection')
+            ->returns(null);
 
-        $mockPromise = $this->createStub(PromiseInterface::class);
-        $mockPromise->method('then')
-            ->willReturnCallback(function ($successCallback) use ($mockPromise): PromiseInterface {
+        $mockPromise = Double::for(PromiseInterface::class);
+        $mockPromise->allows('then')
+            ->resolves(function (mixed ...$args) use ($mockPromise): mixed {
+                $successCallback = $args[0] ?? null;
+                assert(is_callable($successCallback));
                 $successCallback();
 
                 return $mockPromise;
             });
 
-        $client = $this->createMock(Client::class);
-        $client->expects($this->exactly(2))
-            ->method('__call')
-            ->with('subscribe', $this->isArray())
-            ->willReturn($mockPromise);
-
-        $client->expects($this->exactly(2))
-            ->method('on');
+        $client = $this->createFakeClient($mockPromise);
 
         $pubSub = $this->createPubSub($server, $client);
         $pubSub->setupDefaultChannels();
+
+        $this->assertCount(2, $client->commandCalls);
+        foreach ($client->commandCalls as [$command, $args]) {
+            $this->assertSame('subscribe', $command);
+            $this->assertCount(1, $args);
+        }
+
+        $this->assertCount(2, $client->listeners('message'));
 
         $reflection = new ReflectionClass($pubSub);
         $subscriptionsProperty = $reflection->getProperty('subscriptions');
@@ -398,25 +456,25 @@ class PubSubTest extends TestCase
     #[Test]
     public function setupEnhancedChannelsConfiguresPatternSubscriptions(): void
     {
-        $mockPromise = $this->createStub(PromiseInterface::class);
-        $mockPromise->method('then')
-            ->willReturnCallback(function ($successCallback) use ($mockPromise): PromiseInterface {
+        $mockPromise = Double::for(PromiseInterface::class);
+        $mockPromise->allows('then')
+            ->resolves(function (mixed ...$args) use ($mockPromise): mixed {
+                $successCallback = $args[0] ?? null;
+                assert(is_callable($successCallback));
                 $successCallback();
 
                 return $mockPromise;
             });
 
-        $client = $this->createMock(Client::class);
-        $client->expects($this->exactly(5))
-            ->method('__call')
-            ->willReturn($mockPromise);
-
-        $client->expects($this->exactly(5))
-            ->method('on');
+        $client = $this->createFakeClient($mockPromise);
 
         $this->injectClient($client);
 
         $this->pubSub->setupEnhancedChannels();
+
+        $this->assertCount(5, $client->commandCalls);
+        $this->assertCount(2, $client->listeners('message'));
+        $this->assertCount(3, $client->listeners('pmessage'));
 
         $reflection = new ReflectionClass($this->pubSub);
         $patternSubscriptionsProperty = $reflection->getProperty('patternSubscriptions');
@@ -433,35 +491,29 @@ class PubSubTest extends TestCase
         $userId = '123';
         $message = 'test user message';
 
-        $mockConnection1 = $this->createMock(Connection::class);
-        $mockConnection1->expects($this->once())
-            ->method('getAttribute')
+        $mockConnection1 = Double::for(Connection::class);
+        $mockConnection1->expects('getAttribute')
             ->with('user_id')
-            ->willReturn($userId);
-        $mockConnection1->expects($this->once())
-            ->method('send')
+            ->returns($userId);
+        $mockConnection1->expects('send')
             ->with($message);
-        $mockConnection1->expects($this->once())
-            ->method('getId')
-            ->willReturn('conn-1');
+        $mockConnection1->expects('getId')
+            ->returns('conn-1');
 
-        $mockConnection2 = $this->createMock(Connection::class);
-        $mockConnection2->expects($this->once())
-            ->method('getAttribute')
+        $mockConnection2 = Double::for(Connection::class);
+        $mockConnection2->expects('getAttribute')
             ->with('user_id')
-            ->willReturn('456');
-        $mockConnection2->expects($this->never())
-            ->method('send');
+            ->returns('456');
+        $mockConnection2->expects('send')
+            ->never();
 
-        $mockConnectionRegistry = $this->createMock(ConnectionRegistry::class);
-        $mockConnectionRegistry->expects($this->once())
-            ->method('getConnections')
-            ->willReturn(['conn-1' => $mockConnection1, 'conn-2' => $mockConnection2]);
+        $mockConnectionRegistry = Double::for(ConnectionRegistry::class);
+        $mockConnectionRegistry->expects('getConnections')
+            ->returns(['conn-1' => $mockConnection1, 'conn-2' => $mockConnection2]);
 
-        $server = $this->createMock(Server::class);
-        $server->expects($this->once())
-            ->method('getConnectionRegistry')
-            ->willReturn($mockConnectionRegistry);
+        $server = Double::for(Server::class);
+        $server->expects('getConnectionRegistry')
+            ->returns($mockConnectionRegistry);
 
         $pubSub = $this->createPubSub($server, $this->mockClient);
 
@@ -477,15 +529,13 @@ class PubSubTest extends TestCase
         $message = 'test room message';
         $expectedChannel = 'room-lobby';
 
-        $mockChannelOperationsManager = $this->createMock(ChannelOperationsManager::class);
-        $mockChannelOperationsManager->expects($this->once())
-            ->method('broadcastToChannel')
+        $mockChannelOperationsManager = Double::for(ChannelOperationsManager::class);
+        $mockChannelOperationsManager->expects('broadcastToChannel')
             ->with($expectedChannel, $message);
 
-        $server = $this->createMock(Server::class);
-        $server->expects($this->once())
-            ->method('getChannelOperationsManager')
-            ->willReturn($mockChannelOperationsManager);
+        $server = Double::for(Server::class);
+        $server->expects('getChannelOperationsManager')
+            ->returns($mockChannelOperationsManager);
 
         $pubSub = $this->createPubSub($server, $this->mockClient);
 
@@ -499,19 +549,17 @@ class PubSubTest extends TestCase
     {
         $message = 'system notification';
 
-        $mockChannelOperationsManager = $this->createMock(ChannelOperationsManager::class);
-        $mockChannelOperationsManager->expects($this->once())
-            ->method('broadcast')
+        $mockChannelOperationsManager = Double::for(ChannelOperationsManager::class);
+        $mockChannelOperationsManager->expects('broadcast')
             ->with($message);
 
-        $mockChannelOperationsManager->expects($this->once())
-            ->method('broadcastToChannel')
+        $mockChannelOperationsManager->expects('broadcastToChannel')
             ->with('admin-notifications', $message);
 
-        $server = $this->createMock(Server::class);
-        $server->expects($this->exactly(2))
-            ->method('getChannelOperationsManager')
-            ->willReturn($mockChannelOperationsManager);
+        $server = Double::for(Server::class);
+        $server->expects('getChannelOperationsManager')
+            ->times(2)
+            ->returns($mockChannelOperationsManager);
 
         $pubSub = $this->createPubSub($server, $this->mockClient);
 

@@ -6,6 +6,8 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Redis;
 use Cake\Core\Configure;
 use Crustum\BlazeCast\WebSocket\Redis\PubSub;
 use Crustum\BlazeCast\WebSocket\Redis\PubSubFactory;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -15,6 +17,8 @@ use ReflectionClass;
  */
 class PubSubFactoryTest extends TestCase
 {
+    use VerifiesDoubles;
+
     protected function setUp(): void
     {
         $reflection = new ReflectionClass(PubSubFactory::class);
@@ -71,8 +75,8 @@ class PubSubFactoryTest extends TestCase
     #[Test]
     public function setInstanceStoresProvidedInstance(): void
     {
-        /** @var PubSub&\PHPUnit\Framework\MockObject\Stub $mockPubSub */
-        $mockPubSub = $this->createStub(PubSub::class);
+        /** @var PubSub $mockPubSub */
+        $mockPubSub = Double::for(PubSub::class);
 
         PubSubFactory::setInstance($mockPubSub);
 
@@ -86,8 +90,8 @@ class PubSubFactoryTest extends TestCase
     {
         $firstInstance = PubSubFactory::getInstance();
 
-        /** @var PubSub&\PHPUnit\Framework\MockObject\Stub $mockPubSub */
-        $mockPubSub = $this->createStub(PubSub::class);
+        /** @var PubSub $mockPubSub */
+        $mockPubSub = Double::for(PubSub::class);
         PubSubFactory::setInstance($mockPubSub);
 
         // Get instance again

@@ -183,9 +183,7 @@ class EventsController extends PusherController
             }
 
             $channelName = $item['channel'];
-            if (!isset($eventsByChannel[$channelName])) {
-                $eventsByChannel[$channelName] = [];
-            }
+            $eventsByChannel[$channelName] ??= [];
 
             $eventsByChannel[$channelName][] = $item;
         }

@@ -9,6 +9,8 @@ use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Publish\PubSubIncomingMessageHandler;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use React\Socket\ConnectionInterface as ReactConnection;
 
 /**
@@ -16,6 +18,8 @@ use React\Socket\ConnectionInterface as ReactConnection;
  */
 class PubSubIncomingMessageHandlerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * Test incoming Redis payload excludes by raw socket_id.
      *
@@ -33,17 +37,17 @@ class PubSubIncomingMessageHandlerTest extends TestCase
             ]],
         ]);
 
-        $reactExcluded = $this->createStub(ReactConnection::class);
+        $reactExcluded = Double::for(ReactConnection::class);
         $excluded = new Connection($reactExcluded);
         $excluded->setSocketId('1.excluded');
 
-        $reactOther = $this->createStub(ReactConnection::class);
+        $reactOther = Double::for(ReactConnection::class);
         $other = new Connection($reactOther);
         $other->setSocketId('2.other');
 
         $sent = [];
-        $reactOther->method('write')->willReturnCallback(function ($data) use (&$sent): bool {
-            $sent[] = $data;
+        $reactOther->allows('write')->resolves(function (mixed ...$args) use (&$sent): mixed {
+            $sent[] = $args[0] ?? null;
 
             return true;
         });
@@ -52,8 +56,8 @@ class PubSubIncomingMessageHandlerTest extends TestCase
         $channel->subscribe($excluded);
         $channel->subscribe($other);
 
-        $connectionManager = $this->createStub(ChannelConnectionManager::class);
-        $connectionManager->method('getConnection')->willReturnCallback(fn(string $id): ?Connection => $id === '1.excluded' ? $excluded : null);
+        $connectionManager = Double::for(ChannelConnectionManager::class);
+        $connectionManager->allows('getConnection')->resolves(fn(mixed ...$args): mixed => ($args[0] ?? null) === '1.excluded' ? $excluded : null);
 
         $handler = new PubSubIncomingMessageHandler($applicationManager, $connectionManager);
         $handler->handle(json_encode([

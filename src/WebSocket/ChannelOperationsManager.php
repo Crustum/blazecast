@@ -65,7 +65,7 @@ class ChannelOperationsManager
         $connections = $this->connectionRegistry->getConnections();
 
         foreach ($connections as $connection) {
-            if ($exceptConnection && $connection->getId() === $exceptConnection->getId()) {
+            if ($exceptConnection instanceof Connection && $connection->getId() === $exceptConnection->getId()) {
                 continue;
             }
 

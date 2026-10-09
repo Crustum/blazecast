@@ -117,6 +117,15 @@ interface PusherChannelInterface
     public function broadcast(array $payload, ?Connection $except = null): array;
 
     /**
+     * Broadcast message triggered from internal source
+     *
+     * @param BroadcastPayload $payload Message payload
+     * @param \Crustum\BlazeCast\WebSocket\Connection|null $except Connection to exclude
+     * @return void
+     */
+    public function broadcastInternally(array $payload, ?Connection $except = null): void;
+
+    /**
      * Find a connection by ID
      *
      * @param string $connectionId Connection ID

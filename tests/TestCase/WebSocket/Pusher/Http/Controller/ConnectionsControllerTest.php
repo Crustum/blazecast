@@ -11,6 +11,8 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\Utils;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\StreamInterface;
 
@@ -21,6 +23,8 @@ use Psr\Http\Message\StreamInterface;
  */
 class ConnectionsControllerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * @var PusherControllerInterface
      */
@@ -67,16 +71,14 @@ class ConnectionsControllerTest extends TestCase
         $appId = 'test-app';
         $params = ['appId' => $appId];
 
-        $connectionManager = $this->createMock(ChannelConnectionManager::class);
-        $connectionManager->expects($this->once())
-            ->method('getConnectionsForApp')
+        $connectionManager = Double::for(ChannelConnectionManager::class);
+        $connectionManager->expects('getConnectionsForApp')
             ->with($appId)
-            ->willReturn(['conn1', 'conn2', 'conn3']);
+            ->returns(['conn1', 'conn2', 'conn3']);
 
-        $connectionManager->expects($this->once())
-            ->method('getAppStats')
+        $connectionManager->expects('getAppStats')
             ->with($appId)
-            ->willReturn([
+            ->returns([
                 'connections' => 10,
                 'subscriptions' => 15,
                 'http_requests' => 5,
@@ -118,16 +120,14 @@ class ConnectionsControllerTest extends TestCase
         $appId = 'test-app';
         $params = ['appId' => $appId];
 
-        $connectionManager = $this->createMock(ChannelConnectionManager::class);
-        $connectionManager->expects($this->once())
-            ->method('getConnectionsForApp')
+        $connectionManager = Double::for(ChannelConnectionManager::class);
+        $connectionManager->expects('getConnectionsForApp')
             ->with($appId)
-            ->willReturn([]);
+            ->returns([]);
 
-        $connectionManager->expects($this->once())
-            ->method('getAppStats')
+        $connectionManager->expects('getAppStats')
             ->with($appId)
-            ->willReturn([
+            ->returns([
                 'connections' => 0,
                 'subscriptions' => 0,
                 'http_requests' => 0,

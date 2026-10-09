@@ -6,8 +6,13 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher\Event;
 use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
+use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Event\EventDispatcher;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
+use JMac\Testing\Matching\Argument;
+use ReflectionClass;
 
 /**
  * EventDispatcherTest
@@ -16,6 +21,8 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
  */
 class EventDispatcherTest extends TestCase
 {
+    use VerifiesDoubles;
+
     protected ChannelManager $channelManager;
 
     protected ApplicationManager $applicationManager;
@@ -44,9 +51,9 @@ class EventDispatcherTest extends TestCase
     public function testCanDispatchToApplicationChannelManager(): void
     {
         $channel = $this->channelManager->getChannel('test-channel');
-        $connection = $this->createMock(Connection::class);
-        $connection->method('getId')->willReturn('test-connection-1');
-        $connection->method('send')->with($this->isString());
+        $connection = Double::for(Connection::class);
+        $connection->allows('getId')->returns('test-connection-1');
+        $connection->allows('send')->with(Argument::type('string'));
 
         $channel->subscribe($connection);
 
@@ -68,13 +75,13 @@ class EventDispatcherTest extends TestCase
     {
         $channel = $this->channelManager->getChannel('test-channel');
 
-        $connection1 = $this->createMock(Connection::class);
-        $connection1->method('getId')->willReturn('connection-1');
-        $connection1->expects($this->never())->method('send');
+        $connection1 = Double::for(Connection::class);
+        $connection1->allows('getId')->returns('connection-1');
+        $connection1->expects('send')->never();
 
-        $connection2 = $this->createMock(Connection::class);
-        $connection2->method('getId')->willReturn('connection-2');
-        $connection2->expects($this->once())->method('send');
+        $connection2 = Double::for(Connection::class);
+        $connection2->allows('getId')->returns('connection-2');
+        $connection2->expects('send');
 
         $channel->subscribe($connection1);
         $channel->subscribe($connection2);
@@ -127,12 +134,11 @@ class EventDispatcherTest extends TestCase
     public function testCreatesProperPayloadFormat(): void
     {
         $channel = $this->channelManager->getChannel('test-channel');
-        $connection = $this->createMock(Connection::class);
-        $connection->method('getId')->willReturn('test-connection-1');
+        $connection = Double::for(Connection::class);
+        $connection->allows('getId')->returns('test-connection-1');
 
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($message): bool {
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($message): bool {
                 $data = json_decode($message, true);
 
                 return isset($data['event']) &&
@@ -161,13 +167,13 @@ class EventDispatcherTest extends TestCase
         $channel1 = $this->channelManager->getChannel('channel-1');
         $channel2 = $this->channelManager->getChannel('channel-2');
 
-        $connection1 = $this->createMock(Connection::class);
-        $connection1->method('getId')->willReturn('connection-1');
-        $connection1->expects($this->once())->method('send');
+        $connection1 = Double::for(Connection::class);
+        $connection1->allows('getId')->returns('connection-1');
+        $connection1->expects('send');
 
-        $connection2 = $this->createMock(Connection::class);
-        $connection2->method('getId')->willReturn('connection-2');
-        $connection2->expects($this->once())->method('send');
+        $connection2 = Double::for(Connection::class);
+        $connection2->allows('getId')->returns('connection-2');
+        $connection2->expects('send');
 
         $channel1->subscribe($connection1);
         $channel2->subscribe($connection2);
@@ -209,13 +215,13 @@ class EventDispatcherTest extends TestCase
         $app1Channel = $this->channelManager->getChannel('shared-channel');
         $app2Channel = $app2ChannelManager->getChannel('shared-channel');
 
-        $app1Connection = $this->createMock(Connection::class);
-        $app1Connection->method('getId')->willReturn('app1-connection');
-        $app1Connection->expects($this->never())->method('send');
+        $app1Connection = Double::for(Connection::class);
+        $app1Connection->allows('getId')->returns('app1-connection');
+        $app1Connection->expects('send')->never();
 
-        $app2Connection = $this->createMock(Connection::class);
-        $app2Connection->method('getId')->willReturn('app2-connection');
-        $app2Connection->expects($this->once())->method('send');
+        $app2Connection = Double::for(Connection::class);
+        $app2Connection->allows('getId')->returns('app2-connection');
+        $app2Connection->expects('send');
 
         $app1Channel->subscribe($app1Connection);
         $app2Channel->subscribe($app2Connection);
@@ -227,5 +233,71 @@ class EventDispatcherTest extends TestCase
             'app-isolation-test',
             json_encode(['message' => 'app2 only']),
         );
+    }
+
+    /**
+     * Test that internal events route through broadcastInternally
+     */
+    public function testInternalEventsRouteThroughBroadcastInternally(): void
+    {
+        $spy = new class ('spy-channel') extends PusherChannel {
+            /**
+             * @var list<array<string, mixed>>
+             */
+            public array $internal = [];
+
+            /**
+             * @var list<array<string, mixed>>
+             */
+            public array $external = [];
+
+            /**
+             * @param array<string, mixed> $payload Message payload
+             * @param \Crustum\BlazeCast\WebSocket\Connection|null $except Connection to exclude
+             * @return list<string>
+             */
+            public function broadcast(array $payload, ?Connection $except = null): array
+            {
+                $this->external[] = $payload;
+
+                return [];
+            }
+
+            /**
+             * @param array<string, mixed> $payload Message payload
+             * @param \Crustum\BlazeCast\WebSocket\Connection|null $except Connection to exclude
+             * @return void
+             */
+            public function broadcastInternally(array $payload, ?Connection $except = null): void
+            {
+                $this->internal[] = $payload;
+            }
+        };
+
+        $reflection = new ReflectionClass($this->channelManager);
+        $property = $reflection->getProperty('channels');
+        $property->setValue($this->channelManager, ['spy-channel' => $spy]);
+
+        EventDispatcher::dispatch(
+            $this->applicationManager,
+            'test-app-1',
+            'spy-channel',
+            'pusher_internal:member_added',
+            (string)json_encode(['user_id' => 'user-1']),
+        );
+
+        $this->assertCount(1, $spy->internal);
+        $this->assertCount(0, $spy->external);
+
+        EventDispatcher::dispatch(
+            $this->applicationManager,
+            'test-app-1',
+            'spy-channel',
+            'client-event',
+            (string)json_encode(['message' => 'test data']),
+        );
+
+        $this->assertCount(1, $spy->external);
+        $this->assertCount(1, $spy->internal);
     }
 }

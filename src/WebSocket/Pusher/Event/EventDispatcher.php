@@ -229,7 +229,13 @@ class EventDispatcher
             'data' => $cleanData,
         ];
 
-        $recipientIds = $channel->broadcast($message, $excludeConnection);
+        $recipientIds = [];
+        if (str_starts_with($event, 'pusher_internal:')) {
+            $channel->broadcastInternally($message, $excludeConnection);
+        } else {
+            $recipientIds = $channel->broadcast($message, $excludeConnection);
+        }
+
         $deliveredTo = count($recipientIds);
         $sampleIds = array_slice($recipientIds, 0, BlazeCastPlugin::CLIENT_SEND_CONNECTION_ID_CAP);
 

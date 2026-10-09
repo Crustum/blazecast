@@ -173,6 +173,7 @@ class PusherChannel implements PusherChannelInterface, JsonSerializable
     public function subscribe(Connection $connection, ?string $auth = null, ?string $data = null): void
     {
         $this->connections[$connection->getId()] = $connection;
+        $connection->setAttribute("subscribed_at_{$this->name}", microtime(true));
 
         $channelData = [];
         if ($data) {
@@ -203,10 +204,24 @@ class PusherChannel implements PusherChannelInterface, JsonSerializable
         unset($this->connections[$connection->getId()]);
 
         $connection->removeAttribute("channel_data_{$this->name}");
+        $connection->removeAttribute("subscribed_at_{$this->name}");
 
         BlazeCastLogger::info(__('PusherChannel: Connection {0} unsubscribed from Pusher channel {1} with connection id {2}', $connection->getId(), $this->name, $connection->getId()), [
             'scope' => ['socket.channel', 'socket.channel.pusher'],
         ]);
+    }
+
+    /**
+     * Get the time at which the connection subscribed to the channel.
+     *
+     * @param \Crustum\BlazeCast\WebSocket\Connection $connection Connection
+     * @return float|null Subscription timestamp or null when unknown
+     */
+    public function getSubscribedAt(Connection $connection): ?float
+    {
+        $subscribedAt = $connection->getAttribute("subscribed_at_{$this->name}");
+
+        return is_numeric($subscribedAt) ? (float)$subscribedAt : null;
     }
 
     /**

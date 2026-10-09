@@ -14,6 +14,9 @@ use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use InvalidArgumentException;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
+use JMac\Testing\Matching\Argument;
 
 /**
  * EventsControllerTest
@@ -22,18 +25,20 @@ use InvalidArgumentException;
  */
 class EventsControllerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
-     * @var ApplicationManager
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager
      */
     protected ApplicationManager $applicationManager;
 
     /**
-     * @var ChannelManager
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager
      */
     protected ChannelManager $channelManager;
 
     /**
-     * @var ChannelConnectionManager
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager
      */
     protected ChannelConnectionManager $connectionManager;
 
@@ -43,7 +48,7 @@ class EventsControllerTest extends TestCase
     protected PusherControllerInterface $controller;
 
     /**
-     * @var Connection
+     * @var \Crustum\BlazeCast\WebSocket\Connection
      */
     protected Connection $httpConnection;
 
@@ -232,19 +237,19 @@ class EventsControllerTest extends TestCase
             'data' => $expectedData,
         ];
 
-        $testChannel = $this->createMock(PusherChannel::class);
-        $testChannel->method('getName')->willReturn('test-channel');
-        $testChannel->method('getConnectionCount')->willReturn(5);
+        $testChannel = Double::for(PusherChannel::class);
+        $testChannel->allows('getName')->returns('test-channel');
+        $testChannel->allows('getConnectionCount')->returns(5);
 
-        $testChannel->expects($this->once())
-            ->method('broadcast')
-            ->with($this->equalTo($expectedMessage), $this->anything());
+        $testChannel->expects('broadcast')
+            ->with($expectedMessage, Argument::any());
 
-        $this->helper->getChannelManager()
-            ->method('getChannel')
-            ->willReturnMap([
-                ['test-channel', $testChannel],
-            ]);
+        /** @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\JMac\Testing\DoubleInterface $channelManager */
+        $channelManager = $this->helper->getChannelManager();
+        $channelManager
+            ->allows('getChannel')
+            ->with('test-channel')
+            ->returns($testChannel);
 
         $eventData = [
             'name' => $expectedEventName,
@@ -282,27 +287,27 @@ class EventsControllerTest extends TestCase
             'data' => $expectedData2,
         ];
 
-        $testChannel1 = $this->createMock(PusherChannel::class);
-        $testChannel1->method('getName')->willReturn('test-channel-1');
-        $testChannel1->method('getConnectionCount')->willReturn(5);
-        $testChannel2 = $this->createMock(PusherChannel::class);
-        $testChannel2->method('getName')->willReturn('test-channel-2');
-        $testChannel2->method('getConnectionCount')->willReturn(10);
+        $testChannel1 = Double::for(PusherChannel::class);
+        $testChannel1->allows('getName')->returns('test-channel-1');
+        $testChannel1->allows('getConnectionCount')->returns(5);
+        $testChannel2 = Double::for(PusherChannel::class);
+        $testChannel2->allows('getName')->returns('test-channel-2');
+        $testChannel2->allows('getConnectionCount')->returns(10);
 
-        $testChannel1->expects($this->once())
-            ->method('broadcast')
-            ->with($this->equalTo($expectedMessage1), $this->anything());
+        $testChannel1->expects('broadcast')
+            ->with($expectedMessage1, Argument::any());
 
-        $testChannel2->expects($this->once())
-            ->method('broadcast')
-            ->with($this->equalTo($expectedMessage2), $this->anything());
+        $testChannel2->expects('broadcast')
+            ->with($expectedMessage2, Argument::any());
 
+        /** @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\JMac\Testing\DoubleInterface $channelManager */
         $channelManager = $this->helper->getChannelManager();
-        $channelManager->method('getChannel')
-            ->willReturnMap([
-                ['test-channel-1', $testChannel1],
-                ['test-channel-2', $testChannel2],
-            ]);
+        $channelManager->allows('getChannel')
+            ->with('test-channel-1')
+            ->returns($testChannel1);
+        $channelManager->allows('getChannel')
+            ->with('test-channel-2')
+            ->returns($testChannel2);
 
         $batchData = [
             'batch' => [
@@ -333,11 +338,11 @@ class EventsControllerTest extends TestCase
     {
         $testChannel = $this->helper->createChannelMock('test-channel', 5);
 
+        /** @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\JMac\Testing\DoubleInterface $channelManager */
         $channelManager = $this->helper->getChannelManager();
-        $channelManager->method('getChannel')
-            ->willReturnMap([
-                ['test-channel', $testChannel],
-            ]);
+        $channelManager->allows('getChannel')
+            ->with('test-channel')
+            ->returns($testChannel);
 
         $result = $this->helper->callProtectedMethod(
             $this->controller,

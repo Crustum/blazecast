@@ -7,9 +7,11 @@ use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Handler\PingHandler;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
+use JMac\Testing\Double;
+use JMac\Testing\DoubleInterface;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
+use JMac\Testing\Matching\Argument;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -18,20 +20,19 @@ use ReflectionClass;
  */
 class PingHandlerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     private PingHandler $handler;
 
-    /**
-     * @var \PHPUnit\Framework\MockObject\Stub&Server
-     */
-    private Server&Stub $stubServer;
+    private Server $stubServer;
 
-    private Connection&MockObject $mockConnection;
+    private Connection&DoubleInterface $mockConnection;
 
     protected function setUp(): void
     {
         $this->handler = new PingHandler();
-        $this->stubServer = $this->createStub(Server::class);
-        $this->mockConnection = $this->createMock(Connection::class);
+        $this->stubServer = Double::for(Server::class);
+        $this->mockConnection = Double::for(Connection::class);
 
         $this->handler->setServer($this->stubServer);
     }
@@ -50,12 +51,10 @@ class PingHandlerTest extends TestCase
 
         $message = new Message('ping');
 
-        $this->mockConnection->expects($this->once())
-            ->method('updateActivity');
+        $this->mockConnection->expects('updateActivity');
 
-        $this->mockConnection->expects($this->once())
-            ->method('send')
-            ->with($this->isString());
+        $this->mockConnection->expects('send')
+            ->with(Argument::type('string'));
 
         $this->handler->handle($this->mockConnection, $message);
     }
@@ -65,12 +64,11 @@ class PingHandlerTest extends TestCase
     {
         $message = new Message('ping');
 
-        $this->mockConnection->expects($this->once())
-            ->method('updateActivity');
+        $this->mockConnection = Double::for(Connection::class);
+        $this->mockConnection->expects('updateActivity');
 
-        $this->mockConnection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $this->mockConnection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'pong' &&
@@ -90,12 +88,11 @@ class PingHandlerTest extends TestCase
         $beforeTime = microtime(true);
         $beforeServerTime = time();
 
-        $this->mockConnection->expects($this->once())
-            ->method('updateActivity');
+        $this->mockConnection = Double::for(Connection::class);
+        $this->mockConnection->expects('updateActivity');
 
-        $this->mockConnection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage) use ($beforeTime, $beforeServerTime): bool {
+        $this->mockConnection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage) use ($beforeTime, $beforeServerTime): bool {
                 $decoded = json_decode($jsonMessage, true);
                 $time = $decoded['data']['time'] ?? 0;
                 $serverTime = $decoded['data']['server_time'] ?? 0;
@@ -115,12 +112,11 @@ class PingHandlerTest extends TestCase
         $pingData = ['client_time' => microtime(true), 'sequence' => 123];
         $message = new Message('ping', $pingData);
 
-        $this->mockConnection->expects($this->once())
-            ->method('updateActivity');
+        $this->mockConnection = Double::for(Connection::class);
+        $this->mockConnection->expects('updateActivity');
 
-        $this->mockConnection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $this->mockConnection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'pong' &&
@@ -136,12 +132,11 @@ class PingHandlerTest extends TestCase
     {
         $message = new Message('ping', null, 'test-channel');
 
-        $this->mockConnection->expects($this->once())
-            ->method('updateActivity');
+        $this->mockConnection = Double::for(Connection::class);
+        $this->mockConnection->expects('updateActivity');
 
-        $this->mockConnection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $this->mockConnection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'pong' &&
@@ -161,12 +156,13 @@ class PingHandlerTest extends TestCase
             new Message('ping', ['seq' => 2]),
         ];
 
-        $this->mockConnection->expects($this->exactly(3))
-            ->method('updateActivity');
+        $this->mockConnection = Double::for(Connection::class);
+        $this->mockConnection->expects('updateActivity')
+            ->times(3);
 
-        $this->mockConnection->expects($this->exactly(3))
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $this->mockConnection->expects('send')
+            ->times(3)
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'pong';
@@ -182,12 +178,11 @@ class PingHandlerTest extends TestCase
     {
         $message = new Message('ping');
 
-        $this->mockConnection->expects($this->once())
-            ->method('updateActivity');
+        $this->mockConnection = Double::for(Connection::class);
+        $this->mockConnection->expects('updateActivity');
 
-        $this->mockConnection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $this->mockConnection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return json_last_error() === JSON_ERROR_NONE && is_array($decoded);
@@ -201,11 +196,10 @@ class PingHandlerTest extends TestCase
     {
         $message = new Message('ping');
 
-        $this->mockConnection->expects($this->once())
-            ->method('updateActivity');
+        $this->mockConnection = Double::for(Connection::class);
+        $this->mockConnection->expects('updateActivity');
 
-        $this->mockConnection->expects($this->once())
-            ->method('send');
+        $this->mockConnection->expects('send');
 
         $this->handler->handle($this->mockConnection, $message);
 
@@ -224,12 +218,11 @@ class PingHandlerTest extends TestCase
         $handler = new PingHandler();
         $message = new Message('ping');
 
-        $this->mockConnection->expects($this->once())
-            ->method('updateActivity');
+        $this->mockConnection = Double::for(Connection::class);
+        $this->mockConnection->expects('updateActivity');
 
-        $this->mockConnection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $this->mockConnection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'pong';
@@ -243,12 +236,11 @@ class PingHandlerTest extends TestCase
     {
         $message = new Message('ping');
 
-        $this->mockConnection->expects($this->once())
-            ->method('updateActivity');
+        $this->mockConnection = Double::for(Connection::class);
+        $this->mockConnection->expects('updateActivity');
 
-        $this->mockConnection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): true {
+        $this->mockConnection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): true {
                 $decoded = json_decode($jsonMessage, true);
 
                 $this->assertArrayHasKey('event', $decoded);

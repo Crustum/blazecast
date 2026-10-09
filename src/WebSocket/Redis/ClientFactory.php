@@ -33,9 +33,7 @@ class ClientFactory
      */
     public function create(LoopInterface $loop, ?array $config = null): Client
     {
-        if ($config === null) {
-            $config = Configure::read('BlazeCast.redis');
-        }
+        $config ??= Configure::read('BlazeCast.redis');
 
         $redisUrl = $this->buildRedisUrl($config);
         $factory = new Factory($loop);

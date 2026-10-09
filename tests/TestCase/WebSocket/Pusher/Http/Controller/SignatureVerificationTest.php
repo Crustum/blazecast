@@ -6,6 +6,9 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher\Http\Controller;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -18,6 +21,8 @@ use ReflectionClass;
  */
 class SignatureVerificationTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * Test signature generation matches client implementation
      *
@@ -29,7 +34,7 @@ class SignatureVerificationTest extends TestCase
         $path = '/apps/1/channels';
         $appKey = 'app-key';
         $appSecret = 'app-secret';
-        $timestamp = '1750374111';
+        $timestamp = (string)time();
 
         $authParams = [
             'auth_key' => $appKey,
@@ -44,8 +49,8 @@ class SignatureVerificationTest extends TestCase
 
         $controller = new TestSignatureController(
             new ApplicationManager(),
-            $this->createStub(ChannelManager::class),
-            $this->createStub(ChannelConnectionManager::class),
+            Double::for(ChannelManager::class),
+            Double::for(ChannelConnectionManager::class),
         );
 
         $apps = ['1' => ['key' => $appKey, 'secret' => $appSecret]];
@@ -53,14 +58,14 @@ class SignatureVerificationTest extends TestCase
         $appsProperty = $reflection->getProperty('applications');
         $appsProperty->setValue($controller->getApplicationManager(), $apps);
 
-        $uri = $this->createStub(UriInterface::class);
-        $uri->method('getPath')->willReturn($path);
-        $uri->method('getQuery')->willReturn($clientQueryString . '&auth_signature=' . $clientSignature);
+        $uri = Double::for(UriInterface::class);
+        $uri->allows('getPath')->returns($path);
+        $uri->allows('getQuery')->returns($clientQueryString . '&auth_signature=' . $clientSignature);
 
-        $request = $this->createStub(RequestInterface::class);
-        $request->method('getUri')->willReturn($uri);
-        $request->method('getMethod')->willReturn($method);
-        $request->method('getBody')->willReturn('');
+        $request = Double::for(RequestInterface::class);
+        $request->allows('getUri')->returns($uri);
+        $request->allows('getMethod')->returns($method);
+        $request->allows('getBody')->returns('');
 
         $paramsWithSignature = $authParams;
         $paramsWithSignature['auth_signature'] = $clientSignature;
@@ -79,39 +84,89 @@ class SignatureVerificationTest extends TestCase
     {
         $method = 'GET';
         $path = '/apps/1/channels';
-        $query = 'auth_key=app-key&auth_timestamp=1750374111&auth_version=1.0&auth_signature=a7f14c178fb34617fac47dc1f2ea2195b0ac9db6b151f1c2e6dc2e83593e823f';
+        $timestamp = (string)time();
+        $query = 'auth_key=app-key&auth_timestamp=' . $timestamp . '&auth_version=1.0';
         $appSecret = 'app-secret';
-        $clientSignature = 'a7f14c178fb34617fac47dc1f2ea2195b0ac9db6b151f1c2e6dc2e83593e823f';
 
         parse_str($query, $params);
         $authParams = $params;
-        unset($authParams['auth_signature']);
         ksort($authParams);
 
         $queryString = http_build_query($authParams);
 
         $stringToSign = "{$method}\n{$path}\n{$queryString}";
 
-        $expectedSignature = hash_hmac('sha256', $stringToSign, $appSecret);
+        $clientSignature = hash_hmac('sha256', $stringToSign, $appSecret);
+        $params['auth_signature'] = $clientSignature;
+        $query .= '&auth_signature=' . $clientSignature;
 
         $controller = new TestSignatureController(
             new ApplicationManager(),
-            $this->createStub(ChannelManager::class),
-            $this->createStub(ChannelConnectionManager::class),
+            Double::for(ChannelManager::class),
+            Double::for(ChannelConnectionManager::class),
         );
 
-        $uri = $this->createStub(UriInterface::class);
-        $uri->method('getPath')->willReturn($path);
-        $uri->method('getQuery')->willReturn($query);
+        $uri = Double::for(UriInterface::class);
+        $uri->allows('getPath')->returns($path);
+        $uri->allows('getQuery')->returns($query);
 
-        $request = $this->createStub(RequestInterface::class);
-        $request->method('getUri')->willReturn($uri);
-        $request->method('getMethod')->willReturn($method);
-        $request->method('getBody')->willReturn('');
+        $request = Double::for(RequestInterface::class);
+        $request->allows('getUri')->returns($uri);
+        $request->allows('getMethod')->returns($method);
+        $request->allows('getBody')->returns('');
 
         $isValid = $controller->testVerifySignature($request, $params, $appSecret);
 
-        $this->assertEquals($expectedSignature, $clientSignature, 'Signature should match client implementation');
         $this->assertTrue($isValid, 'Server verifySignature should return true');
+    }
+
+    /**
+     * Test signatures outside the timestamp tolerance are rejected.
+     *
+     * @param int $timestamp Timestamp to sign with
+     * @return void
+     */
+    #[DataProvider('timestampToleranceProvider')]
+    public function testRejectsSignaturesOutsideTimestampTolerance(int $timestamp): void
+    {
+        $method = 'GET';
+        $path = '/apps/1/channels';
+        $appSecret = 'app-secret';
+        $authParams = [
+            'auth_key' => 'app-key',
+            'auth_timestamp' => (string)$timestamp,
+            'auth_version' => '1.0',
+        ];
+        ksort($authParams);
+        $queryString = http_build_query($authParams);
+        $clientSignature = hash_hmac('sha256', "{$method}\n{$path}\n{$queryString}", $appSecret);
+        $params = $authParams + ['auth_signature' => $clientSignature];
+
+        $controller = new TestSignatureController(
+            new ApplicationManager(),
+            Double::for(ChannelManager::class),
+            Double::for(ChannelConnectionManager::class),
+        );
+
+        $uri = Double::for(UriInterface::class);
+        $uri->allows('getPath')->returns($path);
+        $request = Double::for(RequestInterface::class);
+        $request->allows('getUri')->returns($uri);
+        $request->allows('getMethod')->returns($method);
+
+        $this->assertFalse($controller->testVerifySignature($request, $params, $appSecret));
+    }
+
+    /**
+     * Provide expired and future timestamps.
+     *
+     * @return array<string, array<int>>
+     */
+    public static function timestampToleranceProvider(): array
+    {
+        return [
+            'expired' => [time() - 3600],
+            'future' => [time() + 3600],
+        ];
     }
 }

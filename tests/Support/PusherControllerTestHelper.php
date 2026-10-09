@@ -8,12 +8,10 @@ use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Http\Response;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel;
-use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPresenceChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
-use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\MockObject\TestStubBuilder;
+use JMac\Testing\Double;
 use ReflectionClass;
 use stdClass;
 
@@ -37,22 +35,22 @@ class PusherControllerTestHelper
     ];
 
     /**
-     * @var ApplicationManager
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager
      */
     private ApplicationManager $applicationManager;
 
     /**
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager|\PHPUnit\Framework\MockObject\Stub
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\JMac\Testing\DoubleInterface
      */
-    private $channelManager;
+    private ChannelManager $channelManager;
 
     /**
-     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager|\PHPUnit\Framework\MockObject\Stub
+     * @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager&\JMac\Testing\DoubleInterface
      */
-    private $connectionManager;
+    private ChannelConnectionManager $connectionManager;
 
     /**
-     * @var Connection
+     * @var \Crustum\BlazeCast\WebSocket\Connection
      */
     private Connection $connection;
 
@@ -84,13 +82,9 @@ class PusherControllerTestHelper
         $appsProperty = $reflection->getProperty('applications');
         $appsProperty->setValue($this->applicationManager, ['test-app' => $this->testApp]);
 
-        $this->channelManager = (new TestStubBuilder(ChannelManager::class))
-            ->disableOriginalConstructor()
-            ->getStub();
+        $this->channelManager = Double::for(ChannelManager::class);
 
-        $this->connectionManager = (new TestStubBuilder(ChannelConnectionManager::class))
-            ->disableOriginalConstructor()
-            ->getStub();
+        $this->connectionManager = Double::for(ChannelConnectionManager::class);
 
         $reactConnection = new TestConnection();
         $this->connection = new Connection($reactConnection);
@@ -163,48 +157,20 @@ class PusherControllerTestHelper
      *
      * @param string $name Channel name
      * @param int $connectionCount Connection count
-     * @return \Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel|\PHPUnit\Framework\MockObject\Stub
+     * @return PusherChannel
      */
-    public function createChannelMock(string $name, int $connectionCount = 5)
+    public function createChannelMock(string $name, int $connectionCount = 5): PusherChannel
     {
-        $channel = (new TestStubBuilder(PusherChannel::class))
-            ->disableOriginalConstructor()
-            ->getStub();
+        $channel = Double::for(PusherChannel::class);
 
-        $channel->method('getName')
-            ->willReturn($name);
+        $channel->allows('getName')
+            ->returns($name);
 
-        $channel->method('getConnectionCount')
-            ->willReturn($connectionCount);
+        $channel->allows('getConnectionCount')
+            ->returns($connectionCount);
 
-        $channel->method('getConnections')
-            ->willReturn(array_fill(0, $connectionCount, null));
-
-        return $channel;
-    }
-
-    /**
-     * Create a stub PusherPresenceChannel
-     *
-     * @param string $name Channel name
-     * @param array<string, mixed> $users Channel users
-     * @param int $connectionCount Connection count
-     * @return \Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPresenceChannel|\PHPUnit\Framework\MockObject\Stub
-     */
-    public function createPresenceChannelMock(string $name, array $users = [], int $connectionCount = 5)
-    {
-        $channel = (new TestStubBuilder(PusherPresenceChannel::class))
-            ->disableOriginalConstructor()
-            ->getStub();
-
-        $channel->method('getName')
-            ->willReturn($name);
-
-        $channel->method('getConnectionCount')
-            ->willReturn($connectionCount);
-
-        $channel->method('getUsers')
-            ->willReturn($users);
+        $channel->allows('getConnections')
+            ->returns(array_fill(0, $connectionCount, null));
 
         return $channel;
     }
@@ -217,17 +183,13 @@ class PusherControllerTestHelper
      */
     public function setupChannels(array $channels): void
     {
-        $this->channelManager->method('getChannels')
-            ->willReturn($channels);
+        $this->channelManager->allows('getChannels')
+            ->returns($channels);
 
-        $map = [];
         foreach ($channels as $channel) {
-            $map[] = [$channel->getName(), $channel];
-        }
-
-        if ($map !== []) {
-            $this->channelManager->method('getChannel')
-                ->willReturnMap($map);
+            $this->channelManager->allows('getChannel')
+                ->with($channel->getName())
+                ->returns($channel);
         }
     }
 
@@ -260,9 +222,9 @@ class PusherControllerTestHelper
     /**
      * Get channel manager
      *
-     * @return \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager|\PHPUnit\Framework\MockObject\Stub
+     * @return ChannelManager
      */
-    public function getChannelManager()
+    public function getChannelManager(): ChannelManager
     {
         return $this->channelManager;
     }
@@ -270,9 +232,9 @@ class PusherControllerTestHelper
     /**
      * Get connection manager
      *
-     * @return \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager|\PHPUnit\Framework\MockObject\Stub
+     * @return ChannelConnectionManager
      */
-    public function getConnectionManager()
+    public function getConnectionManager(): ChannelConnectionManager
     {
         return $this->connectionManager;
     }
@@ -328,21 +290,5 @@ class PusherControllerTestHelper
             $this->testCase->assertArrayHasKey($key, $response->getHeaders());
             $this->testCase->assertEquals($value, $response->getHeaders()[$key]);
         }
-    }
-
-    /**
-     * Mock a static method call
-     *
-     * @param string $className Class name
-     * @param string $methodName Method name
-     * @return \PHPUnit\Framework\MockObject\MockObject
-     */
-    public function mockStaticMethod(string $className, string $methodName): MockObject
-    {
-        /** @phpstan-ignore-next-line */
-        return $this->testCase->getMockBuilder($className)
-            ->disableOriginalConstructor()
-            ->onlyMethods([$methodName])
-            ->getMock();
     }
 }

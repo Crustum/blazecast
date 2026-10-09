@@ -6,10 +6,14 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher\Http\Controller;
 use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Http\Response;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use Psr\Http\Message\RequestInterface;
 
 class PusherControllerInterfaceTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * Test that a controller implementing the interface can be invoked
      *
@@ -18,8 +22,8 @@ class PusherControllerInterfaceTest extends TestCase
     public function testControllerCanBeInvoked(): void
     {
         $controller = new TestController();
-        $request = $this->createStub(RequestInterface::class);
-        $connection = $this->createStub(Connection::class);
+        $request = Double::for(RequestInterface::class);
+        $connection = Double::for(Connection::class);
 
         $response = $controller($request, $connection, ['param1' => 'value1']);
 
@@ -35,8 +39,8 @@ class PusherControllerInterfaceTest extends TestCase
     public function testControllerIsStateless(): void
     {
         $controller = new TestController();
-        $request = $this->createStub(RequestInterface::class);
-        $connection = $this->createStub(Connection::class);
+        $request = Double::for(RequestInterface::class);
+        $connection = Double::for(Connection::class);
 
         $response1 = $controller($request, $connection, ['param1' => 'value1']);
         $this->assertEquals('Test response with value1', $response1->getBody());

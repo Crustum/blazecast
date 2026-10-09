@@ -9,6 +9,8 @@ use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use React\EventLoop\Loop;
 use React\Socket\SecureServer;
 use React\Socket\ServerInterface;
@@ -24,6 +26,8 @@ use ReflectionMethod;
  */
 class ServerTlsTest extends TestCase
 {
+    use VerifiesDoubles;
+
     protected PusherRouter $router;
 
     protected ChannelManager $channelManager;
@@ -46,7 +50,7 @@ class ServerTlsTest extends TestCase
     {
         parent::setUp();
 
-        $this->router = $this->createStub(PusherRouter::class);
+        $this->router = Double::for(PusherRouter::class);
         $this->channelManager = new ChannelManager();
         $this->connectionManager = new ChannelConnectionManager();
         $this->applicationManager = new ApplicationManager([

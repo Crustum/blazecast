@@ -10,46 +10,48 @@ use Crustum\BlazeCast\WebSocket\ConnectionRegistry;
 use Crustum\BlazeCast\WebSocket\Job\PruneStaleConnectionsJob;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use React\EventLoop\LoopInterface;
 
 class PruneStaleConnectionsJobTest extends TestCase
 {
+    use VerifiesDoubles;
+
     public function testRunPrunesConnectionWaitingTooLongForPong(): void
     {
-        $connection = $this->createMock(Connection::class);
-        $server = $this->createStub(Server::class);
-        $connectionRegistry = $this->createStub(ConnectionRegistry::class);
-        $applicationContextResolver = $this->createMock(ApplicationContextResolver::class);
-        $appManager = $this->createMock(ApplicationManager::class);
-        $loop = $this->createStub(LoopInterface::class);
+        $connection = Double::for(Connection::class);
+        $server = Double::for(Server::class);
+        $connectionRegistry = Double::for(ConnectionRegistry::class);
+        $applicationContextResolver = Double::for(ApplicationContextResolver::class);
+        $appManager = Double::for(ApplicationManager::class);
+        $loop = Double::for(LoopInterface::class);
 
         $app = [
             'id' => 'app-id',
             'activity_timeout' => 60,
         ];
 
-        $server->method('getConnectionRegistry')->willReturn($connectionRegistry);
-        $server->method('getApplicationContextResolver')->willReturn($applicationContextResolver);
-        $server->method('getApplicationManager')->willReturn($appManager);
+        $server->allows('getConnectionRegistry')->returns($connectionRegistry);
+        $server->allows('getApplicationContextResolver')->returns($applicationContextResolver);
+        $server->allows('getApplicationManager')->returns($appManager);
 
-        $connectionRegistry->method('getConnections')->willReturn([$connection]);
-        $applicationContextResolver->expects($this->once())
-            ->method('getAppIdForConnection')
+        $connectionRegistry->allows('getConnections')->returns([$connection]);
+        $applicationContextResolver->expects('getAppIdForConnection')
             ->with($connection, [])
-            ->willReturn('app-id');
-        $appManager->expects($this->once())
-            ->method('getApplication')
+            ->returns('app-id');
+        $appManager->expects('getApplication')
             ->with('app-id')
-            ->willReturn($app);
+            ->returns($app);
 
-        $connection->method('getPingState')->willReturn([
+        $connection->allows('getPingState')->returns([
             'last_ping_time' => microtime(true) - 90,
             'last_pong_time' => microtime(true) - 200,
             'pending_pings' => 1,
             'ping_count' => 1,
         ]);
-        $connection->expects($this->once())->method('send');
-        $connection->expects($this->once())->method('close');
+        $connection->expects('send');
+        $connection->expects('close');
 
         $job = new PruneStaleConnectionsJob($loop, $server);
         $job->run();
@@ -57,39 +59,37 @@ class PruneStaleConnectionsJobTest extends TestCase
 
     public function testRunDoesNotPruneWhenPongAlreadyReceived(): void
     {
-        $connection = $this->createMock(Connection::class);
-        $server = $this->createStub(Server::class);
-        $connectionRegistry = $this->createStub(ConnectionRegistry::class);
-        $applicationContextResolver = $this->createStub(ApplicationContextResolver::class);
-        $appManager = $this->createStub(ApplicationManager::class);
-        $loop = $this->createStub(LoopInterface::class);
+        $connection = Double::for(Connection::class);
+        $server = Double::for(Server::class);
+        $connectionRegistry = Double::for(ConnectionRegistry::class);
+        $applicationContextResolver = Double::for(ApplicationContextResolver::class);
+        $appManager = Double::for(ApplicationManager::class);
+        $loop = Double::for(LoopInterface::class);
 
         $app = [
             'id' => 'app-id',
             'activity_timeout' => 60,
         ];
 
-        $server->method('getConnectionRegistry')->willReturn($connectionRegistry);
-        $server->method('getApplicationContextResolver')->willReturn($applicationContextResolver);
-        $server->method('getApplicationManager')->willReturn($appManager);
+        $server->allows('getConnectionRegistry')->returns($connectionRegistry);
+        $server->allows('getApplicationContextResolver')->returns($applicationContextResolver);
+        $server->allows('getApplicationManager')->returns($appManager);
 
-        $connectionRegistry->method('getConnections')->willReturn([$connection]);
-        $applicationContextResolver->method('getAppIdForConnection')
-            ->willReturnMap([
-                [$connection, [], 'app-id'],
-            ]);
-        $appManager->method('getApplication')
-            ->willReturnMap([
-                ['app-id', $app],
-            ]);
+        $connectionRegistry->allows('getConnections')->returns([$connection]);
+        $applicationContextResolver->allows('getAppIdForConnection')
+            ->with($connection, [])
+            ->returns('app-id');
+        $appManager->allows('getApplication')
+            ->with('app-id')
+            ->returns($app);
 
-        $connection->method('getPingState')->willReturn([
+        $connection->allows('getPingState')->returns([
             'last_ping_time' => microtime(true) - 90,
             'last_pong_time' => microtime(true) - 10,
             'pending_pings' => 0,
             'ping_count' => 1,
         ]);
-        $connection->expects($this->never())->method('close');
+        $connection->expects('close')->never();
 
         $job = new PruneStaleConnectionsJob($loop, $server);
         $job->run();

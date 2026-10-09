@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0]
+
+### Added
+
+- HTTP API signature timestamp tolerance: requests signed more than 600s in the past or future are rejected (`AuthenticationTrait::SIGNATURE_TOLERANCE`)
+- Presence `subscribed_at` tracking per channel connection (`PusherChannel::getSubscribedAt()`)
+- `MetricsHandler::presenceData()` and `presenceConnections()` metric types plus `mergePresenceData()`, `mergePresenceConnections()`, and `mergeChannelUsers()` for combining per-server presence snapshots
+- Test doubles via `jasonmccreary/double ^1.0` (`require-dev`): all 45 test files converted from PHPUnit `createMock`/`createStub` to `Double::for` + `allows`/`expects` with the `VerifiesDoubles` trait
+- Explicit `react/promise ^3.2` dependency
+- `guzzlehttp/psr7 ^3.0` support with new `HandshakeResponseFactory` (casts integer handshake header values such as `Sec-WebSocket-Version` to string; ports upstream #410)
+- `HandshakeResponseFactoryTest` covering the factory through Ratchet's `ServerNegotiator` handshake path
+
+### Changed
+
+- Widened dependency constraints: `firebase/php-jwt ^7.0`, `symfony/http-foundation ^7.0` (alongside `guzzlehttp/psr7 ^2.6|^3.0` and `react/promise ^3.2`)
+- Presence `member_added` is announced only for the user's first connection and `member_removed` only when the user's last connection leaves
+- Presence member events are dispatched through `EventDispatcher` when scaling is enabled so they fan out to all nodes, falling back to local broadcast otherwise
+- `EventDispatcher` routes `pusher_internal:*` events through the new `PusherChannelInterface::broadcastInternally()`
+- Presence channel data tolerates members without `user_info` (falls back to an empty object)
+- `channel_users` metrics are returned as a list
+
+### Fixed
+
+- Stricter type guards: `ChannelOperationsManager` verifies `$exceptConnection` is a `Connection` before comparing IDs, `PusherChannelFactory` verifies the `ApplicationManager` instance before injecting it, and `Server` verifies the container implements `ContainerInterface` before use
+
+
 ## [0.4.0]
 
 ### Added

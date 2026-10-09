@@ -26,9 +26,10 @@ class TestablePresenceChannel extends PusherPresenceChannel
      * Override to prevent broadcasting which causes issues in tests
      *
      * @param string $userId User ID
+     * @param \Crustum\BlazeCast\WebSocket\Connection|null $except Connection to exclude
      * @return void
      */
-    protected function broadcastMemberRemoved(string $userId): void
+    protected function broadcastMemberRemoved(string $userId, ?Connection $except = null): void
     {
     }
 }

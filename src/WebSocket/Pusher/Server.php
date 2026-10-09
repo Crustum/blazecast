@@ -22,6 +22,7 @@ use Crustum\BlazeCast\WebSocket\Event\MessageSentEvent;
 use Crustum\BlazeCast\WebSocket\Handler\DefaultHandler;
 use Crustum\BlazeCast\WebSocket\Handler\HandlerRegistry;
 use Crustum\BlazeCast\WebSocket\Handler\PingHandler;
+use Crustum\BlazeCast\WebSocket\Http\HandshakeResponseFactory;
 use Crustum\BlazeCast\WebSocket\Http\HttpRequestProcessor;
 use Crustum\BlazeCast\WebSocket\Http\PusherRouter;
 use Crustum\BlazeCast\WebSocket\Job\JobManager;
@@ -47,7 +48,6 @@ use Crustum\BlazeCast\WebSocket\WebSocketServerInterface;
 use Crustum\Rhythm\Event\SharedBeat;
 use Crustum\Rhythm\Rhythm;
 use Exception;
-use GuzzleHttp\Psr7\HttpFactory;
 use GuzzleHttp\Psr7\Message;
 use GuzzleHttp\Psr7\Response as GuzzleResponse;
 use InvalidArgumentException;
@@ -315,7 +315,7 @@ class Server implements WebSocketServerInterface
 
         $this->negotiator = new ServerNegotiator(
             new RequestVerifier(),
-            new HttpFactory(),
+            new HandshakeResponseFactory(),
         );
 
         $this->negotiator->setSupportedSubProtocols([
@@ -740,7 +740,7 @@ class Server implements WebSocketServerInterface
 
         $entriesRepositoryClass = 'Crustum\\Speculum\\Contract\\EntriesRepository';
         $storage = null;
-        if ($this->container && interface_exists($entriesRepositoryClass) && $this->container->has($entriesRepositoryClass)) {
+        if ($this->container instanceof ContainerInterface && interface_exists($entriesRepositoryClass) && $this->container->has($entriesRepositoryClass)) {
             $storage = $this->container->get($entriesRepositoryClass);
         }
 
@@ -762,7 +762,7 @@ class Server implements WebSocketServerInterface
             return;
         }
 
-        if (!$this->container || !$this->container->has(Rhythm::class)) {
+        if (!$this->container instanceof ContainerInterface || !$this->container->has(Rhythm::class)) {
             $this->log('info', __('Server: Rhythm not available in container, skipping initialization'), [
                 'scope' => ['socket.server', 'socket.server.rhythm'],
             ]);

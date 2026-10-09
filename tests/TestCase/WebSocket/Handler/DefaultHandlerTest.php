@@ -7,6 +7,9 @@ use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Handler\DefaultHandler;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
+use JMac\Testing\Matching\Argument;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -16,6 +19,8 @@ use ReflectionClass;
  */
 class DefaultHandlerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     private DefaultHandler $handler;
 
     private Server $stubServer;
@@ -23,7 +28,7 @@ class DefaultHandlerTest extends TestCase
     protected function setUp(): void
     {
         $this->handler = new DefaultHandler();
-        $this->stubServer = $this->createStub(Server::class);
+        $this->stubServer = Double::for(Server::class);
 
         $this->handler->setServer($this->stubServer);
     }
@@ -65,10 +70,9 @@ class DefaultHandlerTest extends TestCase
         $data = ['key' => 'value', 'number' => 123];
         $message = new Message($eventType, $data);
 
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage) use ($eventType, $data): bool {
+        $connection = Double::for(Connection::class);
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage) use ($eventType, $data): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -86,10 +90,9 @@ class DefaultHandlerTest extends TestCase
         $message = new Message('test_event', ['test' => 'data']);
         $beforeTime = time();
 
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage) use ($beforeTime): bool {
+        $connection = Double::for(Connection::class);
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage) use ($beforeTime): bool {
                 $decoded = json_decode($jsonMessage, true);
                 $timestamp = $decoded['data']['timestamp'] ?? 0;
 
@@ -104,10 +107,9 @@ class DefaultHandlerTest extends TestCase
     {
         $message = new Message('empty_event');
 
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $connection = Double::for(Connection::class);
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -129,10 +131,9 @@ class DefaultHandlerTest extends TestCase
         ];
         $message = new Message('complex_event', $complexData);
 
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage) use ($complexData): bool {
+        $connection = Double::for(Connection::class);
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage) use ($complexData): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -149,10 +150,9 @@ class DefaultHandlerTest extends TestCase
     {
         $message = new Message('channel_event', ['content' => 'hello'], 'test-channel');
 
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $connection = Double::for(Connection::class);
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -169,10 +169,9 @@ class DefaultHandlerTest extends TestCase
     {
         $message = new Message('string_event', 'simple string data');
 
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $connection = Double::for(Connection::class);
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -189,10 +188,9 @@ class DefaultHandlerTest extends TestCase
     {
         $message = new Message('numeric_event', 42);
 
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $connection = Double::for(Connection::class);
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -209,10 +207,9 @@ class DefaultHandlerTest extends TestCase
     {
         $message = new Message('boolean_event', true);
 
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $connection = Double::for(Connection::class);
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return $decoded['event'] === 'echo' &&
@@ -229,10 +226,9 @@ class DefaultHandlerTest extends TestCase
     {
         $message = new Message('json_test', ['test' => 'data']);
 
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($jsonMessage): bool {
+        $connection = Double::for(Connection::class);
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($jsonMessage): bool {
                 $decoded = json_decode($jsonMessage, true);
 
                 return json_last_error() === JSON_ERROR_NONE && is_array($decoded);
@@ -271,24 +267,22 @@ class DefaultHandlerTest extends TestCase
         ];
 
         $callCount = 0;
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->exactly(3))
-            ->method('send')
-            ->willReturnCallback(function ($json) use (&$callCount): void {
+        $connection = Double::for(Connection::class);
+        $connection->expects('send')
+            ->times(3)
+            ->resolves(function (mixed ...$args) use (&$callCount): mixed {
+                $json = $args[0];
                 $decoded = json_decode($json, true);
                 $callCount++;
 
-                switch ($callCount) {
-                    case 1:
-                        $this->assertEquals('event1', $decoded['data']['original_event']);
-                        break;
-                    case 2:
-                        $this->assertEquals('event2', $decoded['data']['original_event']);
-                        break;
-                    case 3:
-                        $this->assertEquals('event3', $decoded['data']['original_event']);
-                        break;
-                }
+                match ($callCount) {
+                    1 => $this->assertEquals('event1', $decoded['data']['original_event']),
+                    2 => $this->assertEquals('event2', $decoded['data']['original_event']),
+                    3 => $this->assertEquals('event3', $decoded['data']['original_event']),
+                    default => null,
+                };
+
+                return null;
             });
 
         foreach ($messages as $message) {

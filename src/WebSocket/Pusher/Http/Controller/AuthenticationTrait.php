@@ -18,6 +18,13 @@ use Psr\Http\Message\RequestInterface;
 trait AuthenticationTrait
 {
     /**
+     * The number of seconds either side of the current time a request signature remains valid.
+     *
+     * @var int
+     */
+    protected const SIGNATURE_TOLERANCE = 600;
+
+    /**
      * Parse query parameters from request
      *
      * @param \Psr\Http\Message\RequestInterface $request HTTP request
@@ -72,6 +79,27 @@ trait AuthenticationTrait
             'scope' => ['socket.controller', 'socket.controller.auth'],
         ]);
 
-        return hash_equals($expectedSignature, $authSignature);
+        if (!hash_equals($expectedSignature, (string)$authSignature)) {
+            return false;
+        }
+
+        return $this->verifySignatureTimestamp($params);
+    }
+
+    /**
+     * Verify that the request signature has not expired.
+     *
+     * @param array<string, mixed> $params Parameters including auth timestamp
+     * @return bool True when the timestamp is within tolerance
+     */
+    protected function verifySignatureTimestamp(array $params): bool
+    {
+        $timestamp = $params['auth_timestamp'] ?? null;
+
+        if (!is_numeric($timestamp)) {
+            return false;
+        }
+
+        return abs(time() - (int)$timestamp) <= static::SIGNATURE_TOLERANCE;
     }
 }

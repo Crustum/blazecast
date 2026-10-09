@@ -7,6 +7,8 @@ use Cake\Core\Configure;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -16,6 +18,8 @@ use Psr\Http\Message\UriInterface;
  */
 class SignaturePathPrefixTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * Test verifySignature strips server path prefix before HMAC.
      *
@@ -30,7 +34,7 @@ class SignaturePathPrefixTest extends TestCase
 
         $authParams = [
             'auth_key' => 'app-key',
-            'auth_timestamp' => '1750374111',
+            'auth_timestamp' => (string)time(),
             'auth_version' => '1.0',
         ];
         ksort($authParams);
@@ -41,18 +45,18 @@ class SignaturePathPrefixTest extends TestCase
 
         $controller = new TestSignatureController(
             new ApplicationManager(),
-            $this->createStub(ChannelManager::class),
-            $this->createStub(ChannelConnectionManager::class),
+            Double::for(ChannelManager::class),
+            Double::for(ChannelConnectionManager::class),
         );
 
-        $uri = $this->createStub(UriInterface::class);
-        $uri->method('getPath')->willReturn($requestPath);
-        $uri->method('getQuery')->willReturn($queryString . '&auth_signature=' . $clientSignature);
+        $uri = Double::for(UriInterface::class);
+        $uri->allows('getPath')->returns($requestPath);
+        $uri->allows('getQuery')->returns($queryString . '&auth_signature=' . $clientSignature);
 
-        $request = $this->createStub(RequestInterface::class);
-        $request->method('getUri')->willReturn($uri);
-        $request->method('getMethod')->willReturn($method);
-        $request->method('getBody')->willReturn('');
+        $request = Double::for(RequestInterface::class);
+        $request->allows('getUri')->returns($uri);
+        $request->allows('getMethod')->returns($method);
+        $request->allows('getBody')->returns('');
 
         $params = $authParams;
         $params['auth_signature'] = $clientSignature;

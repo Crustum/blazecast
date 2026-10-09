@@ -112,9 +112,7 @@ class ServerFactory
         $applicationManager = $applicationManager ?: static::createApplicationManager($config);
         $connectionManager = $connectionManager ?: new ChannelConnectionManager();
 
-        if ($rateLimiter === null) {
-            $rateLimiter = static::createWebSocketRateLimiter($applicationManager, $loop);
-        }
+        $rateLimiter ??= static::createWebSocketRateLimiter($applicationManager, $loop);
 
         if (!$connectionMessageRateLimiter instanceof ConnectionMessageRateLimiter) {
             $connectionMessageRateLimiter = static::createConnectionMessageRateLimiter($applicationManager);

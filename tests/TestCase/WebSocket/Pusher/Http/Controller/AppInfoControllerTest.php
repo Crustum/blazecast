@@ -13,6 +13,8 @@ use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\Utils;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\StreamInterface;
 
@@ -23,6 +25,8 @@ use Psr\Http\Message\StreamInterface;
  */
 class AppInfoControllerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * @var ApplicationManager
      */
@@ -89,15 +93,13 @@ class AppInfoControllerTest extends TestCase
         $appId = 'test-app';
         $params = ['appId' => $appId];
 
-        $channelManager = $this->createMock(ChannelManager::class);
-        $channelManager->expects($this->once())
-            ->method('getChannelCount')
-            ->willReturn(5);
+        $channelManager = Double::for(ChannelManager::class);
+        $channelManager->expects('getChannelCount')
+            ->returns(5);
 
-        $connectionManager = $this->createMock(ChannelConnectionManager::class);
-        $connectionManager->expects($this->once())
-            ->method('getActiveChannelNames')
-            ->willReturn(['channel1', 'channel2', 'channel3']);
+        $connectionManager = Double::for(ChannelConnectionManager::class);
+        $connectionManager->expects('getActiveChannelNames')
+            ->returns(['channel1', 'channel2', 'channel3']);
 
         $controller = new AppInfoController(
             $this->helper->getApplicationManager(),
@@ -171,15 +173,13 @@ class AppInfoControllerTest extends TestCase
             'secret' => 'minimal-secret',
         ];
 
-        $channelManager = $this->createMock(ChannelManager::class);
-        $channelManager->expects($this->once())
-            ->method('getChannelCount')
-            ->willReturn(0);
+        $channelManager = Double::for(ChannelManager::class);
+        $channelManager->expects('getChannelCount')
+            ->returns(0);
 
-        $connectionManager = $this->createMock(ChannelConnectionManager::class);
-        $connectionManager->expects($this->once())
-            ->method('getActiveChannelNames')
-            ->willReturn([]);
+        $connectionManager = Double::for(ChannelConnectionManager::class);
+        $connectionManager->expects('getActiveChannelNames')
+            ->returns([]);
 
         $controller = new AppInfoController(
             $this->helper->getApplicationManager(),
@@ -225,15 +225,13 @@ class AppInfoControllerTest extends TestCase
         $appId = 'empty-app';
         $params = ['appId' => $appId];
 
-        $channelManager = $this->createMock(ChannelManager::class);
-        $channelManager->expects($this->once())
-            ->method('getChannelCount')
-            ->willReturn(0);
+        $channelManager = Double::for(ChannelManager::class);
+        $channelManager->expects('getChannelCount')
+            ->returns(0);
 
-        $connectionManager = $this->createMock(ChannelConnectionManager::class);
-        $connectionManager->expects($this->once())
-            ->method('getActiveChannelNames')
-            ->willReturn([]);
+        $connectionManager = Double::for(ChannelConnectionManager::class);
+        $connectionManager->expects('getActiveChannelNames')
+            ->returns([]);
 
         $controller = new AppInfoController(
             $this->helper->getApplicationManager(),

@@ -11,6 +11,8 @@ use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface
 use Exception;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use Psr\Http\Message\RequestInterface;
 use ReflectionClass;
 
@@ -19,6 +21,8 @@ use ReflectionClass;
  */
 class HealthCheckControllerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * @var PusherControllerInterface
      */
@@ -78,18 +82,20 @@ class HealthCheckControllerTest extends TestCase
     {
         $request = $this->createRequest('GET', '/pusher/health');
 
-        $controller = $this->getMockBuilder(HealthCheckController::class)
-            ->setConstructorArgs([
+        /** @var \JMac\Testing\OverriddenDouble $controllerDouble */
+        $controllerDouble = Double::for(HealthCheckController::class, override: true)->passthru(
+            new HealthCheckController(
                 $this->helper->getApplicationManager(),
                 $this->helper->getChannelManager(),
                 $this->helper->getConnectionManager(),
-            ])
-            ->onlyMethods(['handle'])
-            ->getMock();
+            ),
+        );
 
-        $controller->expects($this->once())
-            ->method('handle')
-            ->willThrowException(new Exception('Test exception'));
+        $controllerDouble->expects('handle')
+            ->throws(new Exception('Test exception'));
+
+        /** @var HealthCheckController $controller */
+        $controller = $controllerDouble->instance();
 
         $reflection = new ReflectionClass($controller);
         $method = $reflection->getMethod('__invoke');

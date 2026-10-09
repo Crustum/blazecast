@@ -6,12 +6,14 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher\Http\Controller;
 use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\Test\Support\PusherControllerTestHelper;
 use Crustum\BlazeCast\WebSocket\Http\Response;
-use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannelInterface;
+use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherPresenceChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\ChannelUsersController;
 use Crustum\BlazeCast\WebSocket\Pusher\Http\Controller\PusherControllerInterface;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use Psr\Http\Message\RequestInterface;
 
 /**
@@ -19,6 +21,8 @@ use Psr\Http\Message\RequestInterface;
  */
 class ChannelUsersControllerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * @var PusherControllerInterface
      */
@@ -81,16 +85,19 @@ class ChannelUsersControllerTest extends TestCase
      */
     public function testIndexReturnsErrorForNonPresenceChannel(): void
     {
-        $regularChannel = $this->createStub(PusherChannelInterface::class);
+        $regularChannelDouble = Double::for(PusherChannel::class);
 
-        $regularChannel->method('getName')
-            ->willReturn('public-channel');
+        $regularChannelDouble->allows('getName')
+            ->returns('public-channel');
 
-        $this->helper->getChannelManager()
-            ->method('getChannel')
-            ->willReturnMap([
-                ['public-channel', $regularChannel],
-            ]);
+        $regularChannel = $regularChannelDouble->instance();
+
+        /** @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\JMac\Testing\DoubleInterface $channelManager */
+        $channelManager = $this->helper->getChannelManager();
+        $channelManager
+            ->allows('getChannel')
+            ->with('public-channel')
+            ->returns($regularChannel);
 
         $this->helper->configureController($this->controller, [
             'requestData' => [
@@ -122,6 +129,12 @@ class ChannelUsersControllerTest extends TestCase
     public function testIndexReturns404ForNonExistentChannel(): void
     {
         $this->helper->setupChannels([]);
+        /** @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\JMac\Testing\DoubleInterface $channelManager */
+        $channelManager = $this->helper->getChannelManager();
+        $channelManager
+            ->allows('getChannel')
+            ->with('presence-non-existent')
+            ->returns($this->helper->createChannelMock('presence-non-existent', 0));
 
         $this->helper->configureController($this->controller, [
             'requestData' => [
@@ -153,25 +166,27 @@ class ChannelUsersControllerTest extends TestCase
             ['user_id' => 'user2', 'user_info' => ['name' => 'User 2']],
         ];
 
-        $presenceChannel = $this->createStub(PusherPresenceChannel::class);
+        $presenceChannelDouble = Double::for(PusherPresenceChannel::class, override: true);
 
-        $presenceChannel->method('getName')
-            ->willReturn('presence-channel');
+        $presenceChannelDouble->allows('getName')
+            ->returns('presence-channel');
 
-        $presenceChannel->method('getMembers')
-            ->willReturn($users);
+        $presenceChannelDouble->allows('getMembers')
+            ->returns($users);
 
-        $this->helper->getChannelManager()
-            ->method('getChannel')
-            ->willReturnMap([
-                ['presence-channel', $presenceChannel],
-            ]);
+        $presenceChannel = $presenceChannelDouble->instance();
 
-        $this->helper->getChannelManager()
-            ->method('hasChannel')
-            ->willReturnMap([
-                ['presence-channel', true],
-            ]);
+        /** @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\JMac\Testing\DoubleInterface $channelManager */
+        $channelManager = $this->helper->getChannelManager();
+        $channelManager
+            ->allows('getChannel')
+            ->with('presence-channel')
+            ->returns($presenceChannel);
+
+        $channelManager
+            ->allows('hasChannel')
+            ->with('presence-channel')
+            ->returns(true);
 
         $this->helper->configureController($this->controller, [
             'requestData' => [
@@ -202,25 +217,27 @@ class ChannelUsersControllerTest extends TestCase
      */
     public function testIndexReturnsEmptyUserList(): void
     {
-        $presenceChannel = $this->createStub(PusherPresenceChannel::class);
+        $presenceChannelDouble = Double::for(PusherPresenceChannel::class, override: true);
 
-        $presenceChannel->method('getName')
-            ->willReturn('presence-empty');
+        $presenceChannelDouble->allows('getName')
+            ->returns('presence-empty');
 
-        $presenceChannel->method('getMembers')
-            ->willReturn([]);
+        $presenceChannelDouble->allows('getMembers')
+            ->returns([]);
 
-        $this->helper->getChannelManager()
-            ->method('getChannel')
-            ->willReturnMap([
-                ['presence-empty', $presenceChannel],
-            ]);
+        $presenceChannel = $presenceChannelDouble->instance();
 
-        $this->helper->getChannelManager()
-            ->method('hasChannel')
-            ->willReturnMap([
-                ['presence-empty', true],
-            ]);
+        /** @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\JMac\Testing\DoubleInterface $channelManager */
+        $channelManager = $this->helper->getChannelManager();
+        $channelManager
+            ->allows('getChannel')
+            ->with('presence-empty')
+            ->returns($presenceChannel);
+
+        $channelManager
+            ->allows('hasChannel')
+            ->with('presence-empty')
+            ->returns(true);
 
         $this->helper->configureController($this->controller, [
             'requestData' => [

@@ -11,6 +11,9 @@ use Crustum\BlazeCast\WebSocket\Pusher\MetricsHandler;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\Utils;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
+use JMac\Testing\Matching\Argument;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\StreamInterface;
 
@@ -19,6 +22,8 @@ use Psr\Http\Message\StreamInterface;
  */
 class ChannelsControllerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * @var PusherControllerInterface
      */
@@ -77,31 +82,29 @@ class ChannelsControllerTest extends TestCase
             ],
         ];
 
-        $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['gather'])
-            ->getMock();
+        $metricsHandler = Double::for(MetricsHandler::class);
 
-        $metricsHandler->expects($this->once())
-            ->method('gather')
+        $metricsHandler->expects('gather')
             ->with($this->testApp, 'channels', [
                 'filter_by_prefix' => null,
                 'info' => null,
             ])
-            ->willReturn($expectedChannels);
+            ->returns($expectedChannels);
 
-        $controller = $this->getMockBuilder(ChannelsController::class)
-            ->setConstructorArgs([
+        /** @var \JMac\Testing\OverriddenDouble $controllerDouble */
+        $controllerDouble = Double::for(ChannelsController::class, override: true)->passthru(
+            new ChannelsController(
                 $this->helper->getApplicationManager(),
                 $this->helper->getChannelManager(),
                 $this->helper->getConnectionManager(),
-            ])
-            ->onlyMethods(['getMetricsHandler'])
-            ->getMock();
+            ),
+        );
 
-        $controller->expects($this->once())
-            ->method('getMetricsHandler')
-            ->willReturn($metricsHandler);
+        $controllerDouble->expects('getMetricsHandler')
+            ->returns($metricsHandler);
+
+        /** @var ChannelsController $controller */
+        $controller = $controllerDouble->instance();
 
         $this->helper->configureController($controller, [
             'application' => $this->testApp,
@@ -135,31 +138,29 @@ class ChannelsControllerTest extends TestCase
             ],
         ];
 
-        $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['gather'])
-            ->getMock();
+        $metricsHandler = Double::for(MetricsHandler::class);
 
-        $metricsHandler->expects($this->once())
-            ->method('gather')
+        $metricsHandler->expects('gather')
             ->with($this->testApp, 'channels', [
                 'filter_by_prefix' => 'chat-',
                 'info' => null,
             ])
-            ->willReturn($expectedChannels);
+            ->returns($expectedChannels);
 
-        $controller = $this->getMockBuilder(ChannelsController::class)
-            ->setConstructorArgs([
+        /** @var \JMac\Testing\OverriddenDouble $controllerDouble */
+        $controllerDouble = Double::for(ChannelsController::class, override: true)->passthru(
+            new ChannelsController(
                 $this->helper->getApplicationManager(),
                 $this->helper->getChannelManager(),
                 $this->helper->getConnectionManager(),
-            ])
-            ->onlyMethods(['getMetricsHandler'])
-            ->getMock();
+            ),
+        );
 
-        $controller->expects($this->once())
-            ->method('getMetricsHandler')
-            ->willReturn($metricsHandler);
+        $controllerDouble->expects('getMetricsHandler')
+            ->returns($metricsHandler);
+
+        /** @var ChannelsController $controller */
+        $controller = $controllerDouble->instance();
 
         $this->helper->configureController($controller, [
             'application' => $this->testApp,
@@ -200,31 +201,29 @@ class ChannelsControllerTest extends TestCase
             ],
         ];
 
-        $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['gather'])
-            ->getMock();
+        $metricsHandler = Double::for(MetricsHandler::class);
 
-        $metricsHandler->expects($this->once())
-            ->method('gather')
+        $metricsHandler->expects('gather')
             ->with($this->testApp, 'channels', [
                 'filter_by_prefix' => null,
                 'info' => 'user_count,subscription_count',
             ])
-            ->willReturn($expectedChannels);
+            ->returns($expectedChannels);
 
-        $controller = $this->getMockBuilder(ChannelsController::class)
-            ->setConstructorArgs([
+        /** @var \JMac\Testing\OverriddenDouble $controllerDouble */
+        $controllerDouble = Double::for(ChannelsController::class, override: true)->passthru(
+            new ChannelsController(
                 $this->helper->getApplicationManager(),
                 $this->helper->getChannelManager(),
                 $this->helper->getConnectionManager(),
-            ])
-            ->onlyMethods(['getMetricsHandler'])
-            ->getMock();
+            ),
+        );
 
-        $controller->expects($this->once())
-            ->method('getMetricsHandler')
-            ->willReturn($metricsHandler);
+        $controllerDouble->expects('getMetricsHandler')
+            ->returns($metricsHandler);
+
+        /** @var ChannelsController $controller */
+        $controller = $controllerDouble->instance();
 
         $this->helper->configureController($controller, [
             'application' => $this->testApp,
@@ -260,15 +259,11 @@ class ChannelsControllerTest extends TestCase
         ]);
 
         // Mock MetricsHandler::gather to return channel info
-        $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['gather'])
-            ->getMock();
+        $metricsHandler = Double::for(MetricsHandler::class);
 
-        $metricsHandler->expects($this->once())
-            ->method('gather')
-            ->with($this->testApp, 'channels', $this->anything())
-            ->willReturn([
+        $metricsHandler->expects('gather')
+            ->with($this->testApp, 'channels', Argument::any())
+            ->returns([
                 'test-channel-1' => [
                     'occupied' => true,
                     'user_count' => 3,
@@ -286,17 +281,18 @@ class ChannelsControllerTest extends TestCase
                 ],
             ]);
 
-        $controller = $this->getMockBuilder(ChannelsController::class)
-            ->setConstructorArgs([
+        /** @var \JMac\Testing\OverriddenDouble $controllerDouble */
+        $controllerDouble = Double::for(ChannelsController::class, override: true)->passthru(
+            new ChannelsController(
                 $this->helper->getApplicationManager(),
                 $this->helper->getChannelManager(),
                 $this->helper->getConnectionManager(),
-            ])
-            ->onlyMethods(['getMetricsHandler'])
-            ->getMock();
-        $controller->expects($this->once())
-            ->method('getMetricsHandler')
-            ->willReturn($metricsHandler);
+            ),
+        );
+        $controllerDouble->expects('getMetricsHandler')
+            ->returns($metricsHandler);
+        /** @var ChannelsController $controller */
+        $controller = $controllerDouble->instance();
         $this->helper->configureController($controller, [
             'application' => $this->testApp,
         ]);
@@ -336,25 +332,22 @@ class ChannelsControllerTest extends TestCase
         $this->helper->configureController($this->controller, [
             'application' => $this->testApp,
         ]);
-        $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['gather'])
-            ->getMock();
-        $metricsHandler->expects($this->once())
-            ->method('gather')
-            ->with($this->testApp, 'channels', $this->anything())
-            ->willReturn([]);
-        $controller = $this->getMockBuilder(ChannelsController::class)
-            ->setConstructorArgs([
+        $metricsHandler = Double::for(MetricsHandler::class);
+        $metricsHandler->expects('gather')
+            ->with($this->testApp, 'channels', Argument::any())
+            ->returns([]);
+        /** @var \JMac\Testing\OverriddenDouble $controllerDouble */
+        $controllerDouble = Double::for(ChannelsController::class, override: true)->passthru(
+            new ChannelsController(
                 $this->helper->getApplicationManager(),
                 $this->helper->getChannelManager(),
                 $this->helper->getConnectionManager(),
-            ])
-            ->onlyMethods(['getMetricsHandler'])
-            ->getMock();
-        $controller->expects($this->once())
-            ->method('getMetricsHandler')
-            ->willReturn($metricsHandler);
+            ),
+        );
+        $controllerDouble->expects('getMetricsHandler')
+            ->returns($metricsHandler);
+        /** @var ChannelsController $controller */
+        $controller = $controllerDouble->instance();
         $this->helper->configureController($controller, [
             'application' => $this->testApp,
         ]);
@@ -381,14 +374,10 @@ class ChannelsControllerTest extends TestCase
             'application' => $this->testApp,
             'query' => ['filter_by_prefix' => 'test-'],
         ]);
-        $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['gather'])
-            ->getMock();
-        $metricsHandler->expects($this->once())
-            ->method('gather')
-            ->with($this->testApp, 'channels', $this->anything())
-            ->willReturn([
+        $metricsHandler = Double::for(MetricsHandler::class);
+        $metricsHandler->expects('gather')
+            ->with($this->testApp, 'channels', Argument::any())
+            ->returns([
                 'test-channel-1' => [
                     'occupied' => true,
                     'user_count' => 3,
@@ -400,17 +389,18 @@ class ChannelsControllerTest extends TestCase
                     'subscription_count' => 5,
                 ],
             ]);
-        $controller = $this->getMockBuilder(ChannelsController::class)
-            ->setConstructorArgs([
+        /** @var \JMac\Testing\OverriddenDouble $controllerDouble */
+        $controllerDouble = Double::for(ChannelsController::class, override: true)->passthru(
+            new ChannelsController(
                 $this->helper->getApplicationManager(),
                 $this->helper->getChannelManager(),
                 $this->helper->getConnectionManager(),
-            ])
-            ->onlyMethods(['getMetricsHandler'])
-            ->getMock();
-        $controller->expects($this->once())
-            ->method('getMetricsHandler')
-            ->willReturn($metricsHandler);
+            ),
+        );
+        $controllerDouble->expects('getMetricsHandler')
+            ->returns($metricsHandler);
+        /** @var ChannelsController $controller */
+        $controller = $controllerDouble->instance();
         $this->helper->configureController($controller, [
             'application' => $this->testApp,
             'query' => ['filter_by_prefix' => 'test-'],
@@ -441,30 +431,27 @@ class ChannelsControllerTest extends TestCase
             'application' => $this->testApp,
             'query' => ['info' => 'user_count,subscription_count'],
         ]);
-        $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['gather'])
-            ->getMock();
-        $metricsHandler->expects($this->once())
-            ->method('gather')
-            ->with($this->testApp, 'channels', $this->anything())
-            ->willReturn([
+        $metricsHandler = Double::for(MetricsHandler::class);
+        $metricsHandler->expects('gather')
+            ->with($this->testApp, 'channels', Argument::any())
+            ->returns([
                 'test-channel-1' => [
                     'user_count' => 3,
                     'subscription_count' => 3,
                 ],
             ]);
-        $controller = $this->getMockBuilder(ChannelsController::class)
-            ->setConstructorArgs([
+        /** @var \JMac\Testing\OverriddenDouble $controllerDouble */
+        $controllerDouble = Double::for(ChannelsController::class, override: true)->passthru(
+            new ChannelsController(
                 $this->helper->getApplicationManager(),
                 $this->helper->getChannelManager(),
                 $this->helper->getConnectionManager(),
-            ])
-            ->onlyMethods(['getMetricsHandler'])
-            ->getMock();
-        $controller->expects($this->once())
-            ->method('getMetricsHandler')
-            ->willReturn($metricsHandler);
+            ),
+        );
+        $controllerDouble->expects('getMetricsHandler')
+            ->returns($metricsHandler);
+        /** @var ChannelsController $controller */
+        $controller = $controllerDouble->instance();
         $this->helper->configureController($controller, [
             'application' => $this->testApp,
             'query' => ['info' => 'user_count,subscription_count'],

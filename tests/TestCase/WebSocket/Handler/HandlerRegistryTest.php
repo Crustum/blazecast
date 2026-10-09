@@ -10,8 +10,10 @@ use Crustum\BlazeCast\WebSocket\Handler\HandlerRegistry;
 use Crustum\BlazeCast\WebSocket\Handler\PingHandler;
 use Crustum\BlazeCast\WebSocket\Protocol\Message;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
+use JMac\Testing\Matching\Argument;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -20,20 +22,19 @@ use ReflectionClass;
  */
 class HandlerRegistryTest extends TestCase
 {
+    use VerifiesDoubles;
+
     private HandlerRegistry $registry;
 
-    /**
-     * @var \PHPUnit\Framework\MockObject\Stub&Server
-     */
-    private Server&Stub $stubServer;
+    private Server $stubServer;
 
     private Connection $mockConnection;
 
     protected function setUp(): void
     {
         $this->registry = new HandlerRegistry();
-        $this->stubServer = $this->createStub(Server::class);
-        $this->mockConnection = $this->createStub(Connection::class);
+        $this->stubServer = Double::for(Server::class);
+        $this->mockConnection = Double::for(Connection::class);
     }
 
     #[Test]
@@ -58,21 +59,17 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function setServerUpdatesAllRegisteredHandlers(): void
     {
-        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler1 */
-        $handler1 = $this->createMock(HandlerInterface::class);
-        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler2 */
-        $handler2 = $this->createMock(HandlerInterface::class);
+        $handler1 = Double::for(HandlerInterface::class);
+        $handler2 = Double::for(HandlerInterface::class);
 
         $this->registry->register($handler1);
         $this->registry->register($handler2);
 
         // Both handlers should receive the server when it's set
-        $handler1->expects($this->once())
-            ->method('setServer')
+        $handler1->expects('setServer')
             ->with($this->stubServer);
 
-        $handler2->expects($this->once())
-            ->method('setServer')
+        $handler2->expects('setServer')
             ->with($this->stubServer);
 
         $this->registry->setServer($this->stubServer);
@@ -81,8 +78,7 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function registerAddsHandlerToRegistry(): void
     {
-        /** @var HandlerInterface&Stub $handler */
-        $handler = $this->createStub(HandlerInterface::class);
+        $handler = Double::for(HandlerInterface::class);
 
         $this->registry->register($handler);
 
@@ -96,10 +92,8 @@ class HandlerRegistryTest extends TestCase
     {
         $this->registry->setServer($this->stubServer);
 
-        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler */
-        $handler = $this->createMock(HandlerInterface::class);
-        $handler->expects($this->once())
-            ->method('setServer')
+        $handler = Double::for(HandlerInterface::class);
+        $handler->expects('setServer')
             ->with($this->stubServer);
 
         $this->registry->register($handler);
@@ -108,10 +102,8 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function registerDoesNotSetServerOnHandlerIfNoServerExists(): void
     {
-        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler */
-        $handler = $this->createMock(HandlerInterface::class);
-        $handler->expects($this->never())
-            ->method('setServer');
+        $handler = Double::for(HandlerInterface::class);
+        $handler->expects('setServer')->never();
 
         $this->registry->register($handler);
     }
@@ -119,12 +111,9 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function getHandlersReturnsAllRegisteredHandlers(): void
     {
-        /** @var HandlerInterface&Stub $handler1 */
-        $handler1 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface&Stub $handler2 */
-        $handler2 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface&Stub $handler3 */
-        $handler3 = $this->createStub(HandlerInterface::class);
+        $handler1 = Double::for(HandlerInterface::class);
+        $handler2 = Double::for(HandlerInterface::class);
+        $handler3 = Double::for(HandlerInterface::class);
 
         $this->registry->register($handler1);
         $this->registry->register($handler2);
@@ -149,15 +138,12 @@ class HandlerRegistryTest extends TestCase
     {
         $message = new Message('test_event', ['data' => 'test']);
 
-        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler */
-        $handler = $this->createMock(HandlerInterface::class);
-        $handler->expects($this->once())
-            ->method('supports')
+        $handler = Double::for(HandlerInterface::class);
+        $handler->expects('supports')
             ->with('test_event')
-            ->willReturn(true);
+            ->returns(true);
 
-        $handler->expects($this->once())
-            ->method('handle')
+        $handler->expects('handle')
             ->with($this->mockConnection, $message);
 
         $this->registry->register($handler);
@@ -171,15 +157,12 @@ class HandlerRegistryTest extends TestCase
     {
         $message = new Message('unsupported_event', ['data' => 'test']);
 
-        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler */
-        $handler = $this->createMock(HandlerInterface::class);
-        $handler->expects($this->once())
-            ->method('supports')
+        $handler = Double::for(HandlerInterface::class);
+        $handler->expects('supports')
             ->with('unsupported_event')
-            ->willReturn(false);
+            ->returns(false);
 
-        $handler->expects($this->never())
-            ->method('handle');
+        $handler->expects('handle')->never();
 
         $this->registry->register($handler);
 
@@ -192,22 +175,16 @@ class HandlerRegistryTest extends TestCase
     {
         $message = new Message('test_event', ['data' => 'test']);
 
-        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler1 */
-        $handler1 = $this->createMock(HandlerInterface::class);
-        $handler1->expects($this->once())
-            ->method('supports')
+        $handler1 = Double::for(HandlerInterface::class);
+        $handler1->expects('supports')
             ->with('test_event')
-            ->willReturn(true);
-        $handler1->expects($this->once())
-            ->method('handle')
+            ->returns(true);
+        $handler1->expects('handle')
             ->with($this->mockConnection, $message);
 
-        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler2 */
-        $handler2 = $this->createMock(HandlerInterface::class);
-        $handler2->expects($this->never())
-            ->method('supports');
-        $handler2->expects($this->never())
-            ->method('handle');
+        $handler2 = Double::for(HandlerInterface::class);
+        $handler2->expects('supports')->never();
+        $handler2->expects('handle')->never();
 
         $this->registry->register($handler1);
         $this->registry->register($handler2);
@@ -221,23 +198,17 @@ class HandlerRegistryTest extends TestCase
     {
         $message = new Message('test_event', ['data' => 'test']);
 
-        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler1 */
-        $handler1 = $this->createMock(HandlerInterface::class);
-        $handler1->expects($this->once())
-            ->method('supports')
+        $handler1 = Double::for(HandlerInterface::class);
+        $handler1->expects('supports')
             ->with('test_event')
-            ->willReturn(false);
-        $handler1->expects($this->never())
-            ->method('handle');
+            ->returns(false);
+        $handler1->expects('handle')->never();
 
-        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler2 */
-        $handler2 = $this->createMock(HandlerInterface::class);
-        $handler2->expects($this->once())
-            ->method('supports')
+        $handler2 = Double::for(HandlerInterface::class);
+        $handler2->expects('supports')
             ->with('test_event')
-            ->willReturn(true);
-        $handler2->expects($this->once())
-            ->method('handle')
+            ->returns(true);
+        $handler2->expects('handle')
             ->with($this->mockConnection, $message);
 
         $this->registry->register($handler1);
@@ -257,12 +228,10 @@ class HandlerRegistryTest extends TestCase
         $this->registry->register($defaultHandler);
 
         $pingMessage = new Message('ping');
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('updateActivity');
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($json): bool {
+        $connection = Double::for(Connection::class);
+        $connection->expects('updateActivity');
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($json): bool {
                 $decoded = json_decode($json, true);
 
                 return $decoded['event'] === 'pong';
@@ -282,10 +251,9 @@ class HandlerRegistryTest extends TestCase
         $this->registry->register($defaultHandler);
 
         $unknownMessage = new Message('unknown_event', ['test' => 'data']);
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('send')
-            ->with($this->callback(function ($json): bool {
+        $connection = Double::for(Connection::class);
+        $connection->expects('send')
+            ->with(Argument::satisfies(function ($json): bool {
                 $decoded = json_decode($json, true);
 
                 return $decoded['event'] === 'echo';
@@ -300,8 +268,7 @@ class HandlerRegistryTest extends TestCase
     {
         $handlers = [];
         for ($i = 0; $i < 5; $i++) {
-            /** @var HandlerInterface&Stub $handler */
-            $handler = $this->createStub(HandlerInterface::class);
+            $handler = Double::for(HandlerInterface::class);
             $handlers[] = $handler;
             $this->registry->register($handler);
         }
@@ -326,12 +293,9 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function registryMaintainsHandlerOrder(): void
     {
-        /** @var HandlerInterface&Stub $handler1 */
-        $handler1 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface&Stub $handler2 */
-        $handler2 = $this->createStub(HandlerInterface::class);
-        /** @var HandlerInterface&Stub $handler3 */
-        $handler3 = $this->createStub(HandlerInterface::class);
+        $handler1 = Double::for(HandlerInterface::class);
+        $handler2 = Double::for(HandlerInterface::class);
+        $handler3 = Double::for(HandlerInterface::class);
 
         // Register in specific order
         $this->registry->register($handler2);
@@ -354,18 +318,15 @@ class HandlerRegistryTest extends TestCase
         $channel = 'test-channel';
         $message = new Message($eventType, $data, $channel);
 
-        /** @var HandlerInterface&\PHPUnit\Framework\MockObject\MockObject $handler */
-        $handler = $this->createMock(HandlerInterface::class);
-        $handler->expects($this->once())
-            ->method('supports')
+        $handler = Double::for(HandlerInterface::class);
+        $handler->expects('supports')
             ->with($eventType)
-            ->willReturn(true);
+            ->returns(true);
 
-        $handler->expects($this->once())
-            ->method('handle')
+        $handler->expects('handle')
             ->with(
-                $this->identicalTo($this->mockConnection),
-                $this->callback(fn($msg): bool => $msg instanceof Message &&
+                $this->mockConnection,
+                Argument::satisfies(fn($msg): bool => $msg instanceof Message &&
                        $msg->getEvent() === $eventType &&
                        $msg->getData() === $data &&
                        $msg->getChannel() === $channel),
@@ -378,9 +339,8 @@ class HandlerRegistryTest extends TestCase
     #[Test]
     public function registryWorksWithMixedHandlerTypes(): void
     {
-        /** @var HandlerInterface&Stub $mockHandler */
-        $mockHandler = $this->createStub(HandlerInterface::class);
-        $mockHandler->method('supports')->willReturn(false);
+        $mockHandler = Double::for(HandlerInterface::class);
+        $mockHandler->allows('supports')->returns(false);
 
         $pingHandler = new PingHandler();
         $defaultHandler = new DefaultHandler();

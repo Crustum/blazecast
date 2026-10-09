@@ -56,14 +56,12 @@ class ConnectionMessageRateLimiter
         }
 
         $key = $connectionId;
-        if (!isset($this->rateLimiters[$key])) {
-            $this->rateLimiters[$key] = [
-                'points' => $maxPoints,
-                'last_reset' => time(),
-                'duration' => 1,
-                'max_points' => $maxPoints,
-            ];
-        }
+        $this->rateLimiters[$key] ??= [
+            'points' => $maxPoints,
+            'last_reset' => time(),
+            'duration' => 1,
+            'max_points' => $maxPoints,
+        ];
 
         $currentTime = time();
         $limiter = &$this->rateLimiters[$key];

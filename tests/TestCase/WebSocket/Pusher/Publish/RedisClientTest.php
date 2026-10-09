@@ -6,14 +6,20 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher\Publish;
 use Cake\TestSuite\TestCase;
 use Clue\React\Redis\Client;
 use Crustum\BlazeCast\WebSocket\Pusher\Publish\RedisClient;
+use Evenement\EventEmitterTrait;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use React\EventLoop\Loop;
+use React\Promise\PromiseInterface;
 use ReflectionClass;
+use function React\Promise\resolve;
 
 /**
  * Tests for RedisClient
  */
 class RedisClientTest extends TestCase
 {
+    use VerifiesDoubles;
+
     private RedisClient $redisClient;
 
     private string $testChannel = 'test:channel';
@@ -93,11 +99,43 @@ class RedisClientTest extends TestCase
     }
 
     /**
+     * Create a dummy Redis client.
+     *
+     * Double::for() cannot double Clue\React\Redis\Client (it declares the
+     * magic __call method), so a hand-rolled no-op implementation is used
+     * instead.
+     *
+     * @return \Clue\React\Redis\Client
+     */
+    private function createDummyClient(): Client
+    {
+        return new class implements Client {
+            use EventEmitterTrait;
+
+            /**
+             * @param array<mixed> $args
+             */
+            public function __call($name, $args): PromiseInterface
+            {
+                return resolve(null);
+            }
+
+            public function end(): void
+            {
+            }
+
+            public function close(): void
+            {
+            }
+        };
+    }
+
+    /**
      * Test isConnected returns true when client exists
      */
     public function testIsConnectedReturnsTrueWhenClientExists(): void
     {
-        $mockClient = $this->createStub(Client::class);
+        $mockClient = $this->createDummyClient();
 
         // Use reflection to set the protected client property
         $reflection = new ReflectionClass($this->redisClient);
@@ -112,7 +150,7 @@ class RedisClientTest extends TestCase
      */
     public function testDisconnectSetsShouldRetryToFalse(): void
     {
-        $mockClient = $this->createStub(Client::class);
+        $mockClient = $this->createDummyClient();
 
         // Use reflection to set the protected client property
         $reflection = new ReflectionClass($this->redisClient);

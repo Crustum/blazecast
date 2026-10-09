@@ -9,6 +9,8 @@ use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Crustum\BlazeCast\WebSocket\Pusher\MetricsHandler;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -17,6 +19,8 @@ use PHPUnit\Framework\TestCase;
  */
 class ChannelManagerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     private ChannelManager $manager;
 
     protected function setUp(): void
@@ -223,13 +227,13 @@ class ChannelManagerTest extends TestCase
         $channel2 = $this->manager->getChannel('presence-channel');
 
         // Create simple mock connections
-        $connection1 = $this->createStub(Connection::class);
-        $connection1->method('getId')->willReturn('conn-1');
-        $connection1->method('getAttribute')->willReturnCallback(fn($key): ?string => $key === 'app_id' ? 'test-app' : null);
+        $connection1 = Double::for(Connection::class);
+        $connection1->allows('getId')->returns('conn-1');
+        $connection1->allows('getAttribute')->resolves(fn(mixed ...$args): mixed => $args[0] === 'app_id' ? 'test-app' : null);
 
-        $connection2 = $this->createStub(Connection::class);
-        $connection2->method('getId')->willReturn('conn-2');
-        $connection2->method('getAttribute')->willReturnCallback(fn($key): ?string => $key === 'app_id' ? 'test-app' : ($key === 'user_id' ? 'user-2' : null));
+        $connection2 = Double::for(Connection::class);
+        $connection2->allows('getId')->returns('conn-2');
+        $connection2->allows('getAttribute')->resolves(fn(mixed ...$args): mixed => $args[0] === 'app_id' ? 'test-app' : ($args[0] === 'user_id' ? 'user-2' : null));
 
         // Subscribe connections to public channel (no auth needed)
         $channel1->subscribe($connection1);

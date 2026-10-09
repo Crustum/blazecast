@@ -9,12 +9,14 @@ use Crustum\BlazeCast\Test\Support\TestServer;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\Http\PusherRouter;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
-use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannelInterface;
+use Crustum\BlazeCast\WebSocket\Pusher\Channel\PusherChannel;
 use Crustum\BlazeCast\WebSocket\Pusher\Exception\ConnectionLimitExceeded;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Server;
 use Crustum\BlazeCast\WebSocket\RateLimiter\ConnectionMessageRateLimiter;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use React\EventLoop\LoopInterface;
 use React\Http\Browser;
 use React\Http\Message\ResponseException;
@@ -28,6 +30,8 @@ use Throwable;
  */
 class ServerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     protected PusherRouter $router;
 
     protected ChannelManager $channelManager;
@@ -42,7 +46,7 @@ class ServerTest extends TestCase
     {
         parent::setUp();
 
-        $this->router = $this->createStub(PusherRouter::class);
+        $this->router = Double::for(PusherRouter::class);
         $this->channelManager = new ChannelManager();
         $this->connectionManager = new ChannelConnectionManager();
         $this->applicationManager = new ApplicationManager([
@@ -56,7 +60,7 @@ class ServerTest extends TestCase
             ],
         ]);
 
-        $this->loop = $this->createStub(LoopInterface::class);
+        $this->loop = Double::for(LoopInterface::class);
     }
 
     /**
@@ -114,7 +118,7 @@ class ServerTest extends TestCase
             $this->loop,
         );
 
-        $newRouter = $this->createStub(PusherRouter::class);
+        $newRouter = Double::for(PusherRouter::class);
         $server->setHttpRouter($newRouter);
 
         $this->assertSame($newRouter, $server->getHttpRouter());
@@ -137,8 +141,8 @@ class ServerTest extends TestCase
             $this->loop,
         );
 
-        $connection = $this->createMock(Connection::class);
-        $connection->method('getId')->willReturn('test-connection-1');
+        $connection = Double::for(Connection::class);
+        $connection->allows('getId')->returns('test-connection-1');
 
         $server->subscribeToPusherChannel($connection, 'test-channel');
 
@@ -172,11 +176,10 @@ class ServerTest extends TestCase
      */
     public function testChannelConnectionManagerWorks(): void
     {
-        $connection = $this->createStub(Connection::class);
-        $connection->method('getId')->willReturn('test-connection-1');
+        $connection = Double::for(Connection::class);
+        $connection->allows('getId')->returns('test-connection-1');
 
-        $channel = $this->createStub(PusherChannelInterface::class);
-        $channel->method('getName')->willReturn('test-channel');
+        $channel = new PusherChannel('test-channel');
 
         $this->connectionManager->subscribe($connection, $channel);
         $this->assertTrue($this->connectionManager->isSubscribed($connection, $channel));
@@ -223,9 +226,9 @@ class ServerTest extends TestCase
             $this->loop,
         );
 
-        $connection1 = $this->createStub(Connection::class);
-        $connection1->method('getId')->willReturn('connection-1');
-        $connection1->method('getAttribute')->willReturn('1');
+        $connection1 = Double::for(Connection::class);
+        $connection1->allows('getId')->returns('connection-1');
+        $connection1->allows('getAttribute')->returns('1');
 
         $reflection = new ReflectionClass($this->connectionManager);
         $appConnectionsProperty = $reflection->getProperty('appConnections');
@@ -369,10 +372,8 @@ class ServerTest extends TestCase
             $this->loop,
         );
 
-        $connection = $this->createStub(Connection::class);
-        $connection->method('getAttribute')->willReturnMap([
-            ['app_id', '1'],
-        ]);
+        $connection = Double::for(Connection::class);
+        $connection->allows('getAttribute')->with('app_id')->returns('1');
 
         $method = (new ReflectionClass($server))->getMethod('resolveActivityTimeout');
 
@@ -415,10 +416,8 @@ class ServerTest extends TestCase
             $this->loop,
         );
 
-        $connection = $this->createStub(Connection::class);
-        $connection->method('getAttribute')->willReturnMap([
-            ['app_id', '1'],
-        ]);
+        $connection = Double::for(Connection::class);
+        $connection->allows('getAttribute')->with('app_id')->returns('1');
 
         $method = (new ReflectionClass($server))->getMethod('resolveActivityTimeout');
 
@@ -443,8 +442,8 @@ class ServerTest extends TestCase
             $this->loop,
         );
 
-        $connection = $this->createStub(Connection::class);
-        $connection->method('getAttribute')->willReturn(null);
+        $connection = Double::for(Connection::class);
+        $connection->allows('getAttribute')->returns(null);
 
         $method = (new ReflectionClass($server))->getMethod('resolveActivityTimeout');
 
@@ -474,13 +473,15 @@ class ServerTest extends TestCase
         );
 
         $sent = [];
-        $connection = $this->createMock(Connection::class);
-        $connection->method('getId')->willReturn('conn-rate-1');
-        $connection->method('getAttribute')->willReturn('1');
-        $connection->expects($this->once())->method('send')->willReturnCallback(function (string $payload) use (&$sent): void {
-            $sent[] = $payload;
+        $connection = Double::for(Connection::class);
+        $connection->allows('getId')->returns('conn-rate-1');
+        $connection->allows('getAttribute')->returns('1');
+        $connection->expects('send')->resolves(function (mixed ...$args) use (&$sent): mixed {
+            $sent[] = $args[0];
+
+            return null;
         });
-        $connection->expects($this->never())->method('close');
+        $connection->expects('close')->never();
 
         $method = (new ReflectionClass($server))->getMethod('ensureWithinConnectionMessageRateLimit');
 
@@ -517,11 +518,11 @@ class ServerTest extends TestCase
             $limiter,
         );
 
-        $connection = $this->createMock(Connection::class);
-        $connection->method('getId')->willReturn('conn-rate-2');
-        $connection->method('getAttribute')->willReturn('1');
-        $connection->expects($this->once())->method('send');
-        $connection->expects($this->once())->method('close');
+        $connection = Double::for(Connection::class);
+        $connection->allows('getId')->returns('conn-rate-2');
+        $connection->allows('getAttribute')->returns('1');
+        $connection->expects('send');
+        $connection->expects('close');
 
         $method = (new ReflectionClass($server))->getMethod('ensureWithinConnectionMessageRateLimit');
 
@@ -555,8 +556,8 @@ class ServerTest extends TestCase
             $this->loop,
         );
 
-        $connection = $this->createStub(Connection::class);
-        $connection->method('getId')->willReturn('conn-rate-3');
+        $connection = Double::for(Connection::class);
+        $connection->allows('getId')->returns('conn-rate-3');
 
         $method = (new ReflectionClass($server))->getMethod('ensureWithinConnectionMessageRateLimit');
 

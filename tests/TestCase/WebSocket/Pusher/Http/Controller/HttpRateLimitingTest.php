@@ -14,6 +14,8 @@ use Crustum\BlazeCast\WebSocket\RateLimiter\LocalRateLimiter;
 use Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
@@ -23,6 +25,8 @@ use PHPUnit\Framework\Attributes\Test;
  */
 class HttpRateLimitingTest extends TestCase
 {
+    use VerifiesDoubles;
+
     private PusherControllerTestHelper $helper;
 
     private RateLimiterInterface $rateLimiter;
@@ -49,6 +53,12 @@ class HttpRateLimitingTest extends TestCase
         ]);
 
         $this->helper = new PusherControllerTestHelper($this);
+        /** @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelManager&\JMac\Testing\DoubleInterface $channelManager */
+        $channelManager = $this->helper->getChannelManager();
+        $channelManager
+            ->allows('getChannel')
+            ->with('test-channel')
+            ->returns($this->helper->createChannelMock('test-channel'));
         $this->rateLimiter = new LocalRateLimiter([
             $this->appId => [
                 'max_backend_events_per_second' => 5,
@@ -161,29 +171,27 @@ class HttpRateLimitingTest extends TestCase
     #[Test]
     public function testReadRequestRateLimitSuccess(): void
     {
-        $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['gather'])
-            ->getMock();
+        $metricsHandler = Double::for(MetricsHandler::class);
 
-        $metricsHandler->expects($this->once())
-            ->method('gather')
-            ->willReturn([]);
+        $metricsHandler->expects('gather')
+            ->returns([]);
 
-        $controller = $this->getMockBuilder(ChannelsController::class)
-            ->setConstructorArgs([
+        /** @var \JMac\Testing\OverriddenDouble $controllerDouble */
+        $controllerDouble = Double::for(ChannelsController::class, override: true)->passthru(
+            new ChannelsController(
                 $this->helper->getApplicationManager(),
                 $this->helper->getChannelManager(),
                 $this->helper->getConnectionManager(),
                 null,
                 $this->rateLimiter,
-            ])
-            ->onlyMethods(['getMetricsHandler'])
-            ->getMock();
+            ),
+        );
 
-        $controller->expects($this->once())
-            ->method('getMetricsHandler')
-            ->willReturn($metricsHandler);
+        $controllerDouble->expects('getMetricsHandler')
+            ->returns($metricsHandler);
+
+        /** @var ChannelsController $controller */
+        $controller = $controllerDouble->instance();
 
         $this->helper->configureController($controller, [
             'application' => [
@@ -202,32 +210,31 @@ class HttpRateLimitingTest extends TestCase
     #[Test]
     public function testReadRequestRateLimitExceeded(): void
     {
-        $metricsHandler = $this->getMockBuilder(MetricsHandler::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['gather'])
-            ->getMock();
+        $metricsHandler = Double::for(MetricsHandler::class);
 
-        $metricsHandler->expects($this->atLeastOnce())
-            ->method('gather')
-            ->willReturn([]);
+        $metricsHandler->expects('gather')
+            ->times(minimum: 1)
+            ->returns([]);
 
         $request = new ServerRequest('GET', new Uri('/apps/' . $this->appId . '/channels'));
 
         for ($i = 0; $i < 10; $i++) {
-            $controller = $this->getMockBuilder(ChannelsController::class)
-                ->setConstructorArgs([
+            /** @var \JMac\Testing\OverriddenDouble $controllerDouble */
+            $controllerDouble = Double::for(ChannelsController::class, override: true)->passthru(
+                new ChannelsController(
                     $this->helper->getApplicationManager(),
                     $this->helper->getChannelManager(),
                     $this->helper->getConnectionManager(),
                     null,
                     $this->rateLimiter,
-                ])
-                ->onlyMethods(['getMetricsHandler'])
-                ->getMock();
+                ),
+            );
 
-            $controller->expects($this->once())
-                ->method('getMetricsHandler')
-                ->willReturn($metricsHandler);
+            $controllerDouble->expects('getMetricsHandler')
+                ->returns($metricsHandler);
+
+            /** @var ChannelsController $controller */
+            $controller = $controllerDouble->instance();
 
             $this->helper->configureController($controller, [
                 'application' => [
@@ -240,19 +247,22 @@ class HttpRateLimitingTest extends TestCase
             $this->assertEquals(200, $response->getStatusCode(), "Request {$i} should succeed");
         }
 
-        $controller = $this->getMockBuilder(ChannelsController::class)
-            ->setConstructorArgs([
+        /** @var \JMac\Testing\OverriddenDouble $controllerDouble */
+        $controllerDouble = Double::for(ChannelsController::class, override: true)->passthru(
+            new ChannelsController(
                 $this->helper->getApplicationManager(),
                 $this->helper->getChannelManager(),
                 $this->helper->getConnectionManager(),
                 null,
                 $this->rateLimiter,
-            ])
-            ->onlyMethods(['getMetricsHandler'])
-            ->getMock();
+            ),
+        );
 
-        $controller->expects($this->never())
-            ->method('getMetricsHandler');
+        $controllerDouble->expects('getMetricsHandler')
+            ->never();
+
+        /** @var ChannelsController $controller */
+        $controller = $controllerDouble->instance();
 
         $this->helper->configureController($controller, [
             'application' => [
@@ -276,20 +286,20 @@ class HttpRateLimitingTest extends TestCase
         $request = new ServerRequest('GET', new Uri('/apps/' . $this->appId . '/connections'));
         $params = ['appId' => $this->appId];
 
-        $this->helper->getConnectionManager()
-            ->method('getConnectionsForApp')
-            ->willReturnMap([
-                [$this->appId, []],
-            ]);
+        /** @var \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager&\JMac\Testing\DoubleInterface $connectionManager */
+        $connectionManager = $this->helper->getConnectionManager();
+        $connectionManager
+            ->allows('getConnectionsForApp')
+            ->with($this->appId)
+            ->returns([]);
 
-        $this->helper->getConnectionManager()
-            ->method('getAppStats')
-            ->willReturnMap([
-                [$this->appId, [
-                    'connections' => 0,
-                    'subscriptions' => 0,
-                    'http_requests' => 0,
-                ]],
+        $connectionManager
+            ->allows('getAppStats')
+            ->with($this->appId)
+            ->returns([
+                'connections' => 0,
+                'subscriptions' => 0,
+                'http_requests' => 0,
             ]);
 
         for ($i = 0; $i < 10; $i++) {

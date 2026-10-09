@@ -128,9 +128,7 @@ class ChannelConnectionManager
 
         $this->connectionChannels[$connectionId][$channelName] = $channel;
 
-        if (!isset($this->channelConnections[$channelName])) {
-            $this->channelConnections[$channelName] = [];
-        }
+        $this->channelConnections[$channelName] ??= [];
 
         $this->channelConnections[$channelName][$connectionId] = $connection;
         $this->stats['total_subscriptions']++;
@@ -487,17 +485,13 @@ class ChannelConnectionManager
      */
     protected function ensureAppExists(string $appId): void
     {
-        if (!isset($this->appConnections[$appId])) {
-            $this->appConnections[$appId] = [];
-        }
+        $this->appConnections[$appId] ??= [];
 
-        if (!isset($this->appStats[$appId])) {
-            $this->appStats[$appId] = [
-                'connections' => 0,
-                'subscriptions' => 0,
-                'http_requests' => 0,
-            ];
-        }
+        $this->appStats[$appId] ??= [
+            'connections' => 0,
+            'subscriptions' => 0,
+            'http_requests' => 0,
+        ];
     }
 
     /**

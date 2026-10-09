@@ -130,9 +130,7 @@ class BlazeCastLogger
         }
 
         $logContext = $context;
-        if (!isset($logContext['scope'])) {
-            $logContext['scope'] = $scopes;
-        }
+        $logContext['scope'] ??= $scopes;
 
         Log::write($level, $message, $logContext);
     }

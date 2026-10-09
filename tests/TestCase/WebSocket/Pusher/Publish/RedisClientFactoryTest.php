@@ -5,6 +5,8 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher\Publish;
 
 use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\WebSocket\Pusher\Publish\RedisClientFactory;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use React\EventLoop\LoopInterface;
 use React\Promise\PromiseInterface;
 
@@ -13,6 +15,8 @@ use React\Promise\PromiseInterface;
  */
 class RedisClientFactoryTest extends TestCase
 {
+    use VerifiesDoubles;
+
     private RedisClientFactory $factory;
 
     private LoopInterface $mockLoop;
@@ -21,7 +25,7 @@ class RedisClientFactoryTest extends TestCase
     {
         parent::setUp();
 
-        $this->mockLoop = $this->createStub(LoopInterface::class);
+        $this->mockLoop = Double::for(LoopInterface::class);
         $this->factory = new RedisClientFactory();
     }
 

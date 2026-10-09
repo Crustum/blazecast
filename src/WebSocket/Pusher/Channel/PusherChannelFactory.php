@@ -119,11 +119,11 @@ class PusherChannelFactory
      */
     protected function configureChannel(PusherChannelInterface $channel): void
     {
-        if ($channel instanceof PusherPrivateChannel && $this->applicationManager) {
+        if ($channel instanceof PusherPrivateChannel && $this->applicationManager instanceof ApplicationManager) {
             $channel->setApplicationManager($this->applicationManager);
         }
 
-        if ($channel instanceof PusherPresenceChannel && $this->applicationManager) {
+        if ($channel instanceof PusherPresenceChannel && $this->applicationManager instanceof ApplicationManager) {
             $channel->setApplicationManager($this->applicationManager);
         }
 

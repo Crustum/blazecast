@@ -30,9 +30,7 @@ class ClientFactory
      */
     public function create(LoopInterface $loop, ?array $config = null): PromiseInterface
     {
-        if ($config === null) {
-            $config = Configure::read('BlazeCast.redis');
-        }
+        $config ??= Configure::read('BlazeCast.redis');
 
         $factory = new Factory($loop);
 

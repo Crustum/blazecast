@@ -6,6 +6,8 @@ namespace Crustum\BlazeCast\Test\TestCase\WebSocket\Pusher\Http\Controller;
 use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\Test\Support\PusherControllerTestHelper;
 use Crustum\BlazeCast\WebSocket\Http\Response;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
 
@@ -14,6 +16,8 @@ use Psr\Http\Message\UriInterface;
  */
 class PusherControllerTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * @var \Crustum\BlazeCast\Test\Support\PusherControllerTestHelper
      */
@@ -63,11 +67,11 @@ class PusherControllerTest extends TestCase
      */
     public function testParseQueryParams(): void
     {
-        $uri = $this->createStub(UriInterface::class);
-        $uri->method('getQuery')->willReturn('foo=bar&test=123');
+        $uri = Double::for(UriInterface::class);
+        $uri->allows('getQuery')->returns('foo=bar&test=123');
 
-        $request = $this->createStub(RequestInterface::class);
-        $request->method('getUri')->willReturn($uri);
+        $request = Double::for(RequestInterface::class);
+        $request->allows('getUri')->returns($uri);
 
         $params = $this->controller->callParseQueryParams($request);
 
@@ -101,27 +105,27 @@ class PusherControllerTest extends TestCase
      */
     public function testControllerStatelessness(): void
     {
-        $uri1 = $this->createStub(UriInterface::class);
-        $uri1->method('getQuery')->willReturn('param=value1');
-        $uri1->method('getPath')->willReturn('/test/path');
+        $uri1 = Double::for(UriInterface::class);
+        $uri1->allows('getQuery')->returns('param=value1');
+        $uri1->allows('getPath')->returns('/test/path');
 
-        $request1 = $this->createStub(RequestInterface::class);
-        $request1->method('getUri')->willReturn($uri1);
-        $request1->method('getMethod')->willReturn('GET');
-        $request1->method('getBody')->willReturn('');
+        $request1 = Double::for(RequestInterface::class);
+        $request1->allows('getUri')->returns($uri1);
+        $request1->allows('getMethod')->returns('GET');
+        $request1->allows('getBody')->returns('');
 
         $this->controller->__invoke($request1, $this->helper->getConnection(), ['param' => 'value1']);
 
         $this->assertEquals(['param' => 'value1'], $this->controller->getLastQuery());
 
-        $uri2 = $this->createStub(UriInterface::class);
-        $uri2->method('getQuery')->willReturn('param=value2');
-        $uri2->method('getPath')->willReturn('/test/path');
+        $uri2 = Double::for(UriInterface::class);
+        $uri2->allows('getQuery')->returns('param=value2');
+        $uri2->allows('getPath')->returns('/test/path');
 
-        $request2 = $this->createStub(RequestInterface::class);
-        $request2->method('getUri')->willReturn($uri2);
-        $request2->method('getMethod')->willReturn('GET');
-        $request2->method('getBody')->willReturn('');
+        $request2 = Double::for(RequestInterface::class);
+        $request2->allows('getUri')->returns($uri2);
+        $request2->allows('getMethod')->returns('GET');
+        $request2->allows('getBody')->returns('');
 
         $this->controller->__invoke($request2, $this->helper->getConnection(), ['param' => 'value2']);
 
@@ -135,12 +139,12 @@ class PusherControllerTest extends TestCase
      */
     public function testOptionsRequestHandling(): void
     {
-        $request = $this->createStub(RequestInterface::class);
-        $request->method('getMethod')->willReturn('OPTIONS');
-        $uri = $this->createStub(UriInterface::class);
-        $uri->method('getPath')->willReturn('/test');
-        $request->method('getUri')->willReturn($uri);
-        $request->method('getBody')->willReturn('');
+        $request = Double::for(RequestInterface::class);
+        $request->allows('getMethod')->returns('OPTIONS');
+        $uri = Double::for(UriInterface::class);
+        $uri->allows('getPath')->returns('/test');
+        $request->allows('getUri')->returns($uri);
+        $request->allows('getBody')->returns('');
 
         $response = $this->controller->__invoke($request, $this->helper->getConnection());
 
@@ -162,12 +166,12 @@ class PusherControllerTest extends TestCase
             'auth_signature' => 'invalid-signature',
         ];
 
-        $uri = $this->createStub(UriInterface::class);
-        $uri->method('getPath')->willReturn('/test/path');
+        $uri = Double::for(UriInterface::class);
+        $uri->allows('getPath')->returns('/test/path');
 
-        $request = $this->createStub(RequestInterface::class);
-        $request->method('getUri')->willReturn($uri);
-        $request->method('getMethod')->willReturn('GET');
+        $request = Double::for(RequestInterface::class);
+        $request->allows('getUri')->returns($uri);
+        $request->allows('getMethod')->returns('GET');
 
         $result = $this->controller->callVerifySignature($request, $params, 'test-secret');
 

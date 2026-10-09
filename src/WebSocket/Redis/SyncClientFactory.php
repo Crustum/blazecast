@@ -21,9 +21,7 @@ class SyncClientFactory
      */
     public function create(?array $config = null): Redis
     {
-        if ($config === null) {
-            $config = Configure::read('BlazeCast.redis');
-        }
+        $config ??= Configure::read('BlazeCast.redis');
 
         return $this->createRedisConnection($config);
     }
@@ -36,9 +34,7 @@ class SyncClientFactory
      */
     public function createForTesting(?array $config = null): Redis
     {
-        if ($config === null) {
-            $config = Configure::read('BlazeCast.redis_test');
-        }
+        $config ??= Configure::read('BlazeCast.redis_test');
 
         return $this->createRedisConnection($config);
     }

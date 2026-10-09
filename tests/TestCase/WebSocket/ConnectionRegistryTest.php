@@ -8,24 +8,27 @@ use Cake\TestSuite\TestCase;
 use Crustum\BlazeCast\WebSocket\Connection;
 use Crustum\BlazeCast\WebSocket\ConnectionRegistry;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
-use PHPUnit\Framework\MockObject\Stub;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 
 /**
  * ConnectionRegistryTest
  */
 class ConnectionRegistryTest extends TestCase
 {
+    use VerifiesDoubles;
+
     protected ConnectionRegistry $registry;
 
     /**
-     * @var \PHPUnit\Framework\MockObject\Stub&ChannelConnectionManager
+     * @var ChannelConnectionManager
      */
-    protected ChannelConnectionManager&Stub $connectionManager;
+    protected ChannelConnectionManager $connectionManager;
 
     /**
-     * @var \PHPUnit\Framework\MockObject\Stub&EventManager
+     * @var EventManager
      */
-    protected EventManager&Stub $eventManager;
+    protected EventManager $eventManager;
 
     /**
      * Set up test fixtures
@@ -36,8 +39,11 @@ class ConnectionRegistryTest extends TestCase
     {
         parent::setUp();
 
-        $this->connectionManager = $this->createStub(ChannelConnectionManager::class);
-        $this->eventManager = $this->createStub(EventManager::class);
+        $this->connectionManager = Double::for(ChannelConnectionManager::class);
+        // Double::for() cannot double EventManager (its `instance` method
+        // collides with Double internals); the stub configured no methods,
+        // so a real instance is behaviorally identical here.
+        $this->eventManager = new EventManager();
 
         $this->registry = new ConnectionRegistry($this->connectionManager, $this->eventManager);
     }
@@ -49,8 +55,8 @@ class ConnectionRegistryTest extends TestCase
      */
     public function testRegisterConnection(): void
     {
-        $connection = $this->createStub(Connection::class);
-        $connection->method('getId')->willReturn('conn-123');
+        $connection = Double::for(Connection::class);
+        $connection->allows('getId')->returns('conn-123');
 
         $this->registry->register($connection, ['app_id' => 'data']);
 
@@ -69,8 +75,8 @@ class ConnectionRegistryTest extends TestCase
      */
     public function testUpdateConnectionId(): void
     {
-        $connection = $this->createStub(Connection::class);
-        $connection->method('getId')->willReturn('conn-123');
+        $connection = Double::for(Connection::class);
+        $connection->allows('getId')->returns('conn-123');
 
         $this->registry->register($connection);
 
@@ -87,11 +93,11 @@ class ConnectionRegistryTest extends TestCase
      */
     public function testGetConnections(): void
     {
-        $connection1 = $this->createStub(Connection::class);
-        $connection1->method('getId')->willReturn('conn-1');
+        $connection1 = Double::for(Connection::class);
+        $connection1->allows('getId')->returns('conn-1');
 
-        $connection2 = $this->createStub(Connection::class);
-        $connection2->method('getId')->willReturn('conn-2');
+        $connection2 = Double::for(Connection::class);
+        $connection2->allows('getId')->returns('conn-2');
 
         $this->registry->register($connection1);
         $this->registry->register($connection2);
@@ -112,8 +118,8 @@ class ConnectionRegistryTest extends TestCase
     {
         $this->assertEquals(0, $this->registry->getConnectionCount());
 
-        $connection = $this->createStub(Connection::class);
-        $connection->method('getId')->willReturn('conn-123');
+        $connection = Double::for(Connection::class);
+        $connection->allows('getId')->returns('conn-123');
 
         $this->registry->register($connection);
 
@@ -127,8 +133,8 @@ class ConnectionRegistryTest extends TestCase
      */
     public function testUnregisterConnection(): void
     {
-        $connection = $this->createStub(Connection::class);
-        $connection->method('getId')->willReturn('conn-123');
+        $connection = Double::for(Connection::class);
+        $connection->allows('getId')->returns('conn-123');
 
         $this->registry->register($connection);
         $this->assertEquals(1, $this->registry->getConnectionCount());
@@ -146,13 +152,13 @@ class ConnectionRegistryTest extends TestCase
      */
     public function testClearConnections(): void
     {
-        $connection1 = $this->createStub(Connection::class);
-        $connection1->method('getId')->willReturn('conn-1');
-        $connection1->method('isConnected')->willReturn(true);
+        $connection1 = Double::for(Connection::class);
+        $connection1->allows('getId')->returns('conn-1');
+        $connection1->allows('isConnected')->returns(true);
 
-        $connection2 = $this->createStub(Connection::class);
-        $connection2->method('getId')->willReturn('conn-2');
-        $connection2->method('isConnected')->willReturn(true);
+        $connection2 = Double::for(Connection::class);
+        $connection2->allows('getId')->returns('conn-2');
+        $connection2->allows('isConnected')->returns(true);
 
         $this->registry->register($connection1);
         $this->registry->register($connection2);
