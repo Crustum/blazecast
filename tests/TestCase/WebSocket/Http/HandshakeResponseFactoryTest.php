@@ -23,7 +23,7 @@ class HandshakeResponseFactoryTest extends TestCase
      */
     public function testCreatesResponseWithGivenStatus(): void
     {
-        $response = (new HandshakeResponseFactory())->createResponse(101, 'Switching Protocols');
+        $response = new HandshakeResponseFactory()->createResponse(101, 'Switching Protocols');
 
         $this->assertSame(101, $response->getStatusCode());
         $this->assertSame('Switching Protocols', $response->getReasonPhrase());

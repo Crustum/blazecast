@@ -62,7 +62,7 @@ class Message implements MessageInterface
      * @param mixed $data Message data
      * @return $this
      */
-    public function setData(mixed $data)
+    public function setData(mixed $data): static
     {
         $this->data = $data;
 
@@ -75,7 +75,7 @@ class Message implements MessageInterface
      * @param string|null $channel Channel name
      * @return $this
      */
-    public function setChannel(?string $channel)
+    public function setChannel(?string $channel): static
     {
         $this->channel = $channel;
 

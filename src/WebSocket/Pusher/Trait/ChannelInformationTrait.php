@@ -55,7 +55,7 @@ trait ChannelInformationTrait
      */
     protected function infoForChannels(array $application, array $channels, string $info = ''): array
     {
-        return (new Collection($channels))
+        return new Collection($channels)
             ->map(fn($channel): string => $channel instanceof PusherChannelInterface ? $channel->getName() : (string)$channel)
             ->combine(
                 fn($channelName) => $channelName,

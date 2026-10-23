@@ -94,7 +94,7 @@ class ChannelOperationsManager
 
         $applications = $this->applicationManager->getApplications();
         if ($applications !== []) {
-            $firstApp = array_values($applications)[0];
+            $firstApp = array_first($applications);
             $this->broadcastToChannelForApp($firstApp['id'], $channelName, $message, $exceptConnectionId);
         } else {
             BlazeCastLogger::error(__('ChannelOperationsManager: No applications available for broadcast on channel {0}', $channelName), [

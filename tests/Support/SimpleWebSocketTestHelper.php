@@ -4,12 +4,12 @@ declare(strict_types=1);
 namespace Crustum\BlazeCast\Test\Support;
 
 use Exception;
-use React\Async;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
 use React\Socket\Connector;
 use RuntimeException;
+use function React\Async\await;
 
 /**
  * Simple WebSocket test helper
@@ -72,7 +72,7 @@ class SimpleWebSocketTestHelper
             $deferred->reject($exception);
         }
 
-        return Async\await($deferred->promise());
+        return await($deferred->promise());
     }
 
     /**

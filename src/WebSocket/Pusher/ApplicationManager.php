@@ -410,7 +410,7 @@ class ApplicationManager
 
         $applications = $this->getApplications();
         if (count($applications) === 1) {
-            $application = array_values($applications)[0];
+            $application = array_first($applications);
                 BlazeCastLogger::info('Single-app setup: accepting any key/id for default application', [
                 'scope' => ['socket.manager', 'socket.manager.application'],
                 'provided_key_or_id' => $keyOrId,

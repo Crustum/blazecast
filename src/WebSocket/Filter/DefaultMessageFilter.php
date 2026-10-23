@@ -51,13 +51,7 @@ class DefaultMessageFilter implements MessageFilterInterface
      */
     public function filter(Message $message, array $criteria): bool
     {
-        foreach ($criteria as $type => $value) {
-            if (!$this->applyCriteria($message, $type, $value)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($criteria, fn($value, $type): bool => $this->applyCriteria($message, $type, $value));
     }
 
     /**

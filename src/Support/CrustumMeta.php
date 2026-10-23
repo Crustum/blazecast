@@ -12,10 +12,8 @@ final class CrustumMeta
 {
     /**
      * Reserved payload key stripped before client delivery.
-     *
-     * @var string
      */
-    public const KEY = '__crustum';
+    public const string KEY = '__crustum';
 
     /**
      * Decode a Pusher `data` field into an array when possible.

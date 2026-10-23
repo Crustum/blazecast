@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Crustum\BlazeCast\WebSocket\Pusher;
 
 use Cake\Cache\Cache;
+use Cake\Container\ContainerInterface;
 use Cake\Core\Configure;
-use Cake\Core\ContainerInterface;
 use Cake\Core\Plugin;
 use Cake\Event\Event;
 use Cake\Event\EventManager;
@@ -202,7 +202,7 @@ class Server implements WebSocketServerInterface
     /**
      * Container
      *
-     * @var ContainerInterface|null
+     * @var \Cake\Container\ContainerInterface|null
      */
     protected ?ContainerInterface $container;
 
@@ -260,7 +260,7 @@ class Server implements WebSocketServerInterface
      * @param int $port Server port
      * @param ServerConfig $config Server configuration
      * @param \React\EventLoop\LoopInterface|null $loop Event loop
-     * @param \Cake\Core\ContainerInterface|null $container Container for Rhythm integration
+     * @param \Cake\Container\ContainerInterface|null $container Container for Rhythm integration
      * @param \Crustum\BlazeCast\WebSocket\RateLimiter\RateLimiterInterface|\Crustum\BlazeCast\WebSocket\RateLimiter\AsyncRateLimiterInterface|null $rateLimiter Rate limiter
      * @param \Crustum\BlazeCast\WebSocket\RateLimiter\ConnectionMessageRateLimiter|null $connectionMessageRateLimiter Connection message rate limiter
      */

@@ -103,7 +103,7 @@ class TestServer
             }
         }
 
-        if ($existingAppIndex !== null && is_array($existingApps)) {
+        if ($existingAppIndex !== null) {
             $existingApps[$existingAppIndex] = $appConfig;
         } else {
             $existingApps[] = $appConfig;

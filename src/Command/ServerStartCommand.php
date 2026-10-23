@@ -4,12 +4,10 @@ declare(strict_types=1);
 namespace Crustum\BlazeCast\Command;
 
 use Cake\Command\Command;
-use Cake\Console\Arguments;
 use Cake\Console\CommandFactoryInterface;
-use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
+use Cake\Container\ContainerInterface;
 use Cake\Core\Configure;
-use Cake\Core\ContainerInterface;
 use Crustum\BlazeCast\WebSocket\Logger\BlazeCastLogger;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
@@ -45,7 +43,7 @@ class ServerStartCommand extends Command
     /**
      * Get container instance from factory
      *
-     * @return \Cake\Core\ContainerInterface|null
+     * @return \Cake\Container\ContainerInterface|null
      */
     protected function getContainer(): ?ContainerInterface
     {
@@ -117,36 +115,30 @@ class ServerStartCommand extends Command
     /**
      * Execute the command
      *
-     * @param \Cake\Console\Arguments $args Arguments
-     * @param \Cake\Console\ConsoleIo $io Console IO
      * @return int|null
      */
-    public function execute(Arguments $args, ConsoleIo $io): ?int
+    public function execute(): ?int
     {
-        $this->setServerHost($args);
-        $this->setServerPort($args);
-
-        $debug = $args->getOption('debug');
-        $maxRequestSize = (int)$args->getOption('max-request-size');
-
-        $io->out('<info>Starting Pusher Unified Server</info>');
-        $io->out(sprintf('   Host: %s', $this->getServerHost()));
-        $io->out(sprintf('   Port: %d', $this->getServerPort()));
-        $io->out(sprintf('   Debug: %s', $debug ? 'enabled' : 'disabled'));
-        $io->out(sprintf('   Max Request Size: %d bytes', $maxRequestSize));
-        $io->out('');
+        $this->setServerHost();
+        $this->setServerPort();
+        $debug = $this->args->getOption('debug');
+        $maxRequestSize = (int)$this->args->getOption('max-request-size');
+        $this->io->out('<info>Starting Pusher Unified Server</info>');
+        $this->io->out(sprintf('   Host: %s', $this->getServerHost()));
+        $this->io->out(sprintf('   Port: %d', $this->getServerPort()));
+        $this->io->out(sprintf('   Debug: %s', $debug ? 'enabled' : 'disabled'));
+        $this->io->out(sprintf('   Max Request Size: %d bytes', $maxRequestSize));
+        $this->io->out('');
 
         $blazecastConfig = Configure::read('BlazeCast', []);
-
         $config = array_merge($blazecastConfig, [
             'max_request_size' => $maxRequestSize,
             'debug' => $debug,
             'log_level' => $debug ? 'debug' : 'info',
-            'app_id' => (string)$args->getOption('app-id'),
-            'app_key' => (string)$args->getOption('app-key'),
-            'app_secret' => (string)$args->getOption('app-secret'),
+            'app_id' => (string)$this->args->getOption('app-id'),
+            'app_key' => (string)$this->args->getOption('app-key'),
+            'app_secret' => (string)$this->args->getOption('app-secret'),
         ]);
-
         try {
             $applicationManager = null;
             $connectionManager = null;
@@ -155,16 +147,16 @@ class ServerStartCommand extends Command
             if ($container instanceof ContainerInterface) {
                 if ($container->has(ApplicationManager::class)) {
                     $applicationManager = $container->get(ApplicationManager::class);
-                    $io->out('<info>Using ApplicationManager from container</info>');
+                    $this->io->out('<info>Using ApplicationManager from container</info>');
                 } else {
-                    $io->out('<error>ApplicationManager not found in container</error>');
+                    $this->io->out('<error>ApplicationManager not found in container</error>');
                 }
 
                 if ($container->has(ChannelConnectionManager::class)) {
                     $connectionManager = $container->get(ChannelConnectionManager::class);
-                    $io->out('<info>Using ChannelConnectionManager from container</info>');
+                    $this->io->out('<info>Using ChannelConnectionManager from container</info>');
                 } else {
-                    $io->out('<error>ChannelConnectionManager not found in container</error>');
+                    $this->io->out('<error>ChannelConnectionManager not found in container</error>');
                 }
             }
 
@@ -177,49 +169,49 @@ class ServerStartCommand extends Command
                 $connectionManager,
                 $container,
             );
-            $io->out('<success>Server created</success>');
+            $this->io->out('<success>Server created</success>');
 
-            $io->out('');
-            $io->out('<info>Server Capabilities:</info>');
-            $io->out('   HTTP API endpoints (Pusher REST API)');
-            $io->out('   WebSocket connections (Real-time)');
-            $io->out('   Automatic protocol detection');
-            $io->out('   HMAC authentication');
-            $io->out('   CORS support');
-            $io->out('');
+            $this->io->out('');
+            $this->io->out('<info>Server Capabilities:</info>');
+            $this->io->out('   HTTP API endpoints (Pusher REST API)');
+            $this->io->out('   WebSocket connections (Real-time)');
+            $this->io->out('   Automatic protocol detection');
+            $this->io->out('   HMAC authentication');
+            $this->io->out('   CORS support');
+            $this->io->out('');
 
-            $this->displayRegisteredApplications($io, $server);
+            $this->displayRegisteredApplications($server);
 
-            $io->out('<info>Available Endpoints:</info>');
-            $io->out(sprintf('   HTTP API: http://%s:%d/', $this->getServerHost(), $this->getServerPort()));
-            $io->out(sprintf('   WebSocket: ws://%s:%d/app/{APP_KEY}', $this->getServerHost(), $this->getServerPort()));
-            $io->out('');
+            $this->io->out('<info>Available Endpoints:</info>');
+            $this->io->out(sprintf('   HTTP API: http://%s:%d/', $this->getServerHost(), $this->getServerPort()));
+            $this->io->out(sprintf('   WebSocket: ws://%s:%d/app/{APP_KEY}', $this->getServerHost(), $this->getServerPort()));
+            $this->io->out('');
 
-            $this->displayRegisteredRoutes($io, $server);
-            $io->out('');
+            $this->displayRegisteredRoutes($server);
+            $this->io->out('');
 
-            $io->out('Press Ctrl+C to stop the server');
-            $io->out('');
+            $this->io->out('Press Ctrl+C to stop the server');
+            $this->io->out('');
 
             $this->logServerStart($this->getServerHost(), $this->getServerPort());
             $server->start();
         } catch (RuntimeException $e) {
-            $io->error('Failed to start server: ' . $e->getMessage());
+            $this->io->error('Failed to start server: ' . $e->getMessage());
 
             if ($debug) {
-                $io->out('');
-                $io->out('<error>Debug trace:</error>');
-                $io->out($e->getTraceAsString());
+                $this->io->out('');
+                $this->io->out('<error>Debug trace:</error>');
+                $this->io->out($e->getTraceAsString());
             }
 
             return static::CODE_ERROR;
         } catch (Throwable $e) {
-            $io->error('Failed to start server: ' . $e->getMessage());
+            $this->io->error('Failed to start server: ' . $e->getMessage());
 
             if ($debug) {
-                $io->out('');
-                $io->out('<error>Debug trace:</error>');
-                $io->out($e->getTraceAsString());
+                $this->io->out('');
+                $this->io->out('<error>Debug trace:</error>');
+                $this->io->out($e->getTraceAsString());
             }
 
             BlazeCastLogger::error(sprintf('Failed to start Blazecast Server %s\n%s', $e->getMessage(), $e->getTraceAsString()), [
@@ -262,14 +254,12 @@ class ServerStartCommand extends Command
     /**
      * Set the server host with command-line priority over config
      *
-     * @param \Cake\Console\Arguments $args Arguments
      * @return void
      */
-    protected function setServerHost(Arguments $args): void
+    protected function setServerHost(): void
     {
         $config = Configure::read('BlazeCast.servers.blazecast', []);
-        $host = $args->getOption('host') ?: null;
-
+        $host = $this->args->getOption('host') ?: null;
         $this->serverHost = $host ?: ($config['host'] ?? '0.0.0.0');
     }
 
@@ -286,30 +276,26 @@ class ServerStartCommand extends Command
     /**
      * Set the server port with command-line priority over config
      *
-     * @param \Cake\Console\Arguments $args Arguments
      * @return void
      */
-    protected function setServerPort(Arguments $args): void
+    protected function setServerPort(): void
     {
         $config = Configure::read('BlazeCast.servers.blazecast', []);
-
-        $portOption = $args->getOption('port');
+        $portOption = $this->args->getOption('port');
         $port = is_numeric($portOption) ? (int)$portOption : null;
         $configPort = isset($config['port']) ? (int)$config['port'] : 8080;
-
         $this->serverPort = $port ?? $configPort;
     }
 
     /**
      * Display registered applications
      *
-     * @param \Cake\Console\ConsoleIo $io Console IO
      * @param \Crustum\BlazeCast\WebSocket\Pusher\Server $server Unified server
      * @return void
      */
-    protected function displayRegisteredApplications(ConsoleIo $io, Server $server): void
+    protected function displayRegisteredApplications(Server $server): void
     {
-        $io->out('<info>Registered Applications:</info>');
+        $this->io->out('<info>Registered Applications:</info>');
 
         try {
             $router = $server->getHttpRouter();
@@ -323,42 +309,41 @@ class ServerStartCommand extends Command
                 $applications = $applicationManager->getApplications();
 
                 if (empty($applications)) {
-                    $io->out('   No applications registered!');
-                    $io->out(sprintf(
+                    $this->io->out('   No applications registered!');
+                    $this->io->out(sprintf(
                         '   ApplicationManager has %d apps',
                         $applicationManager->getApplicationCount(),
                     ));
                 } else {
                     foreach ($applications as $app) {
-                        $io->out(sprintf('   App ID: %s', $app['id']));
-                        $io->out(sprintf('   Key: %s', $app['key']));
-                        $io->out(sprintf('   Secret: %s...', substr($app['secret'], 0, 8)));
-                        $io->out(sprintf('   Name: %s', $app['name']));
-                        $io->out(sprintf('   WebSocket: ws://%s:%d/app/%s', $this->getServerHost(), $this->getServerPort(), $app['key']));
-                        $io->out(sprintf('   HTTP API: http://%s:%d/apps/%s/', $this->getServerHost(), $this->getServerPort(), $app['id']));
-                        $io->out('');
+                        $this->io->out(sprintf('   App ID: %s', $app['id']));
+                        $this->io->out(sprintf('   Key: %s', $app['key']));
+                        $this->io->out(sprintf('   Secret: %s...', substr($app['secret'], 0, 8)));
+                        $this->io->out(sprintf('   Name: %s', $app['name']));
+                        $this->io->out(sprintf('   WebSocket: ws://%s:%d/app/%s', $this->getServerHost(), $this->getServerPort(), $app['key']));
+                        $this->io->out(sprintf('   HTTP API: http://%s:%d/apps/%s/', $this->getServerHost(), $this->getServerPort(), $app['id']));
+                        $this->io->out('');
                     }
                 }
             } else {
-                $io->out('   No controller factory found!');
+                $this->io->out('   No controller factory found!');
             }
         } catch (Exception $exception) {
-            $io->out(sprintf('   Could not retrieve applications: %s', $exception->getMessage()));
+            $this->io->out(sprintf('   Could not retrieve applications: %s', $exception->getMessage()));
         }
 
-        $io->out('');
+        $this->io->out('');
     }
 
     /**
      * Display registered routes
      *
-     * @param \Cake\Console\ConsoleIo $io Console IO
      * @param \Crustum\BlazeCast\WebSocket\Pusher\Server $server Unified server
      * @return void
      */
-    protected function displayRegisteredRoutes(ConsoleIo $io, Server $server): void
+    protected function displayRegisteredRoutes(Server $server): void
     {
-        $io->out('<info>HTTP API Routes:</info>');
+        $this->io->out('<info>HTTP API Routes:</info>');
 
         try {
             $router = $server->getHttpRouter();
@@ -368,7 +353,7 @@ class ServerStartCommand extends Command
             $routes = $routesMethod->invoke($router);
 
             if (empty($routes)) {
-                $io->out('   No routes registered!');
+                $this->io->out('   No routes registered!');
             } else {
                 foreach ($routes as $route) {
                     $method = isset($route['methods']) ? implode('|', $route['methods']) : 'GET';
@@ -376,14 +361,14 @@ class ServerStartCommand extends Command
                     $name = $route['name'] ?? '';
 
                     if ($name) {
-                        $io->out(sprintf('   %s %s (%s)', $method, $path, $name));
+                        $this->io->out(sprintf('   %s %s (%s)', $method, $path, $name));
                     } else {
-                        $io->out(sprintf('   %s %s', $method, $path));
+                        $this->io->out(sprintf('   %s %s', $method, $path));
                     }
                 }
             }
         } catch (Exception $exception) {
-            $io->out(sprintf('   Could not retrieve routes: %s', $exception->getMessage()));
+            $this->io->out(sprintf('   Could not retrieve routes: %s', $exception->getMessage()));
         }
     }
 }

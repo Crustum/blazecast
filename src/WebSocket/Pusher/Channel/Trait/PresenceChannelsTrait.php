@@ -221,7 +221,7 @@ trait PresenceChannelsTrait
 
         $applications = $this->applicationManager->getApplications();
         if (count($applications) === 1) {
-            $single = array_values($applications)[0];
+            $single = array_first($applications);
 
             return $single['id'] !== '' ? $single['id'] : null;
         }
@@ -242,7 +242,7 @@ trait PresenceChannelsTrait
         $wanted = (string)$userId;
 
         /** @var list<array{id: string, subscribed_at: float|null}> $userConnections */
-        $userConnections = (new Collection($this->getConnections()))
+        $userConnections = new Collection($this->getConnections())
             ->filter(fn(Connection $channelConnection): bool => (string)$channelConnection->getAttribute('user_id') === $wanted)
             ->map(function (Connection $channelConnection) use ($channelName): array {
                 $subscribedAt = $channelConnection->getAttribute("subscribed_at_{$channelName}");
@@ -313,7 +313,7 @@ trait PresenceChannelsTrait
             'presence' => [
                 'count' => count($uniqueMembers),
                 'ids' => $uniqueMembers,
-                'hash' => (new Collection($this->members))
+                'hash' => new Collection($this->members)
                     ->map(function (array $member): array {
                         $userInfo = $member['user_info'] ?? null;
 

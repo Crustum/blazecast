@@ -29,6 +29,7 @@ use Rector\TypeDeclaration\Rector\FunctionLike\AddClosureParamTypeForArrayReduce
 use Rector\TypeDeclaration\Rector\Property\TypedPropertyFromAssignsRector;
 use Rector\TypeDeclaration\Rector\Property\TypedPropertyFromStrictSetUpRector;
 use Rector\TypeDeclaration\Rector\StmtsAwareInterface\SafeDeclareStrictTypesRector;
+use Rector\Php85\Rector\Property\AddOverrideAttributeToOverriddenPropertiesRector;
 
 return RectorConfig::configure()
     ->withPaths([
@@ -62,6 +63,7 @@ return RectorConfig::configure()
         SafeDeclareStrictTypesRector::class,
         IssetOnPropertyObjectToPropertyExistsRector::class,
         IfIssetToCoalescingRector::class,
+        AddOverrideAttributeToOverriddenPropertiesRector::class,
     ])
     ->withPreparedSets(
         deadCode: true,
@@ -70,4 +72,4 @@ return RectorConfig::configure()
         typeDeclarations: true,
         earlyReturn: true,
     )
-    ->withPhpSets(php81: true);
+    ->withPhpSets(php85: true);

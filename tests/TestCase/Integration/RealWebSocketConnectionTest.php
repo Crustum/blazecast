@@ -16,9 +16,9 @@ use React\EventLoop\Loop;
  */
 class RealWebSocketConnectionTest extends TestCase
 {
-    private const SERVER_HOST = '127.0.0.1';
+    private const string SERVER_HOST = '127.0.0.1';
 
-    private const SERVER_PORT = 8091;
+    private const int SERVER_PORT = 8091;
 
     private Application $application;
 

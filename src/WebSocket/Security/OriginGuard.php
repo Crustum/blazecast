@@ -29,13 +29,7 @@ class OriginGuard
             return false;
         }
 
-        foreach ($allowedOrigins as $allowedOrigin) {
-            if (self::matchesPattern($allowedOrigin, $originHost)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($allowedOrigins, fn($allowedOrigin): bool => self::matchesPattern($allowedOrigin, $originHost));
     }
 
     /**

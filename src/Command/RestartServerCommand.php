@@ -5,8 +5,6 @@ namespace Crustum\BlazeCast\Command;
 
 use Cake\Cache\Cache;
 use Cake\Command\Command;
-use Cake\Console\Arguments;
-use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
 use Cake\Core\Configure;
 use Cake\I18n\DateTime;
@@ -49,21 +47,16 @@ class RestartServerCommand extends Command
     /**
      * Execute the command.
      *
-     * @param \Cake\Console\Arguments $args The command arguments.
-     * @param \Cake\Console\ConsoleIo $io The console io
      * @return int|null The exit code or null for success
      */
-    public function execute(Arguments $args, ConsoleIo $io): ?int
+    public function execute(): ?int
     {
-        $timestamp = (new DateTime())->getTimestamp();
-
+        $timestamp = new DateTime()->getTimestamp();
         $cacheKey = 'blazecast:server:restart';
         $cache = Configure::read('Cache.default') ?: 'default';
-
         Cache::write($cacheKey, $timestamp, $cache);
-
-        $io->success('Broadcasting BlazeCast server restart signal.');
-        $io->info("Restart timestamp: {$timestamp}");
+        $this->io->success('Broadcasting BlazeCast server restart signal.');
+        $this->io->info("Restart timestamp: {$timestamp}");
 
         return self::CODE_SUCCESS;
     }

@@ -124,7 +124,7 @@ class MetricsHandler
         }
 
         $channelNames = $this->connectionManager->getActiveChannelNames();
-        $channels = (new Collection($channelNames))
+        $channels = new Collection($channelNames)
             ->map(fn(string $name): PusherChannelInterface => $this->channelManager->getChannel($name))
             ->filter(fn($channel): bool => $this->connectionManager->getConnectionsForChannel($channel) !== []);
 
@@ -161,7 +161,7 @@ class MetricsHandler
         $uniqueUsers = $this->extractUniqueUsers($connections);
 
         /** @var list<array{id: string}> $users */
-        $users = array_values((new Collection($uniqueUsers))
+        $users = array_values(new Collection($uniqueUsers)
             ->map(fn(string $userId): array => ['id' => $userId])
             ->toArray());
 
@@ -217,7 +217,7 @@ class MetricsHandler
         $connections = $this->connectionManager->getConnectionsForChannel($channel);
 
         /** @var list<PresenceConnectionMetrics> $userConnections */
-        $userConnections = (new Collection($connections))
+        $userConnections = new Collection($connections)
             ->filter(fn($connection): bool => (string)$connection->getAttribute('user_id') === (string)$userId)
             ->map(fn($connection): array => [
                 'id' => $connection->getId(),
@@ -240,19 +240,19 @@ class MetricsHandler
         /** @var list<string> $ids */
         $ids = array_values(array_unique(array_map(
             fn($id): string => (string)$id,
-            (new Collection($metrics))->reduce(
+            new Collection($metrics)->reduce(
                 fn(array $carry, $item): array => array_merge($carry, array_values($item['presence']['ids'] ?? [])),
                 [],
             ),
         )));
 
         /** @var array<string, mixed> $hash */
-        $hash = (new Collection(
-            (new Collection($metrics))->reduce(
+        $hash = new Collection(
+            new Collection($metrics)->reduce(
                 fn(array $carry, $item): array => $carry + ($item['presence']['hash'] ?? []),
                 [],
             ),
-        ))
+        )
             ->map(fn($info): mixed => $info !== null && $info !== [] ? $info : (object)[])
             ->toArray();
 
@@ -274,7 +274,7 @@ class MetricsHandler
     public function mergePresenceConnections(array $metrics): array
     {
         /** @var list<PresenceConnectionMetrics> $merged */
-        $merged = (new Collection($metrics))->reduce(
+        $merged = new Collection($metrics)->reduce(
             fn(array $carry, $item): array => array_merge($carry, array_values($item)),
             [],
         );
@@ -291,12 +291,12 @@ class MetricsHandler
     public function mergeChannelUsers(array $metrics): array
     {
         /** @var list<array{id: mixed}> $merged */
-        $merged = (new Collection(
-            (new Collection($metrics))->reduce(
+        $merged = new Collection(
+            new Collection($metrics)->reduce(
                 fn(array $carry, $item): array => array_merge($carry, array_values($item)),
                 [],
             ),
-        ))
+        )
             ->unique()
             ->values()
             ->toArray();

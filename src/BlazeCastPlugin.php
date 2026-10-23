@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace Crustum\BlazeCast;
 
 use Cake\Console\CommandCollection;
+use Cake\Container\ContainerInterface;
 use Cake\Core\BasePlugin;
 use Cake\Core\Configure;
-use Cake\Core\ContainerInterface;
 use Cake\Core\PluginApplicationInterface;
 use Cake\Event\EventManager;
 use Cake\Http\MiddlewareQueue;
@@ -46,7 +46,7 @@ class BlazeCastPlugin extends BasePlugin implements ManifestInterface
      * Register container services.
      * Following Phase 2 plan: only app layer services that developers use.
      *
-     * @param \Cake\Core\ContainerInterface $container The container to register services with
+     * @param \Cake\Container\ContainerInterface $container The container to register services with
      * @return void
      */
     public function services(ContainerInterface $container): void

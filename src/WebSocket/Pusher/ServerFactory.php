@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Crustum\BlazeCast\WebSocket\Pusher;
 
+use Cake\Container\ContainerInterface;
 use Cake\Core\Configure;
-use Cake\Core\ContainerInterface;
 use Cake\Event\EventManager;
 use Crustum\BlazeCast\WebSocket\Http\PusherRouteBuilder;
 use Crustum\BlazeCast\WebSocket\Http\PusherRouter;
@@ -93,7 +93,7 @@ class ServerFactory
      * @param \React\EventLoop\LoopInterface|null $loop Event loop
      * @param \Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager|null $applicationManager Application manager from container
      * @param \Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager|null $connectionManager Connection manager from container
-     * @param \Cake\Core\ContainerInterface|null $container Container for Pulse integration
+     * @param \Cake\Container\ContainerInterface|null $container Container for Pulse integration
      * @return \Crustum\BlazeCast\WebSocket\Pusher\Server
      */
     public static function create(

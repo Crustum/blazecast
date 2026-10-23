@@ -375,7 +375,7 @@ class ServerTest extends TestCase
         $connection = Double::for(Connection::class);
         $connection->allows('getAttribute')->with('app_id')->returns('1');
 
-        $method = (new ReflectionClass($server))->getMethod('resolveActivityTimeout');
+        $method = new ReflectionClass($server)->getMethod('resolveActivityTimeout');
 
         $this->assertSame(45, $method->invoke($server, $connection));
     }
@@ -419,7 +419,7 @@ class ServerTest extends TestCase
         $connection = Double::for(Connection::class);
         $connection->allows('getAttribute')->with('app_id')->returns('1');
 
-        $method = (new ReflectionClass($server))->getMethod('resolveActivityTimeout');
+        $method = new ReflectionClass($server)->getMethod('resolveActivityTimeout');
 
         $this->assertSame(90, $method->invoke($server, $connection));
     }
@@ -445,7 +445,7 @@ class ServerTest extends TestCase
         $connection = Double::for(Connection::class);
         $connection->allows('getAttribute')->returns(null);
 
-        $method = (new ReflectionClass($server))->getMethod('resolveActivityTimeout');
+        $method = new ReflectionClass($server)->getMethod('resolveActivityTimeout');
 
         $this->assertSame(120, $method->invoke($server, $connection));
     }
@@ -483,7 +483,7 @@ class ServerTest extends TestCase
         });
         $connection->expects('close')->never();
 
-        $method = (new ReflectionClass($server))->getMethod('ensureWithinConnectionMessageRateLimit');
+        $method = new ReflectionClass($server)->getMethod('ensureWithinConnectionMessageRateLimit');
 
         $this->assertTrue($method->invoke($server, $connection));
         $this->assertFalse($method->invoke($server, $connection));
@@ -524,7 +524,7 @@ class ServerTest extends TestCase
         $connection->expects('send');
         $connection->expects('close');
 
-        $method = (new ReflectionClass($server))->getMethod('ensureWithinConnectionMessageRateLimit');
+        $method = new ReflectionClass($server)->getMethod('ensureWithinConnectionMessageRateLimit');
 
         $this->assertTrue($method->invoke($server, $connection));
         // The limiter buckets by whole seconds: if the wall clock ticks over
@@ -559,7 +559,7 @@ class ServerTest extends TestCase
         $connection = Double::for(Connection::class);
         $connection->allows('getId')->returns('conn-rate-3');
 
-        $method = (new ReflectionClass($server))->getMethod('ensureWithinConnectionMessageRateLimit');
+        $method = new ReflectionClass($server)->getMethod('ensureWithinConnectionMessageRateLimit');
 
         $this->assertTrue($method->invoke($server, $connection));
         $this->assertTrue($method->invoke($server, $connection));
@@ -615,7 +615,7 @@ class ServerTest extends TestCase
 
         try {
             $loop = $server->getLoop();
-            $browser = (new Browser($loop))->withTimeout(5);
+            $browser = new Browser($loop)->withTimeout(5);
             $url = sprintf('http://%s:%d/app/hs-test-key', $server->getHost(), $server->getPort());
 
             $codes = [];

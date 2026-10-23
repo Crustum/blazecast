@@ -4,9 +4,10 @@
     "type": "cakephp-plugin",
     "license": "MIT",
     "require": {
-        "php": ">=8.2",
-        "cakephp/cakephp": "^5.2",
-        "crustum/plugin-manifest": "^1.0",
+        "php": ">=8.5",
+        "cakephp/cakephp": "6.x-dev",
+        "crustum/plugin-manifest": "2.x-dev",
+        "crustum/rhythm": "2.x-dev",
         "clue/redis-react": "^2.6",
         "firebase/php-jwt": "^6.11 || ^7.0",
         "guzzlehttp/psr7": "^2.6|^3.0",
@@ -16,21 +17,21 @@
         "react/promise": "^3.2",
         "react/promise-timer": "^1.10",
         "react/socket": "^1.14",
-        "skie/signal_handler": "^1.0",
+        "skie/signal_handler": "2.x-dev",
         "symfony/routing": "^7.3",
         "symfony/http-foundation": "^6.0 | ^7.0",
-        "symfony/config": "^7.0",
-        "crustum/rhythm": "^1.0"
+        "symfony/config": "^7.0"
     },
     "require-dev": {
-        "cakedc/cakephp-phpstan": "^4.3",
+        "cakedc/cakephp-phpstan": "5.next-cake6-dev",
+        "cakephp/bake": "4.x-dev",
+        "cakephp/cakephp-codesniffer": "6.x-dev",
         "jasonmccreary/double": "^1.0",
-        "phpunit/phpunit": "^11.1 | ^12.5",
+        "phpstan/phpstan": "^2.3",
+        "phpunit/phpunit": "^12.5",
         "ratchet/pawl": "^0.4",
         "react/http": "^1.7",
-        "rector/rector": "^2.5",
-        "cakephp/cakephp-codesniffer": "^5.0",
-        "cakephp/bake": "^3.0"
+        "rector/rector": "^2.7"
     },
     "autoload": {
         "psr-4": {
@@ -67,9 +68,9 @@
         "test:coverage": "phpunit --coverage-html coverage",
         "rector-check": "vendor/bin/rector process --dry-run",
         "rector-fix": "vendor/bin/rector process",
-        "stan": "tools/phpstan analyse src/ tests/",
-        "stan-test": "tools/phpstan analyse  tests/",
-        "stan-baseline": "tools/phpstan analyse src/ tests/ --generate-baseline"
+        "stan": "phpstan analyse src/ tests/",
+        "stan-test": "phpstan analyse  tests/",
+        "stan-baseline": "phpstan analyse src/ tests/ --generate-baseline"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,

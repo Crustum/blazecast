@@ -516,7 +516,7 @@ class PusherEventHandler extends AbstractHandler implements HandlerInterface
         if ($applicationManager instanceof ApplicationManager) {
             $applications = $applicationManager->getApplications();
             if ($applications !== []) {
-                $firstApp = array_values($applications)[0];
+                $firstApp = array_first($applications);
                 BlazeCastLogger::warning(__('PusherEventHandler: Using first available app ID {0} for connection {1}', $firstApp['id'], $connection->getId()), [
                     'scope' => ['socket.handler', 'socket.handler.pusher'],
                 ]);

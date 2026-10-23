@@ -83,7 +83,7 @@ class ApplicationContextResolver
 
         $applications = $this->applicationManager->getApplications();
         if (count($applications) === 1) {
-            $firstApp = array_values($applications)[0];
+            $firstApp = array_first($applications);
 
             return $firstApp['id'];
         }

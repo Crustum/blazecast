@@ -52,7 +52,7 @@ class PusherRouteBuilder
      * @param string $name Route name
      * @return $this
      */
-    public function get(string $path, callable|string|Closure $controller, string $name)
+    public function get(string $path, callable|string|Closure $controller, string $name): static
     {
         return $this->addRoute($path, $controller, ['GET'], $name);
     }
@@ -65,7 +65,7 @@ class PusherRouteBuilder
      * @param string $name Route name
      * @return $this
      */
-    public function post(string $path, callable|string|Closure $controller, string $name)
+    public function post(string $path, callable|string|Closure $controller, string $name): static
     {
         return $this->addRoute($path, $controller, ['POST'], $name);
     }
@@ -78,7 +78,7 @@ class PusherRouteBuilder
      * @param string $name Route name
      * @return $this
      */
-    public function options(string $path, callable|string|Closure $controller, string $name)
+    public function options(string $path, callable|string|Closure $controller, string $name): static
     {
         return $this->addRoute($path, $controller, ['OPTIONS'], $name);
     }
@@ -92,7 +92,7 @@ class PusherRouteBuilder
      * @param string $name Route name
      * @return $this
      */
-    public function addRoute(string $path, callable|string|Closure $controller, array $methods, string $name)
+    public function addRoute(string $path, callable|string|Closure $controller, array $methods, string $name): static
     {
         $route = new Route($path, ['_controller' => $controller]);
         $route->setMethods($methods);
@@ -114,7 +114,7 @@ class PusherRouteBuilder
      * @param string $name Route name
      * @return $this
      */
-    public function any(string $path, callable|string|Closure $controller, string $name)
+    public function any(string $path, callable|string|Closure $controller, string $name): static
     {
         return $this->addRoute($path, $controller, ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], $name);
     }
@@ -125,7 +125,7 @@ class PusherRouteBuilder
      * @param string $prefix Path prefix
      * @return $this
      */
-    public function addPrefix(string $prefix)
+    public function addPrefix(string $prefix): static
     {
         $this->routes->addPrefix($prefix);
 
