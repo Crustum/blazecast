@@ -6,7 +6,6 @@
     "require": {
         "php": ">=8.2",
         "cakephp/cakephp": "^5.2",
-        "crustum/plugin-manifest": "^1.0",
         "clue/redis-react": "^2.6",
         "firebase/php-jwt": "^6.11 || ^7.0",
         "guzzlehttp/psr7": "^2.6|^3.0",
@@ -24,6 +23,7 @@
     },
     "require-dev": {
         "cakedc/cakephp-phpstan": "^4.3",
+        "crustum/plugin-manifest": "^1.2",
         "jasonmccreary/double": "^1.0",
         "phpunit/phpunit": "^11.1 | ^12.5",
         "ratchet/pawl": "^0.4",
@@ -31,6 +31,9 @@
         "rector/rector": "^2.5",
         "cakephp/cakephp-codesniffer": "^5.0",
         "cakephp/bake": "^3.0"
+    },
+    "suggest": {
+        "crustum/plugin-manifest": "CakePHP plugin installer"
     },
     "autoload": {
         "psr-4": {

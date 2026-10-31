@@ -16,18 +16,12 @@ use Crustum\BlazeCast\Service\EventDispatcherService;
 use Crustum\BlazeCast\WebSocket\ConnectionRegistry;
 use Crustum\BlazeCast\WebSocket\Pusher\ApplicationManager;
 use Crustum\BlazeCast\WebSocket\Pusher\Manager\ChannelConnectionManager;
-use Crustum\PluginManifest\Manifest\ManifestInterface;
-use Crustum\PluginManifest\Manifest\ManifestTrait;
 
 /**
  * Plugin for BlazeCast WebSocket server
- *
- * @uses \Crustum\PluginManifest\Manifest\ManifestTrait
  */
-class BlazeCastPlugin extends BasePlugin implements ManifestInterface
+class BlazeCastPlugin extends BasePlugin
 {
-    use ManifestTrait;
-
     /**
      * Reserved payload key stripped before WebSocket client delivery.
      *
@@ -110,40 +104,5 @@ class BlazeCastPlugin extends BasePlugin implements ManifestInterface
         $commands->add('blazecast restart_server', RestartServerCommand::class);
 
         return $commands;
-    }
-
-    /**
-     * Get the manifest for the plugin.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    public static function manifest(): array
-    {
-        $pluginPath = dirname(__DIR__);
-
-        return array_merge(
-            static::manifestConfig(
-                $pluginPath . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'blazecast.php',
-                CONFIG . 'blazecast.php',
-                false,
-            ),
-            static::manifestBootstrapAppend(
-                "if (file_exists(CONFIG . 'blazecast.php')) {\n    Configure::load('blazecast', 'default');\n}",
-                '// BlazeCast Plugin Configuration',
-            ),
-            static::manifestEnvVars(
-                [
-                    'BLAZECAST_SERVER' => 'blazecast',
-                    'BLAZECAST_SERVER_HOST' => '0.0.0.0',
-                    'BLAZECAST_SERVER_PORT' => '8080',
-                    'BLAZECAST_APP_ID' => 'app-id',
-                    'BLAZECAST_APP_KEY' => 'app-key',
-                    'BLAZECAST_APP_SECRET' => 'app-secret',
-                    'BLAZECAST_APP_NAME' => 'Default BlazeCast App',
-                ],
-                '# BlazeCast Configuration',
-            ),
-            static::manifestStarRepo('Crustum/blazecast'),
-        );
     }
 }
