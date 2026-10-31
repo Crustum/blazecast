@@ -119,5 +119,8 @@ jobs:
     - name: Run PHP CodeSniffer
       run: composer cs-check
 
+    - name: Run rector
+      run: composer rector-check
+
     - name: Run phpstan
       run: composer stan
